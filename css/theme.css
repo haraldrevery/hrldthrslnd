@@ -197,6 +197,60 @@
   --stage-2:       #f0f0ec;
   --stage-3:       #dcdcd5;
 
+  /* The scrim laid over a photographic surface that FOLLOWS the scheme, as
+     opposed to --hero-scrim, which is fixed dark for the surfaces that are
+     fixed dark. Both are assembled in section 6; this token only picks the
+     half of the pair that belongs to this scheme. See .photo-stage-adaptive
+     in input.css for which surfaces are which and why the site has both. */
+  --stage-scrim:   var(--hero-scrim-pale);
+
+  /* --- Adaptive panels ------------------------------------------------------
+     The panels on this site come in two kinds, and the difference is not a
+     style, it is a question about what is BEHIND them.
+
+     A panel standing on a photograph — the phone-width collage card, the glass
+     over the hero picture — has to be legible against a picture, and a picture
+     has no colour scheme. Those keep the fixed light-on-dark values written
+     into .glass-card and .matte-stage, and none of the tokens below.
+
+     A panel standing on the PAGE has no such excuse. It was near-black in both
+     schemes only because the values were typed into the component, and a
+     near-black card on a pale stage is the one piece of a light-mode page that
+     ignores the visitor's setting. The tokens below are that panel's ground
+     and its type, per scheme, so the components carry a name rather than a
+     colour and the tuning happens here.
+
+     The dark column is deliberately the values those components already had,
+     so nothing about the dark site moves when a panel opts in.
+
+     -fg-faint is the one exception: it replaces four hand-typed alphas that
+     ranged 0.60 to 0.72 across the blocks it now covers, and settles them on
+     one value. Adjust it here if an eyebrow reads light against a photograph.  */
+  --panel-adaptive-fg:           var(--ink);
+  --panel-adaptive-fg-strong:    #000000;              /* mastheads on a panel */
+  --panel-adaptive-fg-muted:     rgba(13, 13, 16, 0.78);  /* body copy         */
+  /* 0.66 rather than the 0.62 that looked right, and the difference is one
+     measurement: at 0.62 a .micro label on a .stat-grid-glass tile standing on
+     a DARK part of a photograph came out at 4.47:1 — under AA by a hair, at the
+     one depth where --hero-scrim-pale is thinnest by design. 0.66 puts every
+     label this token covers, on every ground it lands on in practice, above
+     5:1. Kept as a measured floor rather than a taste value; if you lighten it,
+     re-measure the stat tiles over the fog frame in block_test_page.html. */
+  --panel-adaptive-fg-faint:     rgba(13, 13, 16, 0.66);  /* eyebrows, labels  */
+  --panel-adaptive-rule:         rgba(13, 13, 16, 0.30);  /* quote bars        */
+
+  --panel-adaptive-solid:        rgba(255, 255, 255, 0.94); /* .glass-card-solid */
+  --panel-adaptive-block:        rgba(232, 232, 227, 0.96); /* .ink-panel        */
+  --panel-adaptive-block-border: rgba(13, 13, 16, 0.10);
+  --panel-adaptive-glass:        rgba(255, 255, 255, 0.42); /* .glass-card       */
+  /* Glass with a photograph rather than the page behind it: more opaque, for
+     the reason .feature-overlay-panel and .panel-field spell out — over a
+     bright frame the near-transparent version stops holding its body copy. */
+  --panel-adaptive-glass-photo:  rgba(250, 250, 248, 0.78);
+  --panel-adaptive-border:       rgba(13, 13, 16, 0.12);
+  --panel-adaptive-sheen:        rgba(255, 255, 255, 0.70);
+  --panel-adaptive-tile:         rgba(255, 255, 255, 0.42); /* .stat-grid-glass  */
+
   --selection-bg:  var(--c-amber);
   --selection-fg:  var(--ink);
   --focus-ring:    var(--c-azure);
@@ -241,6 +295,29 @@
     --stage-1:       #383a40;
     --stage-2:       #1a1c22;
     --stage-3:       #0d0d10;
+
+    /* In the dark scheme the adaptive scrim IS the fixed one — there is
+       nothing to swap, which is the point: only the light half is new. */
+    --stage-scrim:   var(--hero-scrim);
+
+    /* The adaptive panel tokens, dark half. Every value here is the literal a
+       component or a block of markup carried before these tokens existed, so
+       opting a panel in changes nothing about the dark site. The one shift is
+       -fg-faint, which unifies 0.60 / 0.68 / 0.70 / 0.72 on 0.70. */
+    --panel-adaptive-fg:           var(--paper);
+    --panel-adaptive-fg-strong:    var(--paper);
+    --panel-adaptive-fg-muted:     rgba(244, 244, 242, 0.82);
+    --panel-adaptive-fg-faint:     rgba(244, 244, 242, 0.70);
+    --panel-adaptive-rule:         rgba(255, 255, 255, 0.35);
+
+    --panel-adaptive-solid:        rgba(16, 17, 21, 0.94);
+    --panel-adaptive-block:        rgba(28, 29, 34, 0.96);
+    --panel-adaptive-block-border: rgba(255, 255, 255, 0.08);
+    --panel-adaptive-glass:        rgba(255, 255, 255, 0.08);
+    --panel-adaptive-glass-photo:  rgba(16, 17, 21, 0.74);
+    --panel-adaptive-border:       rgba(255, 255, 255, 0.16);
+    --panel-adaptive-sheen:        rgba(255, 255, 255, 0.14);
+    --panel-adaptive-tile:         rgba(0, 0, 0, 0.20);
 
     --selection-bg:  var(--c-amber);
     --selection-fg:  var(--ink);
@@ -312,6 +389,22 @@
     rgba(9, 9, 12, 0.42) 42%,
     rgba(9, 9, 12, 0.58) 74%,
     rgba(9, 9, 12, 0.78) 100%);
+
+  /* The same overlay for a photographic surface that FOLLOWS the scheme: the
+     one --stage-scrim resolves to in light mode, where the type over the
+     picture is ink rather than paper. Same four-stop geometry, inverted — a
+     wash rather than a dim — and a little heavier than its dark counterpart at
+     every stop, because near-black type needs more of the photograph taken out
+     from under it than near-white type does.
+
+     Only .photo-stage-adaptive reaches this, through --stage-scrim. A surface
+     that is fixed dark in both schemes still uses --hero-scrim directly and is
+     unaffected by anything here. */
+  --hero-scrim-pale: linear-gradient(180deg,
+    rgba(250, 250, 248, 0.88) 0%,
+    rgba(250, 250, 248, 0.60) 42%,
+    rgba(250, 250, 248, 0.74) 74%,
+    rgba(250, 250, 248, 0.88) 100%);
 
   --radius: 4px;
   --radius-pill: 999px;
@@ -391,6 +484,26 @@
      3.4rem landed, kept so the change of unit moved nothing on screen. */
   --logo-nav-size:    1.00em;
   --logo-footer-size: 1.04em;
+  /* The mark over the name on the title card. The odd one out in this group,
+     and it has to be: the other two are in em so they track the type they sit
+     beside, and this one stands alone over a masthead set in clamp(2.4rem,
+     9vw, 7.5rem), on a block-level element that inherits the body size. An em
+     here would size it against the body text and leave a stamp over a
+     seven-rem name. So it is the title's own clamp in the same three-term
+     shape, which is what keeps the mark in proportion to the name across the
+     fluid range.
+
+     Read it against the title's clamp, not on its own — the middle term is the
+     one that binds on nearly every screen, and 6.6vw against the title's 9vw
+     is a mark about three quarters the height of the name.
+
+     The ends are where the two clamps can come apart, because they stop at
+     different widths: the title caps at 7.5rem from ~1333px up, this caps at
+     8.2rem from ~1990px, so on a very wide screen the mark keeps growing after
+     the name has stopped and ends up taller than it. Lower the ceiling toward
+     the title's own if that reads wrong on a large display; it is invisible at
+     laptop sizes either way. */
+  --logo-hero-size:   clamp(1.9rem, 6.6vw, 8.2rem);
 
   /* Width divided by height of the artwork. A mask is painted onto a plain
      element, and an element has no intrinsic size to take a ratio from — unlike
@@ -410,7 +523,7 @@
      artwork of different proportions. Positive x moves right, positive y down.
      Tune by eye — that is what they are here for; the optical-shift tokens in
      section 1 are the same kind of knob for type. */
-  --logo-nudge-x: 0%;
+  --logo-nudge-x: -4%;
   --logo-nudge-y: -14%;
 
   /* Reading width cycle (see javascript/reading_width.js). The default is 100%;

@@ -1483,6 +1483,31 @@
        so all the fade costs it is ground; holding it above the entire dissolve
        would push it into the top third of the screen. Just over half, with a
        floor so a short viewport keeps some air. */
+    /* The two type sizes on the card, as tokens rather than literals in their
+       own rules. The lockup maths below needs to read them: the empty space in
+       a line box above and below its ink is a fraction of the font-size, and
+       that space is most of what makes an evenly-margined stack look uneven.
+       Overridden together with the rules that used to hold these values, in the
+       short-viewport block at the foot of this component. */
+    --cine-title-size: clamp(2.4rem, 9vw, 7.5rem);
+    --cine-eyebrow-size: 1.2rem;
+
+    /* The ink-to-ink gap on either side of the mark — what the eye actually
+       reads as the space, as opposed to the margin, which is measured from
+       boxes that are taller than the letters in them. One number for both
+       sides; the two rules that spend it each subtract their own side's slack.
+       See "The lockup" on .cine-logo for the measurements behind the three
+       constants below, and for why an evenly-margined stack reads uneven.
+
+       These three live on the STAGE rather than on the mark, and that is not
+       tidiness: .cine-eyebrow needs two of them, custom properties inherit to
+       descendants and never to siblings, and declaring them on .cine-logo put
+       them somewhere the rule that spends them cannot see. */
+    --cine-lockup-gap: 1.5rem;
+    --cine-logo-lift:    calc(var(--logo-hero-size) * 0.14);   /* = --logo-nudge-y */
+    --cine-eyebrow-tail: calc(var(--cine-eyebrow-size) * 0.714);
+    --cine-title-head:   calc(var(--cine-title-size) * 0.159);
+
     --cine-fade: 30vh;
     --hero-fade-clear: max(clamp(1.5rem, 5vh, 3rem), calc(var(--cine-fade) * 0.55));
 
@@ -1777,12 +1802,31 @@
      is large enough, heavy enough and near enough to full white already. */
   .cine-eyebrow {
     margin: 0 0 1.5rem;
-    font-size: 1.2rem;
+    font-size: var(--cine-eyebrow-size);
     letter-spacing: 0.42em;
     text-transform: uppercase;
     color: rgba(var(--cine-ink), 0.86);
     text-shadow: 0 0 4px rgba(var(--cine-ground), 0.9), 0 1px 18px rgba(var(--cine-ground), 0.92);
     animation: cine-rise 1.1s ease-out 0.4s both;
+  }
+
+  /* The other half of the lockup, and it has to live on the eyebrow because
+     margins between siblings collapse to the larger of the two — a top margin
+     on the mark would be silently discarded whenever this one exceeded it.
+
+     :has() rather than a modifier class in the markup, because the pairing is
+     the stylesheet's business: the correction applies exactly when a mark
+     follows the eyebrow, and a class would let the two drift apart the first
+     time someone copies the card without it. A .cine-stage with no mark — see
+     block_test_page_e.html — matches nothing here and keeps its plain margin.
+
+     Adding the lift rather than subtracting it: the mark's ink is 14% of its
+     height ABOVE its box, so the box has to start that much lower for the ink
+     to land where the gap says it should. */
+  .cine-eyebrow:has(+ .cine-logo) {
+    margin-bottom: calc(var(--cine-lockup-gap)
+                        - var(--cine-eyebrow-tail)
+                        + var(--cine-logo-lift));
   }
 
   /* The tracking settles from wide to its final value as the letters land. */
@@ -1792,7 +1836,7 @@
     flex-wrap: wrap;
     justify-content: center;
     column-gap: 0.5em;
-    font-size: clamp(2.4rem, 9vw, 7.5rem);
+    font-size: var(--cine-title-size);
     font-weight: 600;
     line-height: 1.04;
     text-transform: uppercase;
@@ -1841,10 +1885,119 @@
     }
   }
 
+  /* The mark under the name. svg/logo.svg masked and painted with
+     currentColor, exactly as .site-logo does it in the bar and the footer —
+     see the long note there for why a mask rather than an <img>, and what it
+     costs. The short version is that the mark is therefore always precisely
+     the colour of the title above it, in either scheme, with nothing here to
+     state twice.
+
+     It is its own class rather than a .site-logo, because the two differ in
+     the one thing .site-logo's sizing is built around: .site-logo is in em so
+     it tracks the type beside it, and this one has no type beside it. It sits
+     under a masthead on a block-level element that inherits the body size.
+     --logo-hero-size is the title's own clamp scaled down for that reason.
+
+     aria-hidden in the markup: the h1 above already carries the site name, and
+     the mark says the same thing a second time.
+
+     The beat: 0.7s, which lands the mark inside the title's own development
+     window rather than after it. That is the whole reason this number moved
+     when the mark did — a piece standing ABOVE the name that arrives once the
+     name has finished reads as a hole at the top of the card being filled in
+     late. Leading the letters instead, the two settle together and the lockup
+     assembles as one object. The rule at 1.7s and the tagline at 1.9s still
+     close the card, so the running order is eyebrow, lockup, rule, tagline.
+
+     It develops out of blur like the letters do rather than simply rising like
+     the eyebrow, because it belongs to the title, not to the furniture. No
+     text-shadow, for the title's reason: the mark is a large solid silhouette
+     and holds its own over a bright frame.
+
+     There is no `opacity: 0` outside the keyframes, which is the contract the
+     reduced-motion block at the foot of this file depends on — the base style
+     here IS the finished state, so `animation: none` leaves the mark exactly
+     placed rather than invisible. .cine-logo is in that list. */
+  .cine-logo {
+    display: block;
+    /* The lockup. Equal margins above and below this mark do NOT read as equal
+       space, and there are three reasons, all of them measurable:
+
+       1. The eyebrow's line box runs well past the bottom of its letters. Its
+          face is 0.6357 over / 0.3838 under the baseline (hhea, from the
+          shipped file), caps reach 0.4873, and it is set at the body's 1.68
+          leading. Space below the caps inside that box: 0.714em. At the
+          eyebrow's size that is a spare 0.86rem of gap nobody typed.
+
+       2. The title's line box runs past the TOP of its letters, by the same
+          arithmetic at its own 1.04 leading: 0.159em. The title is the largest
+          type on the site, so that is another 1.19rem at desktop size — and it
+          scales with the masthead while the eyebrow's does not.
+
+       3. This mark's ink is lifted --logo-nudge-y (14%) off its own box by the
+          translate above, which takes 0.14 of its height OUT of the gap over it
+          and adds the same amount UNDER it. The nudge is optical centring and
+          has to stay; it just has to be paid for here.
+
+       Measured with fontTools against font/HaraldReveryTextFont.ttf and its
+       Mono sibling, which carry identical vertical metrics. Left alone, the
+       three stack the same way: 1.53rem of visible space above the mark and
+       3.37rem below it, from margins of 1.5 and 1.35.
+
+       So both gaps are derived from one --cine-lockup-gap, which is the space
+       as the eye reads it, ink to ink. Each side subtracts its own slack. The
+       ratios are constants because they are properties of the face and the
+       leading, not of the layout; they only change if either font or either
+       line-height does, and then they are re-measured, not guessed.
+
+       The bottom margin resolves NEGATIVE at most sizes. That is correct and
+       not a hack: it is reclaiming the title's empty line-box space, which is
+       real layout the mark is entitled to sit inside. */
+    margin-inline: auto;
+    margin-bottom: calc(var(--cine-lockup-gap)
+                        - var(--cine-logo-lift)
+                        - var(--cine-title-head));
+    height: var(--logo-hero-size);
+    width: calc(var(--logo-hero-size) * var(--logo-aspect));
+    background-color: currentColor;
+    -webkit-mask: url("/svg/logo.svg") center / contain no-repeat;
+    mask: url("/svg/logo.svg") center / contain no-repeat;
+
+    /* The same optical nudge .site-logo carries, and for the same reason: the
+       tokens correct the ARTWORK's own ink balance, not the context it sits
+       in, so they have to apply wherever the mark is drawn. A centred mark is
+       where --logo-nudge-x shows most — off-centre ink in a box centred by the
+       browser reads as a mark that has slipped.
+
+       The `translate` property rather than .site-logo's transform, because
+       this mark is animated and that one is not. transform is the entrance's
+       to use: a static transform here would be overwritten while the animation
+       ran and then replaced by its `transform: none` end frame, so the nudge
+       would never appear at all. translate composes with transform instead of
+       competing for it — the same reason .btn's arrow uses it — which leaves
+       the nudge stated once, untouched by the animation, and still standing
+       when reduced motion drops the animation entirely. */
+    translate: var(--logo-nudge-x) var(--logo-nudge-y);
+    animation: cine-mark-in 1.4s cubic-bezier(0.2, 0.65, 0.25, 1) 0.7s both;
+  }
+
+  @keyframes cine-mark-in {
+    from {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translateY(0.4rem) scale(1.09);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: none;
+    }
+  }
+
   .cine-rule {
     width: clamp(4rem, 14vw, 9rem);
     height: 1px;
-    margin: 2.25rem auto;
+    margin: 2.6rem auto;
     background: rgba(var(--cine-ink), 0.4);
     animation: cine-rule-in 1.4s cubic-bezier(0.7, 0, 0.2, 1) 1.7s both;
   }
@@ -1991,6 +2144,9 @@
       padding-top: calc(clamp(1.25rem, 4vh, 2.5rem) + var(--nav-height));
     }
 
+    /* Both, and they are not redundant: the margin is what a card with no mark
+       uses, the token is what the lockup rules spend. */
+    .cine-stage { --cine-lockup-gap: clamp(0.5rem, 1.6vh, 1rem); }
     .cine-eyebrow { margin-bottom: clamp(0.5rem, 1.6vh, 1rem); }
     .cine-rule    { margin-block: clamp(0.75rem, 2.6vh, 1.5rem); }
     .cine-tagline { font-size: clamp(0.85rem, 2vh, 1rem); line-height: 1.55; }
@@ -2002,8 +2158,17 @@
   }
 
   @media (max-height: 30rem) {
-    .cine-title { font-size: clamp(1.6rem, min(9vw, 7vh), 7.5rem); }
-    .cine-eyebrow { font-size: 0.64rem; letter-spacing: 0.3em; }
+    /* Sizes move as tokens so the lockup maths follows them. The mark takes
+       the title's own min(9vw, 7vh) shape here for the reason the title does:
+       a phone on its side is 844px WIDE, so a vw-only term sizes both pieces
+       off a measurement the screen has plenty of and none of the one it does
+       not. Left at 6.6vw the mark came out twice the height of the name. */
+    .cine-stage {
+      --cine-title-size: clamp(1.6rem, min(9vw, 7vh), 7.5rem);
+      --cine-eyebrow-size: 0.64rem;
+      --logo-hero-size: clamp(1.6rem, min(6.6vw, 5.1vh), 8.2rem);
+    }
+    .cine-eyebrow { letter-spacing: 0.3em; }
   }
 
   /* --- The cheap path, for the screens attached to the weakest hardware -----
@@ -3945,6 +4110,28 @@
        stages — this card is 307px wide on a phone, and at the desktop rhythm
        its own contents were 573px of a 664px screen. */
     .collage-panel {
+      /* And the adaptive tokens go back to their dark column here, because at
+         this width the panel is the one thing standing on a PHOTOGRAPH — the
+         portrait has left the flow and become the hero's ground above. The
+         desktop composition stands on the page and follows the scheme; this
+         one cannot, for the reason section L opens with.
+
+         Redeclared as tokens rather than fought with more selectors: every
+         rule in section L reads these, so eight lines here pin the ground, the
+         border, the sheen and all four type colours at once, and the .display
+         and .lede inside the card come with them. A media query adds no
+         specificity, so overriding the rules themselves would have meant
+         out-ranking .glass-card.glass-card-solid.panel-adaptive from inside a
+         block that cannot. */
+      --panel-adaptive-solid:     rgba(16, 17, 21, 0.55);
+      --panel-adaptive-glass:     rgba(16, 17, 21, 0.55);
+      --panel-adaptive-border:    rgba(255, 255, 255, 0.16);
+      --panel-adaptive-sheen:     rgba(255, 255, 255, 0.14);
+      --panel-adaptive-fg:        var(--paper);
+      --panel-adaptive-fg-strong: var(--paper);
+      --panel-adaptive-fg-muted:  rgba(244, 244, 242, 0.82);
+      --panel-adaptive-fg-faint:  rgba(244, 244, 242, 0.70);
+
       background: rgba(16, 17, 21, 0.55);
       padding: clamp(0.9rem, min(4vw, 2.6vh), 1.75rem);
       --hero-copy-gap-1: clamp(0.7rem,  1.6vh, 1.25rem);
@@ -4944,6 +5131,148 @@ html[data-width="18"]  { --reading-width: 18%; }
   }
 }
 
+/* -----------------------------------------------------------------------------
+   SECTION L. ADAPTIVE PANELS AND STAGES
+   Two modifiers, .panel-adaptive and .photo-stage-adaptive, that hand a
+   fixed-dark surface back to the colour scheme.
+
+   Why this exists. Several of the site's surfaces are near-black in BOTH
+   schemes, and there are two quite different reasons for that:
+
+     because of what is behind them  — a panel on a photograph has to stay
+                                       legible against a picture, and a picture
+                                       has no colour scheme. .matte-stage,
+                                       .hero-stage-photo and the phone-width
+                                       collage card are all this, and they are
+                                       right to be fixed.
+
+     because of how they were built  — the values were typed into the component
+                                       when it was first written for a dark
+                                       ground, and stayed there. A near-black
+                                       card standing on the page's own pale
+                                       stage is not a decision, it is a
+                                       leftover, and it is the one piece of a
+                                       light-mode page that ignores the
+                                       visitor's setting.
+
+   These modifiers are for the second kind. They are opt-in rather than a change
+   to the base components, precisely because the first kind must keep the fixed
+   values — .glass-card over a photographic hero would become ink on a picture
+   the moment the base class started following the scheme.
+
+   Nothing here declares a colour. Both modifiers read the --panel-adaptive-*
+   tokens from theme.css section 4/5, whose dark column is the set of literals
+   the components already carried, so opting a surface in leaves the dark site
+   exactly as it was and only writes the light half.
+
+   Placed last in the components layer on purpose. Every rule below either
+   raises specificity over the base it overrides or ties with it and wins on
+   source order; keep this block at the end and both stay true.
+
+   To pin a subtree back to fixed dark inside an adaptive one, redeclare the
+   tokens on it rather than writing more rules — see .collage-panel in the
+   phone-width block in section H, which does exactly that.
+   -------------------------------------------------------------------------- */
+@layer components {
+
+  /* -- .panel-adaptive: a panel that follows the scheme ----------------------
+     Add it beside .glass-card, .glass-card-solid or .ink-panel. It swaps the
+     ground and it owns the type inside, so a block pasted into an adaptive
+     panel comes out the right colour without an inline `color:` — the same
+     contract .photo-stage already states for itself.                          */
+  .panel-adaptive { color: var(--panel-adaptive-fg); }
+
+  .glass-card.panel-adaptive {
+    background: var(--panel-adaptive-glass);
+    border-color: var(--panel-adaptive-border);
+  }
+  /* The sheen is a highlight, and a highlight on a pale panel is a different
+     white from a highlight on a near-black one. */
+  .glass-card.panel-adaptive::before {
+    background: linear-gradient(155deg, var(--panel-adaptive-sheen), transparent 40%);
+  }
+  .glass-card.glass-card-solid.panel-adaptive { background: var(--panel-adaptive-solid); }
+
+  .ink-panel.panel-adaptive {
+    background: var(--panel-adaptive-block);
+    border-color: var(--panel-adaptive-block-border);
+  }
+
+  /* Type. Mastheads first, then labels, then everything else, because the last
+     selector is the loosest and each of the two above it has to outrank it —
+     .panel-adaptive .micro (0,2,0) over .panel-adaptive p (0,1,1) is what keeps
+     an eyebrow written as <p class="micro"> off the body-copy value. */
+  .panel-adaptive .display,
+  .panel-adaptive .display-md,
+  .panel-adaptive .display-sm,
+  .panel-adaptive h1,
+  .panel-adaptive h2,
+  .panel-adaptive h3 { color: var(--panel-adaptive-fg-strong); }
+  .panel-adaptive .eyebrow,
+  .panel-adaptive .micro { color: var(--panel-adaptive-fg-faint); }
+  .panel-adaptive .lede,
+  .panel-adaptive p { color: var(--panel-adaptive-fg-muted); }
+
+  /* The glass panel lapping the hero photograph. Same modifier, but the ground
+     behind it is a picture rather than the page, so it takes the heavier of the
+     two glass values — stated as a local token rather than a second background
+     rule, so there is still exactly one place a .glass-card's ground is set. */
+  .feature-overlay-panel.panel-adaptive {
+    --panel-adaptive-glass: var(--panel-adaptive-glass-photo);
+    color: var(--panel-adaptive-fg);
+  }
+
+  /* -- .photo-stage-adaptive: a photo stage that follows the scheme ----------
+     .photo-stage with the ground, the scrim and the type let out to the scheme.
+     The picture stays; what changes is which way it is washed — --stage-scrim
+     is the pale gradient in light mode and --hero-scrim itself in dark, so the
+     dark stage is untouched.
+
+     It also carries its own panels: a .glass-card anywhere inside comes out
+     adaptive without the modifier, because a note pinned to this photograph has
+     no business being the opposite scheme from the section holding it.         */
+  .photo-stage-adaptive {
+    background: var(--stage-ground);
+    color: var(--panel-adaptive-fg);
+  }
+  .photo-stage-adaptive::before { background: var(--stage-scrim); }
+
+  .photo-stage-adaptive .display,
+  .photo-stage-adaptive .display-md,
+  .photo-stage-adaptive .display-sm,
+  .photo-stage-adaptive h1,
+  .photo-stage-adaptive h2,
+  .photo-stage-adaptive h3 { color: var(--panel-adaptive-fg-strong); }
+  .photo-stage-adaptive .eyebrow,
+  .photo-stage-adaptive .micro { color: var(--panel-adaptive-fg-faint); }
+  .photo-stage-adaptive .lede,
+  .photo-stage-adaptive p { color: var(--panel-adaptive-fg-muted); }
+
+  /* The bar down the side of a pull quote — the one piece of furniture in these
+     sections that was a hand-typed white alpha in the markup. */
+  .photo-stage-adaptive blockquote { border-left-color: var(--panel-adaptive-rule); }
+
+  /* Panels on the stage. Outranks .panel-field > .glass-card, which is the
+     same specificity and earlier in the file. */
+  .photo-stage-adaptive .glass-card {
+    background: var(--panel-adaptive-glass-photo);
+    border-color: var(--panel-adaptive-border);
+    color: var(--panel-adaptive-fg);
+  }
+  .photo-stage-adaptive .glass-card::before {
+    background: linear-gradient(155deg, var(--panel-adaptive-sheen), transparent 40%);
+  }
+
+  /* The tile grid standing on the picture. The tint inverts with the scheme —
+     a fifth of black under light type, a light wash under dark type — and the
+     small backdrop blur that keeps the grid part of the photograph's surface
+     rather than furniture on it stays exactly as .stat-grid-glass sets it.
+     --hairline is redeclared rather than overridden because .stat-grid draws
+     its rules from that token, so one line re-inks the whole grid. */
+  .photo-stage-adaptive .stat-grid { --hairline: var(--panel-adaptive-border); }
+  .photo-stage-adaptive .stat-grid-glass > * { background: var(--panel-adaptive-tile); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* animation-delay belongs in this list, and it is the one people leave out.
      Collapsing the duration alone leaves every delayed animation as a wait
@@ -5005,6 +5334,7 @@ html[data-width="18"]  { --reading-width: 18%; }
   .cine-eyebrow,
   .cine-title,
   .cine-letter,
+  .cine-logo,
   .cine-rule,
   .cine-tagline,
   .cine-actions {
@@ -5035,12 +5365,27 @@ html[data-width="18"]  { --reading-width: 18%; }
   .glass-card .text-flow,
   .hero-stage-photo .text-flow { color: var(--paper); }
 }
+
+/* And back out again for the two surfaces that follow the scheme. Same
+   specificity as the block above and stated after it, which is the whole
+   mechanism: --paper on an adaptive panel is paper on paper in light mode, so
+   the reduced-motion and no-background-clip readers would have lost the
+   headline exactly where the fallback exists to save it. The token resolves to
+   --paper in the dark scheme, so the rule above is what this becomes there. */
+@media (prefers-reduced-motion: reduce) {
+  .photo-stage-adaptive .text-flow,
+  .panel-adaptive .text-flow { color: var(--panel-adaptive-fg-strong); }
+}
 @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
   .matte-stage .text-flow,
   .photo-stage .text-flow,
   .glass-surface .text-flow,
   .glass-card .text-flow,
   .hero-stage-photo .text-flow { color: var(--paper); }
+}
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .photo-stage-adaptive .text-flow,
+  .panel-adaptive .text-flow { color: var(--panel-adaptive-fg-strong); }
 }
 
 /* Print: drop the furniture, keep the words. */

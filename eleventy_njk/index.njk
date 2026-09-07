@@ -50,6 +50,13 @@ title: false
   <div class="cine-card">
     <p class="cine-eyebrow">{{ settings.short_name }} — index</p>
 
+    {# The site mark, over the name — the two are one lockup, with the eyebrow
+       above as its label. svg/logo.svg as a CSS mask, so it is painted with the
+       title's own currentColor and needs no light and dark copies; see
+       .cine-logo in input.css. Decorative: the h1 below is the site name, and
+       this is the same name drawn. #}
+    <div class="cine-logo" aria-hidden="true"></div>
+
     <h1 class="cine-title" aria-label="{{ settings.name }}">
       {%- for word in settings.name.split(" ") -%}
         {%- set stride = loop.index0 * 7 -%}

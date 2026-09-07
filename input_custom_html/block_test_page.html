@@ -497,12 +497,15 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
       </a>
     </div>
 
-    <div class="feature-overlay-panel glass-card">
-      <!-- A touch brighter than the eyebrow in the block above: this one can land
-           over a bright part of the photograph, where 0.6 fell under 4.5:1. -->
-      <p class="eyebrow" style="color:rgba(244,244,242,0.7);">Featured dispatch — 01</p>
-      <h2 class="display-md" style="margin-top:1rem; color:var(--paper);">Text over<br>the picture</h2>
-      <p style="margin-top:1.5rem; color:rgba(244,244,242,0.82); max-width:44ch;">
+    <div class="feature-overlay-panel glass-card panel-adaptive">
+      <!-- .panel-adaptive: the panel and its type follow the colour scheme —
+           frosted paper with ink on it in light mode, the near-black glass it
+           has always been in the dark. It is the heavier of the two glass
+           values either way, because what is behind it is a photograph. No
+           colour is named here; see section L of css/input.css. -->
+      <p class="eyebrow">Featured dispatch — 01</p>
+      <h2 class="display-md" style="margin-top:1rem;">Text over<br>the picture</h2>
+      <p style="margin-top:1.5rem; max-width:44ch;">
         Use this when a run of one- and two-column text needs breaking up. The text
         sits on the photograph rather than beside it, and the panel keeps it legible
         whatever the picture underneath happens to be doing.
@@ -743,10 +746,21 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
 
 
 <!-- ===== COPY FROM HERE: Photo stage — full-bleed wash
-     .photo-stage is .matte-stage with a picture behind it and --hero-scrim
-     over that. It owns its own type colours, so nothing inside needs an inline
-     `color:` — paste any block in and it comes out light-on-dark. ===== -->
-<section class="photo-stage" id="wash" style="padding-block:clamp(4rem,14vh,8rem);">
+     .photo-stage is .matte-stage with a picture behind it and a scrim over
+     that. It owns its own type colours, so nothing inside needs an inline
+     `color:` — paste any block in and it comes out the right way round.
+
+     .photo-stage-adaptive is the modifier that hands the whole thing to the
+     colour scheme: the ground becomes --stage-ground and the scrim becomes
+     --stage-scrim, which is a pale wash under ink type in light mode and
+     --hero-scrim itself in the dark, so the dark stage is unchanged. The
+     picture stays; what changes is which way it is washed.
+
+     Drop the modifier and the section is fixed light-on-dark again, which is
+     what you want when the picture is the point and the type is a caption on
+     it. Keep it when the section is part of the page's reading, as these two
+     are. See section L of css/input.css. ===== -->
+<section class="photo-stage photo-stage-adaptive" id="wash" style="padding-block:clamp(4rem,14vh,8rem);">
   <div class="stage-media">
     <!-- Full-size file: this is a full-bleed band, the second largest surface
          on the page after the hero. -->
@@ -765,7 +779,9 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
     </h2>
 
     <div class="block-two-col" style="margin-top:clamp(2.5rem,7vh,4rem); align-items:start;">
-      <blockquote style="font-size:var(--step-1); line-height:1.5; border-left:var(--hairline-width) solid rgba(255,255,255,0.35); padding-left:1.5rem; max-width:44ch;">
+      <!-- The quote bar takes --panel-adaptive-rule from the section rather
+           than a hand-typed white alpha, so it inverts with everything else. -->
+      <blockquote style="font-size:var(--step-1); line-height:1.5; border-left:var(--hairline-width) solid; padding-left:1.5rem; max-width:44ch;">
         Fog does to a floodlit pitch exactly what a scrim does to a photograph:
         it takes out the middle distance and leaves a foreground and a
         suggestion. The difference is that one of the two is honest about being
@@ -773,25 +789,29 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
       </blockquote>
 
       <!-- .stat-grid-glass is the modifier for a tile grid standing on a
-           picture: each tile takes a fifth of black and blurs the photograph
-           behind it, so the mono labels are legible over the bright part of
-           the frame as well as the dark. It replaces the four inline
-           `background:transparent` styles these tiles used to carry. -->
-      <div class="stat-grid stat-grid-glass" style="grid-template-columns:repeat(auto-fit,minmax(min(15rem,100%),1fr)); --hairline:rgba(255,255,255,0.18);">
+           picture: each tile takes a tint and blurs the photograph behind it,
+           so the mono labels are legible over the bright part of the frame as
+           well as the dark. It replaces the four inline
+           `background:transparent` styles these tiles used to carry.
+
+           On an adaptive stage the tint inverts with the scheme and the grid's
+           --hairline comes from the section, so neither the tiles nor the
+           labels carry a colour here any more. -->
+      <div class="stat-grid stat-grid-glass" style="grid-template-columns:repeat(auto-fit,minmax(min(15rem,100%),1fr));">
         <div>
-          <p class="micro" style="color:rgba(244,244,242,0.6);">Frame</p>
+          <p class="micro">Frame</p>
           <p style="margin-top:0.5rem; font-size:var(--step--1);">A football ground in heavy fog, one figure under the lights.</p>
         </div>
         <div>
-          <p class="micro" style="color:rgba(244,244,242,0.6);">Ground</p>
-          <p style="margin-top:0.5rem; font-size:var(--step--1);">Fixed dark in both schemes — the scrim is <code>--hero-scrim</code>.</p>
+          <p class="micro">Ground</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">Follows the scheme — the scrim is <code>--stage-scrim</code>.</p>
         </div>
         <div>
-          <p class="micro" style="color:rgba(244,244,242,0.6);">Type</p>
+          <p class="micro">Type</p>
           <p style="margin-top:0.5rem; font-size:var(--step--1);">Set by the section, not by the markup inside it.</p>
         </div>
         <div>
-          <p class="micro" style="color:rgba(244,244,242,0.6);">Edges</p>
+          <p class="micro">Edges</p>
           <p style="margin-top:0.5rem; font-size:var(--step--1);">Hard, deliberately. Only the hero dissolves into the page.</p>
         </div>
       </div>
@@ -940,8 +960,13 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
 <!-- ===== COPY FROM HERE: Panel field — glass notes pinned across a photograph
      Three .glass-card panels staggered over a .photo-stage. The glass has a
      real picture behind it to blur here, which is the whole reason the panels
-     are on the photograph rather than beside it. ===== -->
-<section class="photo-stage" id="notes" style="padding-block:clamp(4rem,12vh,7rem);">
+     are on the photograph rather than beside it.
+
+     .photo-stage-adaptive again, and the panels need no modifier of their own:
+     an adaptive stage carries its .glass-card descendants with it, on the
+     grounds that a note pinned to this photograph has no business being the
+     opposite scheme from the section holding it. ===== -->
+<section class="photo-stage photo-stage-adaptive" id="notes" style="padding-block:clamp(4rem,12vh,7rem);">
   <div class="stage-media">
     <!-- Decorative ground again — the notes over it describe the view. -->
     <img src="/image/2025galdhoepiggen/2025jotunheimen_view_from_galdhopiggen1.jpg"
@@ -955,9 +980,9 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
     <div class="panel-field" style="margin-top:clamp(2.5rem,7vh,4rem);">
 
       <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
-        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 01 · 2469 m</p>
-        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">The distance goes flat</h3>
-        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+        <p class="micro">Note 01 · 2469 m</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1);">The distance goes flat</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1);">
           Above the last ridge every peak is the same colour. Depth stops coming
           from tone and starts coming from where things overlap — which is a
           layout problem the mountains solved first.
@@ -965,9 +990,9 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
       </article>
 
       <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
-        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 02 · Glacier</p>
-        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">Blue is a thickness</h3>
-        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+        <p class="micro">Note 02 · Glacier</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1);">Blue is a thickness</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1);">
           Glacier blue is not a pigment, it is how far the light had to travel
           through the ice before it came back out. The same is true of every
           frosted panel on this page.
@@ -975,9 +1000,9 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
       </article>
 
       <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
-        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 03 · Descent</p>
-        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">A photograph is not the walk</h3>
-        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+        <p class="micro">Note 03 · Descent</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1);">A photograph is not the walk</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1);">
           Eleven hours compress to one frame, and the frame keeps the view but
           loses the weather. The caption is where the rest of it has to go, so
           the caption is worth writing.

@@ -60,9 +60,16 @@ draft: false
      rules hold on to. Copy all three classes together or the phone layout has
      nothing to select.
 
-     Both dark pieces set their type colour inline for the same reason the
-     feature block does: .display resolves to --fg-strong, which is black in
-     light mode, and both of these are dark in both schemes.
+     Both solid pieces carry .panel-adaptive, so their ground and their type
+     follow the colour scheme: near-black with paper type in the dark, a paper
+     card and an ink-grey block with black type on the pale stage. Neither one
+     names a colour — see section L of input.css, and the note there on why
+     this is a modifier and not simply how .glass-card behaves.
+
+     One place it is deliberately switched back off: below 48rem the portrait
+     becomes the hero's ground and this panel is the only piece left standing
+     ON the photograph, so the phone-width block in section H pins the panel's
+     tokens to their dark column. A picture has no colour scheme.
 
      The entrance runs against source order, and that is the point. Source
      order here starts with a PORTRAIT, and a photograph that size arriving
@@ -122,14 +129,14 @@ draft: false
         </figure>
       </div>
 
-      <div class="collage-panel hero-copy glass-card glass-card-solid">
-        <p class="eyebrow" style="color:rgba(244,244,242,0.7);">Index — layered treatment</p>
+      <div class="collage-panel hero-copy glass-card glass-card-solid panel-adaptive">
+        <p class="eyebrow">Index — layered treatment</p>
 
-        <h1 class="display" style="color:var(--paper);">
+        <h1 class="display">
           A front page <br class="hero-break">that <span class="text-flow">overlaps</span>
         </h1>
 
-        <p class="lede" style="color:rgba(244,244,242,0.8);">
+        <p class="lede">
           The same material as the real index — pictures, notes, an archive —
           arranged so the sections step over one another instead of stacking.
         </p>
@@ -140,11 +147,11 @@ draft: false
         </div>
       </div>
 
-      <div class="collage-block ink-panel">
-        <p class="micro" style="color:rgba(244,244,242,0.6);">Sections</p>
+      <div class="collage-block ink-panel panel-adaptive">
+        <p class="micro">Sections</p>
         <div>
-          <p class="display" style="font-size:clamp(2.4rem,4vw,3.6rem); color:var(--paper);">06</p>
-          <p style="margin-top:0.6rem; font-size:var(--step--1); color:rgba(244,244,242,0.7);">
+          <p class="display" style="font-size:clamp(2.4rem,4vw,3.6rem);">06</p>
+          <p style="margin-top:0.6rem; font-size:var(--step--1);">
             Plate 001 — a concrete stairway, May 2022. Available light, hand
             held, and nothing done to it afterwards.
           </p>

@@ -330,6 +330,20 @@
   --stage-1: #ffffff;
   --stage-2: #f0f0ec;
   --stage-3: #dcdcd5;
+  --stage-scrim: var(--hero-scrim-pale);
+  --panel-adaptive-fg: var(--ink);
+  --panel-adaptive-fg-strong: #000000;
+  --panel-adaptive-fg-muted: rgba(13, 13, 16, 0.78);
+  --panel-adaptive-fg-faint: rgba(13, 13, 16, 0.66);
+  --panel-adaptive-rule: rgba(13, 13, 16, 0.30);
+  --panel-adaptive-solid: rgba(255, 255, 255, 0.94);
+  --panel-adaptive-block: rgba(232, 232, 227, 0.96);
+  --panel-adaptive-block-border: rgba(13, 13, 16, 0.10);
+  --panel-adaptive-glass: rgba(255, 255, 255, 0.42);
+  --panel-adaptive-glass-photo: rgba(250, 250, 248, 0.78);
+  --panel-adaptive-border: rgba(13, 13, 16, 0.12);
+  --panel-adaptive-sheen: rgba(255, 255, 255, 0.70);
+  --panel-adaptive-tile: rgba(255, 255, 255, 0.42);
   --selection-bg: var(--c-amber);
   --selection-fg: var(--ink);
   --focus-ring: var(--c-azure);
@@ -361,6 +375,20 @@
     --stage-1: #383a40;
     --stage-2: #1a1c22;
     --stage-3: #0d0d10;
+    --stage-scrim: var(--hero-scrim);
+    --panel-adaptive-fg: var(--paper);
+    --panel-adaptive-fg-strong: var(--paper);
+    --panel-adaptive-fg-muted: rgba(244, 244, 242, 0.82);
+    --panel-adaptive-fg-faint: rgba(244, 244, 242, 0.70);
+    --panel-adaptive-rule: rgba(255, 255, 255, 0.35);
+    --panel-adaptive-solid: rgba(16, 17, 21, 0.94);
+    --panel-adaptive-block: rgba(28, 29, 34, 0.96);
+    --panel-adaptive-block-border: rgba(255, 255, 255, 0.08);
+    --panel-adaptive-glass: rgba(255, 255, 255, 0.08);
+    --panel-adaptive-glass-photo: rgba(16, 17, 21, 0.74);
+    --panel-adaptive-border: rgba(255, 255, 255, 0.16);
+    --panel-adaptive-sheen: rgba(255, 255, 255, 0.14);
+    --panel-adaptive-tile: rgba(0, 0, 0, 0.20);
     --selection-bg: var(--c-amber);
     --selection-fg: var(--ink);
     --focus-ring: #6f9bff;
@@ -402,6 +430,11 @@
     rgba(9, 9, 12, 0.42) 42%,
     rgba(9, 9, 12, 0.58) 74%,
     rgba(9, 9, 12, 0.78) 100%);
+  --hero-scrim-pale: linear-gradient(180deg,
+    rgba(250, 250, 248, 0.88) 0%,
+    rgba(250, 250, 248, 0.60) 42%,
+    rgba(250, 250, 248, 0.74) 74%,
+    rgba(250, 250, 248, 0.88) 100%);
   --radius: 4px;
   --radius-pill: 999px;
   --hairline-width: 1px;
@@ -422,8 +455,9 @@
   --nav-height: 3.6rem;
   --logo-nav-size: 1.00em;
   --logo-footer-size: 1.04em;
+  --logo-hero-size: clamp(1.9rem, 6.6vw, 8.2rem);
   --logo-aspect: 1;
-  --logo-nudge-x: 0%;
+  --logo-nudge-x: -4%;
   --logo-nudge-y: -14%;
   --reading-width: 100%;
 }
@@ -1154,6 +1188,12 @@
   .cine-stage {
     --cine-ground: 244, 244, 242;
     --cine-ink: 13, 13, 16;
+    --cine-title-size: clamp(2.4rem, 9vw, 7.5rem);
+    --cine-eyebrow-size: 1.2rem;
+    --cine-lockup-gap: 1.5rem;
+    --cine-logo-lift: calc(var(--logo-hero-size) * 0.14);
+    --cine-eyebrow-tail: calc(var(--cine-eyebrow-size) * 0.714);
+    --cine-title-head: calc(var(--cine-title-size) * 0.159);
     --cine-fade: 30vh;
     --hero-fade-clear: max(clamp(1.5rem, 5vh, 3rem), calc(var(--cine-fade) * 0.55));
     --hero-fg: rgb(var(--cine-ink));
@@ -1260,12 +1300,15 @@
   }
   .cine-eyebrow {
     margin: 0 0 1.5rem;
-    font-size: 1.2rem;
+    font-size: var(--cine-eyebrow-size);
     letter-spacing: 0.42em;
     text-transform: uppercase;
     color: rgba(var(--cine-ink), 0.86);
     text-shadow: 0 0 4px rgba(var(--cine-ground), 0.9), 0 1px 18px rgba(var(--cine-ground), 0.92);
     animation: cine-rise 1.1s ease-out 0.4s both;
+  }
+  .cine-eyebrow:has(+ .cine-logo) {
+    margin-bottom: calc(var(--cine-lockup-gap) - var(--cine-eyebrow-tail) + var(--cine-logo-lift));
   }
   .cine-title {
     margin: 0;
@@ -1273,7 +1316,7 @@
     flex-wrap: wrap;
     justify-content: center;
     column-gap: 0.5em;
-    font-size: clamp(2.4rem, 9vw, 7.5rem);
+    font-size: var(--cine-title-size);
     font-weight: 600;
     line-height: 1.04;
     text-transform: uppercase;
@@ -1312,10 +1355,34 @@
       text-shadow: 0 0 0 rgba(255, 240, 205, 0);
     }
   }
+  .cine-logo {
+    display: block;
+    margin-inline: auto;
+    margin-bottom: calc(var(--cine-lockup-gap) - var(--cine-logo-lift) - var(--cine-title-head));
+    height: var(--logo-hero-size);
+    width: calc(var(--logo-hero-size) * var(--logo-aspect));
+    background-color: currentColor;
+    -webkit-mask: url("/svg/logo.svg") center / contain no-repeat;
+    mask: url("/svg/logo.svg") center / contain no-repeat;
+    translate: var(--logo-nudge-x) var(--logo-nudge-y);
+    animation: cine-mark-in 1.4s cubic-bezier(0.2, 0.65, 0.25, 1) 0.7s both;
+  }
+  @keyframes cine-mark-in {
+    from {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translateY(0.4rem) scale(1.09);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: none;
+    }
+  }
   .cine-rule {
     width: clamp(4rem, 14vw, 9rem);
     height: 1px;
-    margin: 2.25rem auto;
+    margin: 2.6rem auto;
     background: rgba(var(--cine-ink), 0.4);
     animation: cine-rule-in 1.4s cubic-bezier(0.7, 0, 0.2, 1) 1.7s both;
   }
@@ -1400,6 +1467,9 @@
     main > .cine-stage:first-child, main > style:first-child + .cine-stage {
       padding-top: calc(clamp(1.25rem, 4vh, 2.5rem) + var(--nav-height));
     }
+    .cine-stage {
+      --cine-lockup-gap: clamp(0.5rem, 1.6vh, 1rem);
+    }
     .cine-eyebrow {
       margin-bottom: clamp(0.5rem, 1.6vh, 1rem);
     }
@@ -1421,11 +1491,12 @@
     }
   }
   @media (max-height: 30rem) {
-    .cine-title {
-      font-size: clamp(1.6rem, min(9vw, 7vh), 7.5rem);
+    .cine-stage {
+      --cine-title-size: clamp(1.6rem, min(9vw, 7vh), 7.5rem);
+      --cine-eyebrow-size: 0.64rem;
+      --logo-hero-size: clamp(1.6rem, min(6.6vw, 5.1vh), 8.2rem);
     }
     .cine-eyebrow {
-      font-size: 0.64rem;
       letter-spacing: 0.3em;
     }
   }
@@ -2643,6 +2714,14 @@
       margin-bottom: var(--hero-cue-lane, 0px);
     }
     .collage-panel {
+      --panel-adaptive-solid: rgba(16, 17, 21, 0.55);
+      --panel-adaptive-glass: rgba(16, 17, 21, 0.55);
+      --panel-adaptive-border: rgba(255, 255, 255, 0.16);
+      --panel-adaptive-sheen: rgba(255, 255, 255, 0.14);
+      --panel-adaptive-fg: var(--paper);
+      --panel-adaptive-fg-strong: var(--paper);
+      --panel-adaptive-fg-muted: rgba(244, 244, 242, 0.82);
+      --panel-adaptive-fg-faint: rgba(244, 244, 242, 0.70);
       background: rgba(16, 17, 21, 0.55);
       padding: clamp(0.9rem, min(4vw, 2.6vh), 1.75rem);
       --hero-copy-gap-1: clamp(0.7rem,  1.6vh, 1.25rem);
@@ -3491,6 +3570,69 @@ html[data-width="18"] {
     white-space: nowrap;
     border: 0;
   }
+  .panel-adaptive {
+    color: var(--panel-adaptive-fg);
+  }
+  .glass-card.panel-adaptive {
+    background: var(--panel-adaptive-glass);
+    border-color: var(--panel-adaptive-border);
+  }
+  .glass-card.panel-adaptive::before {
+    background: linear-gradient(155deg, var(--panel-adaptive-sheen), transparent 40%);
+  }
+  .glass-card.glass-card-solid.panel-adaptive {
+    background: var(--panel-adaptive-solid);
+  }
+  .ink-panel.panel-adaptive {
+    background: var(--panel-adaptive-block);
+    border-color: var(--panel-adaptive-block-border);
+  }
+  .panel-adaptive .display, .panel-adaptive .display-md, .panel-adaptive .display-sm, .panel-adaptive h1, .panel-adaptive h2, .panel-adaptive h3 {
+    color: var(--panel-adaptive-fg-strong);
+  }
+  .panel-adaptive .eyebrow, .panel-adaptive .micro {
+    color: var(--panel-adaptive-fg-faint);
+  }
+  .panel-adaptive .lede, .panel-adaptive p {
+    color: var(--panel-adaptive-fg-muted);
+  }
+  .feature-overlay-panel.panel-adaptive {
+    --panel-adaptive-glass: var(--panel-adaptive-glass-photo);
+    color: var(--panel-adaptive-fg);
+  }
+  .photo-stage-adaptive {
+    background: var(--stage-ground);
+    color: var(--panel-adaptive-fg);
+  }
+  .photo-stage-adaptive::before {
+    background: var(--stage-scrim);
+  }
+  .photo-stage-adaptive .display, .photo-stage-adaptive .display-md, .photo-stage-adaptive .display-sm, .photo-stage-adaptive h1, .photo-stage-adaptive h2, .photo-stage-adaptive h3 {
+    color: var(--panel-adaptive-fg-strong);
+  }
+  .photo-stage-adaptive .eyebrow, .photo-stage-adaptive .micro {
+    color: var(--panel-adaptive-fg-faint);
+  }
+  .photo-stage-adaptive .lede, .photo-stage-adaptive p {
+    color: var(--panel-adaptive-fg-muted);
+  }
+  .photo-stage-adaptive blockquote {
+    border-left-color: var(--panel-adaptive-rule);
+  }
+  .photo-stage-adaptive .glass-card {
+    background: var(--panel-adaptive-glass-photo);
+    border-color: var(--panel-adaptive-border);
+    color: var(--panel-adaptive-fg);
+  }
+  .photo-stage-adaptive .glass-card::before {
+    background: linear-gradient(155deg, var(--panel-adaptive-sheen), transparent 40%);
+  }
+  .photo-stage-adaptive .stat-grid {
+    --hairline: var(--panel-adaptive-border);
+  }
+  .photo-stage-adaptive .stat-grid-glass > * {
+    background: var(--panel-adaptive-tile);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -3507,16 +3649,22 @@ html[data-width="18"] {
   .art-plate img {
     transform: none !important;
   }
-  .hero-in, .hero-copy > *, .hero-copy > .hero-actions > *, .collage > *, .post-header > *, .post-body .prose, .post-body .prose > *, .hero-stage .editorial-grid, .hero-stage .hero-media, .hero-stage .hero-media img, .hero-stage .hero-media video, .hero-scroll-cue, .cine-media img, .cine-grain, .cine-eyebrow, .cine-title, .cine-letter, .cine-rule, .cine-tagline, .cine-actions {
+  .hero-in, .hero-copy > *, .hero-copy > .hero-actions > *, .collage > *, .post-header > *, .post-body .prose, .post-body .prose > *, .hero-stage .editorial-grid, .hero-stage .hero-media, .hero-stage .hero-media img, .hero-stage .hero-media video, .hero-scroll-cue, .cine-media img, .cine-grain, .cine-eyebrow, .cine-title, .cine-letter, .cine-logo, .cine-rule, .cine-tagline, .cine-actions {
     animation: none !important;
   }
   .matte-stage .text-flow, .photo-stage .text-flow, .glass-surface .text-flow, .glass-card .text-flow, .hero-stage-photo .text-flow {
     color: var(--paper);
   }
+  .photo-stage-adaptive .text-flow, .panel-adaptive .text-flow {
+    color: var(--panel-adaptive-fg-strong);
+  }
 }
 @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
   .matte-stage .text-flow, .photo-stage .text-flow, .glass-surface .text-flow, .glass-card .text-flow, .hero-stage-photo .text-flow {
     color: var(--paper);
+  }
+  .photo-stage-adaptive .text-flow, .panel-adaptive .text-flow {
+    color: var(--panel-adaptive-fg-strong);
   }
 }
 @media print {
