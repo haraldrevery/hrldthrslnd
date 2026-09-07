@@ -1,0 +1,62 @@
+---
+layout: base.njk
+permalink: /contact.html
+title: Contact
+description: How to get in touch.
+---
+{# PLACEHOLDER COPY. Note there is deliberately no form: a form needs a server
+   or a third-party endpoint, and this site makes no third-party requests. #}
+
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 2rem;">
+  <p class="eyebrow">{{ settings.name }}</p>
+  <h1 class="display" style="margin-top:1rem;">Get in<br><span class="text-flow">touch</span></h1>
+  <p class="lede" style="margin-top:2rem;">
+    Corrections, questions and licensing enquiries are all welcome. Email is the
+    only channel that reaches me reliably.
+  </p>
+  <hr class="rule-grad" style="margin-top:3rem;">
+</section>
+
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,5rem);">
+  <div class="block-two-col">
+
+    <div>
+      <div class="index-row" style="border-top:0;">
+        <p class="micro" style="color:var(--fg-faint);">Email</p>
+        <p style="font-size:var(--step-1);">
+          <a class="link-underline" href="mailto:hello@example.com">hello@example.com</a>
+        </p>
+        <p class="micro" style="color:var(--fg-muted);">Primary</p>
+      </div>
+
+      <div class="index-row">
+        <p class="micro" style="color:var(--fg-faint);">Licensing</p>
+        <p style="font-size:var(--step-1);">
+          <a class="link-underline" href="mailto:licensing@example.com">licensing@example.com</a>
+        </p>
+        <p class="micro" style="color:var(--fg-muted);">Images &amp; type</p>
+      </div>
+
+      <div class="index-row">
+        <p class="micro" style="color:var(--fg-faint);">Elsewhere</p>
+        <p style="font-size:var(--step-1);">
+          <a class="link-underline" href="/feed.xml">RSS feed</a>
+        </p>
+        <p class="micro" style="color:var(--fg-muted);">No account needed</p>
+      </div>
+    </div>
+
+    <aside class="download-block">
+      <p class="eyebrow">A note on forms</p>
+      <p style="color:var(--fg-muted);">
+        There is no contact form on this page. A form needs somewhere to post to
+        — a server, or somebody else's endpoint — and this site is static files
+        with no third-party requests. An email link keeps that promise intact.
+      </p>
+      <p style="margin-top:0.5rem;">
+        <a class="btn" href="mailto:hello@example.com">Write an email</a>
+      </p>
+    </aside>
+
+  </div>
+</section>

@@ -1,0 +1,80 @@
+---
+title: Hero variant A — full-viewport matte stage
+date: 2026-09-03
+image: /image/2016mountains_and_clouds.jpg
+tags: [test, reference]
+description: The first of two hero treatments — a full-viewport dark stage with oversized type.
+draft: false
+---
+
+<!--
+  HERO VARIANT A — full-viewport stage. This is what index.html uses.
+
+  .hero-stage is one full screenful tall. Placed first on a page it starts at
+  the very top of the document and the nav floats over it, so there is no edge
+  at the top for the translucent bar to cross. At the bottom the ground
+  dissolves into the page rather than stopping at an edge.
+
+  It follows the colour scheme: a pale stage in light mode, the old matte in
+  dark. Only variant B stays light-on-dark, because it has a photograph to
+  stay legible against.
+
+  Everything is in the class: height, the fade, the padding that keeps the copy
+  clear of the fade, and the type colours. There is nothing to set inline.
+
+  That now includes the entrance. The four blocks of the copy column arrive one
+  beat apart as the page paints, and the two buttons continue the count — all of
+  it from .hero-copy's own :nth-child rules in input.css ("Hero entrance"), so
+  the stagger is in the markup below without a class or a delay written on it.
+  The grid behind the type fades up over twice as long, so it is still arriving
+  when the first line lands on it. No script, and it collapses to the finished
+  frame under prefers-reduced-motion.
+-->
+
+<!-- ===== COPY FROM HERE: Hero A — full-viewport stage ===== -->
+<section class="hero-stage">
+  <div class="editorial-grid" aria-hidden="true"></div>
+
+  <div class="shell hero-copy">
+    <p class="eyebrow">Variant A</p>
+
+    <h1 class="display">
+      Full <br class="hero-break">bleed <br class="hero-break"><span class="text-flow">stage</span>
+    </h1>
+
+    <p class="lede">
+      Type carries the page. The editorial grid behind it is a decorative
+      overlay masked to fade at the top and bottom, so it never fights the text.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn" href="/block_test_page.html">All blocks</a>
+      <a class="btn btn-ghost" href="/block_test_page_b.html">See variant B</a>
+    </div>
+  </div>
+  <!-- Lower-right scroll cue. Fades in a beat after load and drops the page
+       past the hero; the travel is the site's own smooth scrolling, so there
+       is no script behind it. The sentinel below is its landing point and
+       belongs to this block — keep the two together. -->
+  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>
+</section>
+<div class="hero-end" id="hero-end"></div>
+<!-- ===== COPY TO HERE ===== -->
+
+<section class="shell" style="padding-block:clamp(3rem,8vh,5rem);">
+  <div class="prose">
+    <h2>When to use this one</h2>
+    <p>
+      Variant A is the default, and what <code>index.html</code> leads with. It
+      works with no imagery at all, which makes it the safe choice for an essay,
+      an index page, or anything where the photographs come later in the page
+      rather than at the top. It is the one hero that answers to light and dark
+      mode; switch your system setting with this page open and the stage,
+      the type and the grid all move with it.
+    </p>
+    <p>
+      Compare it with <a class="link-underline" href="/block_test_page_b.html">variant B</a>,
+      which leads with a photograph instead.
+    </p>
+  </div>
+</section>

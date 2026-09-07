@@ -1,0 +1,29 @@
+---
+layout: base.njk
+title: Journal
+description: Every entry, newest first.
+---
+{# Pagination size comes from site_settings.json via blog.11tydata.js —
+   Eleventy resolves pagination before computed data, so it cannot be set in
+   this front matter block. #}
+{% import "card.njk" as cards %}
+
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
+  <h1 class="display">Journal</h1>
+
+  {% include "tag_filter.njk" %}
+
+  <hr class="rule-grad" style="margin-top:2.5rem;">
+</section>
+
+<section class="shell" style="padding-bottom:2rem;">
+  {% if entries.length %}
+  <div class="card-grid">
+    {% for post in entries %}{{ cards.card(post, settings) }}{% endfor %}
+  </div>
+  {% else %}
+  <p class="lede" style="padding-block:3rem;">Nothing published yet.</p>
+  {% endif %}
+</section>
+
+{% include "pagination.njk" %}

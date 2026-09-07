@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <!-- Site logo. Used as a CSS mask, never as an image: .site-logo in
+       css/input.css paints it with currentColor, the same way .icon paints the
+       files beside it in this folder. Only the SHAPE of this file is read, so
+       any fill, stroke colour or style block here is ignored by the browser.
+
+       To swap the mark: replace the paths. Keep viewBox and width/height in
+       step, and if the new artwork is not square, set the logo aspect token in
+       section 6 of css/theme.css to its width divided by its height. -->
+
+  <path d="M477.9,730c-31.9-13.7-62.4-30.2-91-49.1c-33.4-22-64.5-47.4-92.6-75.7c-32.8-32.9-61.8-69.7-86.1-109.7
+	C160,416.5,130.1,325,124.3,227C171.2,144.6,246,80,335.8,46c-34.2,56.8-57.7,120.8-67.8,189.2c-3.7,24.8-5.6,50.1-5.6,75.8
+	c0,109.4,34.1,210.9,92.3,294.3c10,14.4,20.8,28.2,32.2,41.4C413.8,678,444.4,706,477.9,730z"/>
+  <path d="M546.2,737.8c-151.9-82.1-255.1-242.9-255.1-427.7c0-43.2,5.6-85.1,16.2-124.9C366.7,121.4,447.5,78,538.4,66.4
+	C454.6,151.9,403,269,403,398.2c0,53.9,9,105.7,25.5,153.9c6.3,18.3,13.6,36,22,53.2C474.6,654.9,507.1,699.7,546.2,737.8z"/>
+  <path d="M386.9,717.3v317.8H253.3V607.2C292.4,649.9,337.3,687,386.9,717.3z"/>
+  <path d="M956.1,98.2v936.8H839.9V605.3H485c-19.2-36-33.5-75.1-42.1-116.2h397V98.2H956.1z"/>
+</svg>

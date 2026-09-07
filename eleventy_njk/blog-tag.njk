@@ -1,0 +1,39 @@
+---
+layout: base.njk
+pagination:
+  data: collections.tagList
+  size: 1
+  alias: tagEntry
+  # Every subject page is a real, crawlable URL. Without this Eleventy adds only
+  # the first page of a paginated template to its collections, so the sitemap
+  # listed one subject and silently dropped the rest.
+  addAllPagesToCollections: true
+eleventyComputed:
+  title: "{{ tagEntry.tag }}"
+  description: "Entries filed under {{ tagEntry.tag }}."
+  permalink: "/blog_tag_{{ tagEntry.slug }}.html"
+---
+{% import "card.njk" as cards %}
+
+{# Tag filtering is done at build time, one page per tag. That keeps the filter
+   working with scripting disabled and gives every subject a real URL. #}
+{% set tagged = [] %}
+{% for post in collections.posts %}
+  {% if tagEntry.tag in post.data.tags %}{% set tagged = (tagged.push(post), tagged) %}{% endif %}
+{% endfor %}
+
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
+  <p class="eyebrow"><a class="link-underline" href="/blog.html">Journal</a> — subject</p>
+  <h1 class="display" style="margin-top:1rem;">{{ tagEntry.tag }}</h1>
+
+  {% set currentTag = tagEntry.slug %}
+  {% include "tag_filter.njk" %}
+
+  <hr class="rule-grad" style="margin-top:2.5rem;">
+</section>
+
+<section class="shell" style="padding-bottom:4rem;">
+  <div class="card-grid">
+    {% for post in tagged %}{{ cards.card(post, settings) }}{% endfor %}
+  </div>
+</section>

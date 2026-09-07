@@ -1,0 +1,38 @@
+{# Search widget.
+
+   Progressive enhancement, in the strict sense: this markup is inert and
+   invisible until search_bar.js finds it and adds `js-search` to <html>. With
+   scripting disabled it is display:none and never focusable, because the input
+   is also disabled until the script enables it.
+
+   A macro taking an `instance` name rather than a plain include, because the
+   nav renders this twice — once for the desktop bar, once for the mobile
+   drawer. With fixed ids both copies claimed id="site-search", which is
+   invalid HTML and left the drawer's field permanently disabled: the script
+   looked the element up by id and only ever found the first one.
+
+   `data-search` is the hook the script binds to; the ids exist only for the
+   ARIA wiring, which genuinely needs unique targets. #}
+{% macro field(instance, settings) %}
+<div class="search" role="search" data-search>
+  <svg class="search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+    <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+    <path d="M15.5 15.5 L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <input
+    class="search-input"
+    type="search"
+    id="site-search-{{ instance }}"
+    data-search-input
+    placeholder="Search"
+    autocomplete="off"
+    disabled
+    role="combobox"
+    aria-expanded="false"
+    aria-controls="search-results-{{ instance }}"
+    aria-autocomplete="list"
+    aria-label="Search {{ settings.name }}">
+  <div class="search-results" id="search-results-{{ instance }}" data-search-results
+       role="listbox" aria-label="Search results" hidden></div>
+</div>
+{% endmacro %}

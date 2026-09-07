@@ -1,0 +1,16 @@
+{
+  "$comment": "Page builder save file. Not published — the generator skips .json when copying a post folder's assets. This is the shape the app will read and write.",
+  "format": 1,
+  "slug": "post_i",
+  "meta": {
+    "title": "A page folder",
+    "date": "2026-09-01",
+    "tags": ["reference", "test"],
+    "description": "A post folder: one HTML page plus its own media, kept together."
+  },
+  "blocks": [
+    { "type": "hero", "variant": "split", "image": "street_scene.jpg" },
+    { "type": "text", "markdown": "Body copy for the page." },
+    { "type": "gallery", "layout": "justified", "images": ["street_scene.jpg", "statue.jpg"] }
+  ]
+}

@@ -1,0 +1,47 @@
+{# Blog card macro.
+
+   The whole card is clickable via .card-link::after, but only the title is a
+   real anchor — so the link's accessible name is the post title and the tab
+   order stays sane. Tag chips sit above the overlay (z-index) and remain
+   independently clickable. #}
+{% macro card(post, settings) %}
+<article class="card">
+  {#- An empty src is not a blank image: the browser re-requests the current
+      page and paints the HTML as one. With no thumbnail the plate stays empty. -#}
+  {%- set thumb = post.data.thumbnail or settings.default_image -%}
+  <div class="card-media art-plate fill">
+    {%- if thumb %}
+    <img src="{{ thumb }}" alt=""{{ thumb | sizeAttrs | safe }} loading="lazy" decoding="async">
+    {%- endif %}
+  </div>
+
+  <h3 class="card-title">
+    <a class="card-link" href="{{ post.url }}">{{ post.data.title }}</a>
+  </h3>
+
+  {% if post.data.description %}
+  <p class="card-excerpt">{{ post.data.description }}</p>
+  {% endif %}
+
+  <div class="card-meta">
+    <time class="micro" datetime="{{ post.data.date | isoDate }}">{{ post.data.date | isoDate }}</time>
+    {% for tag in post.data.tags | limit(3) %}
+    <a class="tag-chip" href="/blog_tag_{{ tag | tagSlug }}.html">{{ tag }}</a>
+    {% endfor %}
+  </div>
+</article>
+{% endmacro %}
+
+{# Compact index row, for the "recent" list on the front page. #}
+{% macro row(post) %}
+<article class="index-row">
+  <time class="micro" datetime="{{ post.data.date | isoDate }}"
+        style="color:var(--fg-faint);">{{ post.data.date | isoDate }}</time>
+  <h3 style="font-size:var(--step-1);">
+    <a class="card-link link-underline" href="{{ post.url }}">{{ post.data.title }}</a>
+  </h3>
+  <p class="micro" style="color:var(--fg-muted);">
+    {% for tag in post.data.tags | limit(2) %}{{ tag }}{% if not loop.last %} · {% endif %}{% endfor %}
+  </p>
+</article>
+{% endmacro %}

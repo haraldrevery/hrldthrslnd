@@ -1,0 +1,299 @@
+---
+title: Hero variant E — cinematic title card
+date: 2026-09-06
+image: /image/2015-2023/2020mist.jpg
+tags: [test, reference]
+description: The fourth hero treatment — a film title card. Grain, a slow zoom, and a title that develops one letter at a time.
+draft: false
+---
+
+<!--
+  HERO VARIANT E — cinematic title card.
+
+  This block used to carry its own <style>. It does not any more: .cine-stage
+  is a site component in main.css now, next to .hero-stage, because index.njk
+  opens with the same card and two copies of a block this size drift apart the
+  first time one of them is tuned. Copying the markup below is all it takes.
+
+  The trick to the title is two moving parts:
+
+    1. .cine-letter is the fade-in class. Every letter starts invisible,
+       blurred and a little too low, then develops into focus over 1.3s.
+
+    2. Each letter carries its own delay in a custom property:
+         <span class="cine-letter" style="--letter-delay:0.61s">H</span>
+       The values below were drawn at random between 0 and 1.4 seconds and
+       frozen into the markup, so the title develops in a scattered, hand-
+       developed order with no script on the page at all.
+
+  Like variant B this stage is always dark, because a photograph sits behind
+  the type. The mist picture zooms almost imperceptibly for the first half
+  minute (the Ken Burns move), and a grain overlay drifts over the whole frame
+  like projector dust.
+
+  Two things worth knowing about the frame:
+
+    There is no flash or stutter layer over it. There used to be one, and it
+    flickered; main.css records what was wrong with it, because a title card is
+    exactly the block someone reaches for one with. The frame is quiet now — the
+    picture, the scrim, the grain, and the type developing over them.
+
+    The scroll cue is .hero-scroll-cue, the same component every other hero
+    uses — lower right, on the frame's bottom line. All it needs is the three
+    --hero-* tokens .cine-stage declares, since that component is written
+    against .hero-stage and reads its colours and its inset from it.
+
+  The bar gets out of the way. This stage is pulled up under the nav so it owns
+  the full viewport, which is the precondition nav_reveal.js looks for; the bar
+  is then absent while the title card has the screen and slides in about half a
+  viewport down. Nothing is wired up per page — the script names .cine-stage
+  alongside .hero-stage and finds it on its own.
+
+  The whole block honours prefers-reduced-motion: every animation is switched
+  off and the finished frame is shown at once. A small or short screen gets a
+  cheaper path — see the component in main.css.
+-->
+
+<!-- ===== COPY FROM HERE: Hero E — cinematic title card ===== -->
+<!-- --cine-image-opacity set inline because this photograph is already dark.
+     The component's defaults are tuned for the front page's mountains-and-cloud,
+     which needs knocking back a long way before small type will sit on it; this
+     mist needs almost none. It is the knob for the frame's weight — reach for it
+     rather than the scrim.
+
+     One thing to know about setting it HERE rather than in the stylesheet: an
+     inline style cannot be scheme-conditional, so this one value is used in both
+     light and dark, where the component's own defaults differ. That is fine for
+     this picture — a warm mid-tone fog reads as a sepia print on paper and as
+     mist in the dark at the same exposure — but a photograph that only works at
+     one weight per scheme wants a rule, not an attribute. -->
+<section class="cine-stage" style="--cine-image-opacity:0.8">
+  <div class="cine-media" aria-hidden="true">
+    <img src="/image/2015-2023/2020mist.jpg" width="4705" height="1460" alt=""
+         loading="eager" decoding="async">
+    <div class="cine-scrim"></div>
+  </div>
+  <div class="cine-grain" aria-hidden="true"></div>
+
+  <div class="cine-card">
+    <p class="cine-eyebrow">A film in still photographs</p>
+
+    <!-- The full text lives on the h1 for screen readers; the letters below
+         are decoration. --letter-delay is a random draw between 0 and 1.4s. -->
+    <h1 class="cine-title" aria-label="The Long Exposure">
+      <span aria-hidden="true"><span class="cine-letter" style="--letter-delay:0.32s">T</span><span class="cine-letter" style="--letter-delay:1.05s">H</span><span class="cine-letter" style="--letter-delay:0.61s">E</span></span>
+      <span aria-hidden="true"><span class="cine-letter" style="--letter-delay:0.88s">L</span><span class="cine-letter" style="--letter-delay:0.14s">O</span><span class="cine-letter" style="--letter-delay:1.22s">N</span><span class="cine-letter" style="--letter-delay:0.47s">G</span></span>
+      <span aria-hidden="true"><span class="cine-letter" style="--letter-delay:0.73s">E</span><span class="cine-letter" style="--letter-delay:1.36s">X</span><span class="cine-letter" style="--letter-delay:0.09s">P</span><span class="cine-letter" style="--letter-delay:0.96s">O</span><span class="cine-letter" style="--letter-delay:0.52s">S</span><span class="cine-letter" style="--letter-delay:1.11s">U</span><span class="cine-letter" style="--letter-delay:0.28s">R</span><span class="cine-letter" style="--letter-delay:0.67s">E</span></span>
+    </h1>
+
+    <div class="cine-rule" aria-hidden="true"></div>
+
+    <p class="cine-tagline">
+      Fifteen frames, one long wait. Fog comes in off the water, the shutter
+      stays open, and the picture develops itself — one letter at a time.
+    </p>
+
+    <div class="cine-actions">
+      <a class="cine-btn" href="/block_test_page.html">All blocks</a>
+      <a class="cine-btn cine-btn--ghost" href="/block_test_page_a.html">Variant A</a>
+      <a class="cine-btn cine-btn--ghost" href="/block_test_page_b.html">Variant B</a>
+      <a class="cine-btn cine-btn--ghost" href="/block_test_page_c.html">Variant C</a>
+      <a class="cine-btn cine-btn--ghost" href="/block_test_page_d.html">Variant D</a>
+    </div>
+  </div>
+
+  <!-- The site's own scroll cue, copied from variant A unchanged. It works
+       over a stage that is not a .hero-stage because .cine-stage declares the
+       three --hero-* tokens it reads. The sentinel below is its landing point
+       and belongs to this block — keep the two together. -->
+  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>
+</section>
+<div class="hero-end" id="hero-end"></div>
+<!-- ===== COPY TO HERE ===== -->
+
+<section class="shell" style="padding-block:clamp(3rem,8vh,5rem);">
+  <div class="prose">
+    <h2>When to use this one</h2>
+    <p>
+      Variant E is the loud one: a film title card. The photograph behind the
+      type zooms almost imperceptibly for the first half minute, a grain overlay
+      drifts over the frame like projector dust, and the
+      title develops out of blur one letter at a time. Use it where you want a
+      first impression rather than an introduction — a one-off feature page, a
+      yearly retrospective, an announcement that deserves an overture.
+    </p>
+    <h2>How the letter fade works</h2>
+    <p>
+      Two pieces do all the work, and neither needs JavaScript. First, the CSS
+      class <code>.cine-letter</code>: every letter starts invisible, blurred
+      by 18px and nudged down, then animates into focus over 1.3 seconds, with
+      a brief warm glow as it passes through half-focus — the look of a print
+      coming up in the developer tray. Second, the delay: each letter carries
+      its own <code>--letter-delay</code> custom property inline, and the
+      animation reads it with <code>animation-delay: var(--letter-delay, 0s)</code>.
+    </p>
+    <p>
+      The values here were drawn at random between 0 and 1.4 seconds and frozen
+      into the markup, which keeps the page fully static — the scatter is the
+      same on every visit. If you would rather have a different scatter per
+      load, delete the inline delays and let a few lines of script write them:
+    </p>
+    <pre><code>document.querySelectorAll('.cine-letter').forEach((letter) =&gt; {
+  letter.style.setProperty('--letter-delay', (Math.random() * 1.4).toFixed(2) + 's');
+});</code></pre>
+    <p>
+      Everything else is set dressing: the Ken Burns zoom on the backdrop, the
+      tracking on the title settling from wide to final as the letters land,
+      and the tagline, rule and buttons arriving on fixed beats after the last
+      letter. The scroll cue is the last thing in, at 3.2 seconds, after the
+      buttons have landed.
+    </p>
+    <h2>The flash layer that is not here</h2>
+    <p>
+      A title card is exactly the block someone reaches for a projector stutter
+      with, so it is worth saying why this one has none. It used to:
+      <code>background: #fff</code> under
+      <code>mix-blend-mode: overlay</code>, stepped through three stutters with
+      <code>steps(1, end)</code> as the reel starts. Measured against the same
+      frame with the grain switched off, the mean luminance of the stage jumped
+      +3.2, +2.3 and +1.2 levels at 0.60s, 1.25s and 1.38s, each for about 52
+      milliseconds, across 96% of the pixels on screen.
+    </p>
+    <p>
+      Three separate things made that read as a fault rather than as light.
+      First, <code>steps(1, end)</code> gave every transition a binary on/off
+      edge — a ramp is read as a change in light, a step is read as an event.
+      Second, a <em>white</em> source under <code>overlay</code> clips: overlay
+      is hard-light with the layers swapped, so for any backdrop above mid-grey
+      the result is <code>1 − 2(1−b)(1−s)</code>, which with <code>s = 1</code>
+      is exactly 1.0 — pure white, whatever the backdrop was. The bright centre
+      of a photograph is blown out completely, and that is precisely where the
+      title sits. Third, it covered the whole frame, and a global luminance
+      step is far more visible than a local one of the same size.
+    </p>
+    <p>
+      A smooth warm swell was tried in its place and did not earn the layer it
+      cost. The frame is quiet now — the picture, the scrim, the grain, and the
+      type developing over them — and the picture itself sits back off the
+      stage's near-black through <code>--cine-image-opacity</code> rather than
+      being pushed down by more scrim. The two are not the same move: scrim is
+      a veil laid <em>on</em> the picture, which lifts its blacks towards the
+      veil's colour and flattens it, while opacity mixes the picture
+      <em>into</em> the ground, which keeps the blacks black and pulls the
+      highlights down.
+    </p>
+    <p>
+      That token is set inline on the section here, at <code>0.8</code>. The
+      component's defaults are tuned for the front page: a photograph that is
+      mostly bright cloud has to come back a long way before an eyebrow at 86%
+      opacity will sit on it. This mist is already dark, and at the default it
+      went murky — so the page that needs a different exposure sets one value on
+      its own section and changes nothing else:
+    </p>
+    <pre><code>&lt;section class="cine-stage" style="--cine-image-opacity:0.8"&gt;</code></pre>
+    <p>
+      With one caveat worth knowing: an inline style cannot be
+      scheme-conditional, so that single value is used in both light and dark,
+      where the component's own defaults differ (<code>0.4</code> dark,
+      <code>0.68</code> light — mixing towards black darkens the midtones fast
+      while mixing towards white mostly flattens them, so the two are not
+      symmetric). It happens to suit this picture, whose warm mid-tone fog reads
+      as a sepia print on paper and as mist in the dark at the same exposure. A
+      photograph that only works at one weight per scheme wants a rule rather
+      than an attribute.
+    </p>
+    <h2>Light and dark</h2>
+    <p>
+      The stage answers to the system colour scheme, which is a departure from
+      the other photographic hero on the site: <code>.hero-stage-photo</code>
+      pins itself light-on-dark because over a photograph legibility is not a
+      matter of preference. What lets this one differ is that the picture is not
+      laid at full strength under a scrim — it is <em>mixed into</em> the
+      stage's own ground. Swap that ground for a pale one and the whole frame
+      goes pale with it, so dark type over it is as legible as light type was
+      over the near-black, and the vignette veils towards the same colour and
+      still holds the edges back in both.
+    </p>
+    <p>
+      Two channel triples carry it — <code>--cine-ground</code> and
+      <code>--cine-ink</code> — and every alpha in the block is written against
+      them, so the dark scheme is four declarations at the foot of the
+      component rather than a second copy of anything.
+    </p>
+    <h2>The dissolve at the bottom</h2>
+    <p>
+      The frame does not stop at an edge; it gives way to the page over the last
+      30% of the viewport. The mechanism is the one <code>.hero-stage</code>
+      already uses — a <code>mask-image</code> on the layer that carries the
+      ground — and the reason it is worth copying is that the masked layer
+      becomes <em>transparent</em> rather than fading to a colour, so the page's
+      own background shows through and the dissolve is correct in both schemes
+      with nothing to keep in sync.
+    </p>
+    <p>
+      That is why the stage itself paints no background: the ground lives on
+      <code>.cine-media</code>, alongside the picture and the scrim, so one mask
+      dissolves all three together. An opaque background on the section would
+      sit under the mask and there would be nothing to fade into. The grain
+      carries its own copy of the mask, offset by the 128px of overscan its box
+      has on every side, or it would go on speckling over the page below long
+      after the picture had gone.
+    </p>
+    <h2>What it costs, and the cheap path</h2>
+    <p>
+      Two of those effects are expensive, and they are the two the title is
+      built from. <code>filter: blur()</code> renders each letter to its own
+      surface and blurs it again every frame, and a dozen of them overlap in
+      time. <code>letter-spacing</code> is worse in kind rather than in degree:
+      tracking is a layout property, so every frame of that settle re-measures
+      and re-wraps fifteen inline-blocks — it is the one animation here that
+      cannot be handed to the compositor at all.
+    </p>
+    <p>
+      So a small or short screen — the hardware most likely to be the slowest —
+      gets the same choreography with those two properties taken out: the same
+      scattered per-letter delays and the same beats, but the letters fade and
+      rise rather than developing out of blur, and the tracking is at its final
+      value from the start. The stage retunes its padding and type on a short
+      viewport at the same time, so the card fits one screenful on a phone held
+      sideways rather than running past the bottom of it.
+    </p>
+    <p>
+      The grain is the other thing worth knowing about, and its rate matters
+      more than anything else about it. The noise tile is 240px and the moves
+      are not multiples of it, so every step shows a completely different field
+      — a third of the pixels on screen change value on each one. Film does the
+      same thing, but twenty-four times a second, which is past the point where
+      the eye reads the changes as texture rather than as events. Run it at six
+      steps a second, as this did at first, and the whole canvas appears to
+      flicker. It is eight steps over 0.44s now, about eighteen a second, which
+      fuses.
+    </p>
+    <p>
+      That it can be run fast at all is down to how it moves: a
+      <code>transform</code> rather than a <code>background-position</code>.
+      The first is a layer the GPU slides, so a higher rate is more layer moves
+      and not one more pixel of repainting; the second would have been a
+      full-screen repaint eighteen times a second for as long as the page is
+      open.
+    </p>
+    <p>
+      The block honours <code>prefers-reduced-motion</code> and shows the
+      finished frame at once — not by collapsing the animations to nothing but
+      by dropping them, which works because every element's base style is
+      already its finished state and the from-frame lives only inside the
+      keyframes. The card also no longer travels with its own
+      <code>&lt;style&gt;</code>: <code>.cine-stage</code> is a component in
+      <code>main.css</code> now, alongside <code>.hero-stage</code>, because
+      the front page opens with the same title card. Copying the markup above
+      is all it takes.
+    </p>
+    <p>
+      Compare it with the quieter treatments:
+      <a class="link-underline" href="/block_test_page_a.html">variant A</a>,
+      <a class="link-underline" href="/block_test_page_b.html">variant B</a>,
+      <a class="link-underline" href="/block_test_page_c.html">variant C</a> and
+      <a class="link-underline" href="/block_test_page_d.html">variant D</a>.
+    </p>
+  </div>
+</section>

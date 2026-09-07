@@ -1,0 +1,97 @@
+{# Site navigation.
+
+   The mobile drawer is a checkbox + label pair styled by sibling selectors,
+   so it opens and closes with scripting disabled. The search field sits
+   between the wordmark and the links, and is hidden by CSS until
+   search_bar.js marks <html> — see section I of input.css.
+
+   Two things here now want scripting, and neither is the navigation itself.
+   The search field is one; the other is nav_reveal.js, which on a wide screen
+   holds this bar back over a page that opens with a hero until the reader is
+   about half a viewport into it. Both fail the same way: with scripting off
+   the field is never shown and the bar is never held back, so what is left
+   is a complete nav bar with links that work. Nothing in this file is
+   conditional on it — the markup is identical on every page, and the reveal
+   is entirely a matter of two classes on <html> and the rules in section F
+   that read them. #}
+{% import "search.njk" as search %}
+<header class="site-nav">
+  <div class="shell">
+    <input class="nav-toggle" type="checkbox" id="nav-toggle" aria-label="Open navigation">
+
+    <div class="nav-inner">
+      {# The wordmark is a nav link: .nav-link gives it the same font, size,
+         tracking and optical baseline nudge as the links opposite, so the bar
+         reads as one typographic row.
+
+         Monochrome, unlike the footer wordmark, which keeps .text-flow. The
+         mark is a mask painted with currentColor (see .site-logo in input.css),
+         so it can only ever be one colour — and a gradient name beside a flat
+         mark reads as two objects that happen to be adjacent. Dropping the
+         gradient here makes the pair one lockup. The name is still held a step
+         above the other links, at --fg against their --fg-muted; that is
+         .nav-wordmark's job now rather than the gradient's.
+
+         The mark leads and the name follows, both inside the one anchor, so
+         either half is the same home link with the same hover. #}
+      <a class="nav-link nav-wordmark" href="/" aria-label="{{ settings.name }} — home">
+        {# Hidden from assistive tech: the anchor already carries an aria-label
+           and prints the site name in text beside this, so an announced mark
+           would name the same link twice. It is decoration on a labelled
+           control — and, being a mask, it has no content to announce anyway. #}
+        <span class="site-logo" aria-hidden="true"></span>
+        {{ settings.short_name }}
+      </a>
+
+      {# The wrapper absorbs the free space and pushes the field to its right
+         edge, so the search sits immediately left of the links rather than
+         floating in the middle of the bar. #}
+      <div class="nav-desktop-only" style="flex:1 1 auto; justify-content:flex-end;">
+        {{ search.field("desktop", settings) }}
+      </div>
+
+      <nav class="nav-desktop-only" aria-label="Primary" style="gap:1.75rem; align-items:center;">
+        {% for item in settings.nav %}
+        <a class="nav-link" href="{{ item.link }}"{% if page.url == item.link %} aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+
+      {# Both states ship in the markup and CSS swaps which one is displayed,
+         so the button changes with the checkbox alone and still needs no
+         JavaScript. The glyphs are masked files from svg/ — see .icon in
+         input.css — not inline paths, so the bar and the rest of the site draw
+         their icons from the same source. #}
+      <label class="nav-toggle-label" for="nav-toggle">
+        <span class="icon icon-menu nav-toggle-icon" aria-hidden="true"></span>
+        <span class="icon icon-cross nav-toggle-icon" aria-hidden="true"></span>
+        <span class="sr-only">Menu</span>
+      </label>
+    </div>
+
+    {# Mobile drawer. Duplicated links rather than a moved node, because CSS
+       cannot relocate an element and this must work without JavaScript.
+
+       The drawer floats over the page rather than pushing it down, so it needs
+       the scrim below it: without one, everything the open menu does not
+       happen to cover stays live, and a tap meant to dismiss the menu lands on
+       a link instead. #}
+    <nav class="nav-drawer" aria-label="Primary, mobile">
+      {{ search.field("drawer", settings) }}
+      {% for item in settings.nav %}
+      <a class="nav-link" href="{{ item.link }}"{% if page.url == item.link %} aria-current="page"{% endif %}>{{ item.label }}</a>
+      {% endfor %}
+    </nav>
+
+    {# Tap-outside-to-close, and the shield that makes the overlay safe. A
+       second <label> for the same checkbox, so dismissing the menu needs no
+       more scripting than opening it did.
+
+       Hidden from assistive tech: it is a pointer affordance for a control
+       that is already in the page and already labelled. A screen reader user
+       leaves the menu by returning to the toggle, and announcing a nameless
+       second control for the same checkbox would only be noise. Safe to hide,
+       because a <label> is not focusable — nothing is being removed from the
+       keyboard path. #}
+    <label class="nav-scrim" for="nav-toggle" aria-hidden="true"></label>
+  </div>
+</header>

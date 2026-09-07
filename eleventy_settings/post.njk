@@ -1,0 +1,62 @@
+---
+layout: base.njk
+---
+{# Post layout: masthead, reading column, outline dock.
+
+   The YAML `title` is the page's only h1 — markdown headings are demoted one
+   level by the pipeline so the document keeps a single top-level heading. #}
+<article class="shell" style="padding-block:3.5rem 5rem;">
+
+  {# .post-header is the entrance hook, nothing else — see "The post masthead"
+     in input.css. The five blocks below arrive one beat apart on load, in
+     source order, and the rule at the foot is drawn rather than faded. It is a
+     load animation rather than a scroll one because this header is the first
+     thing in the article and is therefore always on screen already. #}
+  <header class="reading-column post-header" style="margin-bottom:3rem;">
+    <p class="eyebrow">
+      <time datetime="{{ date | isoDate }}">{{ date | humanDate }}</time>
+    </p>
+
+    <h1 class="display" style="margin-top:1rem;">{{ title }}</h1>
+
+    {% if description %}
+    <p class="lede" style="margin-top:1.5rem;">{{ description }}</p>
+    {% endif %}
+
+    {# The way out of the post, set at the chips' own size so the row reads as
+       one line. Rendered whether or not the post is tagged — the separator and
+       the chips are what drop away when `tags` is empty. #}
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem; margin-top:1.75rem;">
+      <span class="tag-back-group">
+        <a class="tag-chip tag-chip-back" href="/blog.html">Go back</a>
+        {% if tags.length %}<span class="tag-sep" aria-hidden="true">|</span>{% endif %}
+      </span>
+      {% for tag in tags %}
+      <a class="tag-chip" href="/blog_tag_{{ tag | tagSlug }}.html">{{ tag }}</a>
+      {% endfor %}
+    </div>
+
+    <hr class="rule-grad" style="margin-top:2.5rem;">
+  </header>
+
+  {# .post-body is the second half of the entrance: the body fades up as one,
+     and the first few blocks of it rise into place on their own beats so the
+     top of the article assembles rather than appearing as a slab. Bounded on
+     purpose — see "The post body" in input.css. #}
+  <div class="reading-column post-body">
+    <div class="prose">
+      {{ content | safe }}
+    </div>
+  </div>
+
+  {# On the same beat as the body, so a short post never shows its way out
+     before the words it is a way out of. #}
+  <nav class="reading-column hero-in" aria-label="Post" style="--hero-in-beat:5; margin-top:4rem;">
+    <hr>
+    <p style="padding-top:1.5rem;">
+      <a class="btn btn-ghost btn-back" href="/blog.html">All entries</a>
+    </p>
+  </nav>
+</article>
+
+{% include "outline.njk" %}

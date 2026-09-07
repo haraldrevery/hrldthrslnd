@@ -1,0 +1,20 @@
+---
+permalink: /sitemap.xml
+eleventyExcludeFromCollections: true
+layout: false
+---
+{#- Driven by collections.sitemap, which is assembled in
+    eleventy_binary/lib/eleventy_config.js. Filtering collections.all here
+    instead is what made this file list the posts and nothing else: every page
+    in eleventy_njk/ was excluded from collections.all, homepage included. -#}
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{%- for entry in collections.sitemap %}
+  <url>
+    <loc>{{ entry.url | absolute }}</loc>
+    {%- if entry.date %}
+    <lastmod>{{ entry.date | isoDate }}</lastmod>
+    {%- endif %}
+  </url>
+{%- endfor %}
+</urlset>

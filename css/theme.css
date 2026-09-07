@@ -1,0 +1,419 @@
+/* =============================================================================
+   theme.css — the tuning file for the whole site.
+   -----------------------------------------------------------------------------
+   Everything visual is derived from the tokens below. Change a value here and it
+   propagates site-wide; no other stylesheet hardcodes a colour or a type size.
+
+   Sections
+     1. Typography roots   — per-font size / tracking / leading knobs
+     2. KaTeX typography   — own metrics; size proportional to section 1
+     3. Palette constants  — the fixed chroma hues, identical in both schemes
+     4. Light scheme       — semantic tokens
+     5. Dark scheme        — same semantic tokens, system preference only
+     6. Gradients, shadows, geometry, motion
+   ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+   1. TYPOGRAPHY ROOTS
+   Each font family has its own base root size, letter-spacing and line-height.
+   These are the base characteristics for the entire site: every type rule in
+   input.css derives from them rather than declaring its own values.
+   -------------------------------------------------------------------------- */
+:root {
+  /* --- Harald Revery Text: body copy, paragraphs, most UI ------------------ */
+  --font-text-family: "Harald Revery Text", Georgia, "Times New Roman", serif;
+  --font-text-root: 1.6rem;   /* base size all Text-font sizes scale from   */
+  --font-text-tracking: 0.005em; /* base letter-spacing                        */
+  --font-text-leading: 1.68;     /* base line-height (unitless)                */
+
+  /* --- Harald Revery Mono: mastheads, eyebrows, labels, code --------------- */
+  --font-mono-family: "Harald Revery Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-mono-root: 1.6rem;
+  --font-mono-tracking: 0.02em;
+  --font-mono-leading: 1.5;
+
+  /* --- Display: oversized uppercase mastheads (uses the Mono face) ---------
+     Both project fonts are single-weight 400, so display hierarchy comes from
+     size, tracking and case rather than from weight. --font-display-tracking
+     is deliberately wide; --font-display-leading deliberately tight.         */
+  --font-display-family: var(--font-mono-family);
+  --font-display-tracking: 0.14em;
+  --font-display-leading: 0.94;
+  --font-display-min: 2.1rem;    /* clamp() floor for the largest masthead     */
+  --font-display-fluid: 6.4vw;   /* clamp() fluid term                         */
+  --font-display-max: 5.4rem;    /* clamp() ceiling                            */
+
+  /* --- Optical vertical centring -------------------------------------------
+     These faces put their ink high in the line box. Measured at 200px:
+     uppercase caps sit 28px below the box top but 97px above the box bottom,
+     so anything vertically centred by the browser LOOKS pushed up.
+
+     The two tokens below push it back down. They are applied as asymmetric
+     block padding on centred single-line controls (buttons, chips, nav links,
+     pagination). Tune by eye — that is what they are here for; set them to 0em
+     to see the uncorrected version.                                          */
+  --optical-shift-caps: 0.086em;  /* uppercase Mono: half of the 0.172em skew */
+  --optical-shift-text: 0.030em;  /* mixed-case Text: half of the 0.059em skew */
+
+  /* --- Derived scale (do not edit; edit the roots above) ------------------- */
+  --step--3: calc(var(--font-text-root) * 0.579);
+  --step--2: calc(var(--font-text-root) * 0.694);
+  --step--1: calc(var(--font-text-root) * 0.833);
+  --step-0:  var(--font-text-root);
+  --step-1:  calc(var(--font-text-root) * 1.2);
+  --step-2:  calc(var(--font-text-root) * 1.44);
+  --step-3:  calc(var(--font-text-root) * 1.728);
+  --step-4:  calc(var(--font-text-root) * 2.074);
+  --step-5:  calc(var(--font-text-root) * 2.488);
+}
+
+/* -----------------------------------------------------------------------------
+   2. KATEX TYPOGRAPHY — isolated
+   KaTeX carries its own metrics. Its tracking and leading are its own and must
+   never inherit the Text/Mono values, or maths drifts out of alignment with its
+   own rules and radicals. Its SIZE is deliberately proportional to the text
+   root, so maths keeps sitting correctly in the prose when that root moves;
+   see the note below for why that distinction is the whole point.
+   -------------------------------------------------------------------------- */
+:root {
+  /* What "isolated" means here, precisely:
+
+       tracking and leading  MUST stay detached. KaTeX positions every glyph
+                             with em offsets computed from its own metrics and
+                             assumes letter-spacing 0; inheriting the Text roots
+                             pulls rules, radicals and scripts out of alignment.
+       size                  is a RATIO of the text root, not an absolute rem.
+
+     The size is a ratio because it expresses a relationship, and an absolute
+     value silently stops being true the moment the other side moves. It did:
+     this token read 0.80rem when --font-text-root was 1.0625rem (ratio 0.753),
+     the text root then went 1.0625 -> 1.4 -> 1.6rem while this was hand-nudged
+     once to 0.98rem, and the ratio decayed to 0.613. The maths had drifted a
+     fifth smaller than the prose it sits in without a single edit to this line.
+
+     Measured, not guessed (fontTools, from the shipped files):
+
+       Harald Revery Text  x-height 0.333em   <- unusually small
+       KaTeX_Main          x-height 0.431em
+       KaTeX_Math          x-height 0.442em
+
+     At equal CSS sizes the maths renders ~33% larger than the sentence around
+     it and visibly "pops". 0.753 is x-height parity against KaTeX_Main, which
+     is where this started.
+
+     Trust your eye over these numbers: view a post with inline maths at your
+     own reading distance and adjust the ratio. That is what this knob is for.
+     Note that until the KaTeX faces were repaired, maths rendered in fallback
+     fonts with different x-heights — so any tuning done before that was tuned
+     against the wrong picture and is worth redoing.                          */
+  --font-katex-ratio: 0.753;     /* x-height parity with the body text         */
+  --font-katex-root: calc(var(--font-text-root) * var(--font-katex-ratio));
+  --font-katex-tracking: 0em;    /* KaTeX metrics assume 0; change with care   */
+  --font-katex-leading: 1.0;
+  /* Display blocks stand alone, so they carry more size than inline maths.
+     0.753 x 1.20 = 0.904 of the text root.                                   */
+  --font-katex-display-scale: 0.98;
+}
+
+/* -----------------------------------------------------------------------------
+   3. PALETTE CONSTANTS
+   The chroma spectrum. Fixed hues used to build gradients; the light/dark
+   schemes below pick per-scheme working values from these.
+   -------------------------------------------------------------------------- */
+:root {
+  /* ONE COPY LIVES OUTSIDE THIS FILE. icon/favicon.svg is loaded via <link> as
+     its own document, and no var() resolves across that boundary, so it
+     hardcodes the seven --grad-flow stops. Retuning them means editing that
+     file to match; nothing in the build will warn you.
+
+     svg/logo.svg deliberately does NOT have this problem: it is applied as a
+     CSS mask rather than loaded as an image, so it contributes only a shape
+     and takes its colour from currentColor on this side of the boundary. */
+  --c-magenta: #ff2d78;
+  --c-crimson: #e8192c;
+  --c-orange:  #ff7a1a;
+  --c-amber:   #ffc21f;
+  --c-lemon:   #fff05a;
+  --c-mint:    #35d9a0;
+  --c-teal:    #12b4c4;
+  --c-azure:   #1f6dff;
+  --c-ultra:   #4b2ee6;
+  --c-violet:  #a44bff;
+
+  /* Absolute ink/paper constants. These never swap. Use them for surfaces that
+     are intentionally dark in BOTH schemes (hero matte stage, glass sections). */
+  --ink:       #0d0d10;
+  --ink-soft:  #1c1d22;
+  --paper:     #f4f4f2;
+  --paper-pure:#ffffff;
+
+  /* The same two constants as bare channel triples, for the places that need
+     an ALPHA of the page ground rather than the ground itself — a gradient
+     that dissolves a section into the page has to start at the ground colour
+     with zero alpha, and `transparent` is not that: it is rgba(0,0,0,0), so on
+     any engine that does not interpolate in premultiplied alpha a fade from it
+     runs through grey. Writing rgba(var(--bg-rgb), 0) states the intent and is
+     correct everywhere. */
+  --ink-rgb:   13, 13, 16;
+  --paper-rgb: 244, 244, 242;
+  --mist:      #d9d9d6;
+  --grey-500:  #7a7a80;
+}
+
+/* -----------------------------------------------------------------------------
+   4. LIGHT SCHEME (default)
+   Semantic tokens. Components reference only these, never the constants above,
+   so a scheme swap needs no component changes.
+   -------------------------------------------------------------------------- */
+:root {
+  --bg:            var(--paper);        /* page ground                        */
+  --bg-rgb:        var(--paper-rgb);    /* the same, as channels              */
+  --bg-raised:     var(--paper-pure);   /* cards, panels, sticky nav          */
+  --bg-sunken:     #ebebe8;             /* wells, code blocks, table stripes  */
+  --fg:            var(--ink);          /* primary text                       */
+  --fg-strong:     #000000;             /* mastheads                          */
+  /* Both greys are set for WCAG AA (4.5:1) against --bg AND --bg-raised, not
+     for looks alone: they carry dates, captions and outline entries, which are
+     content. Measured — muted 5.42:1, faint 4.74:1 on the page ground.
+     --grey-500 stays as the palette constant; it is too light for body text. */
+  --fg-muted:      #63636a;             /* captions, meta, dates              */
+  --fg-faint:      #6c6c73;             /* least prominent text               */
+  --hairline:      var(--mist);         /* 1px rules and borders              */
+  --hairline-soft: #e4e4e0;
+
+  --panel-bg:      rgba(255, 255, 255, 0.76);
+  --panel-border:  rgba(13, 13, 16, 0.08);
+  --overlay-scrim: rgba(13, 13, 16, 0.55);
+
+  /* The three stops of --stage-ground (assembled in section 6), which is what
+     a .hero-stage stands on. Unlike --matte-ground these DO swap with the
+     scheme: a hero is the largest surface on the site and a hero that stays
+     near-black in light mode is the one place the page stops answering to the
+     visitor's setting. Not flat --bg either — the radial keeps the depth the
+     dark stage had, one step lighter than the page ground at the top left and
+     one step darker at the bottom right, so the section still reads as a
+     stage rather than as more page. */
+  --stage-1:       #ffffff;
+  --stage-2:       #f0f0ec;
+  --stage-3:       #dcdcd5;
+
+  --selection-bg:  var(--c-amber);
+  --selection-fg:  var(--ink);
+  --focus-ring:    var(--c-azure);
+
+  --link:          var(--fg);
+  --link-underline:var(--c-teal);
+
+  --grid-line-v:   rgba(13, 13, 16, 0.04);
+  --grid-line-h:   rgba(13, 13, 16, 0.035);
+  --grain-opacity: 0.032;
+  --grain-blend:   multiply;
+
+  --shadow-soft:   0 24px 60px -28px rgba(13, 13, 16, 0.28);
+  --shadow-deep:   0 36px 100px -38px rgba(13, 13, 16, 0.55);
+
+  color-scheme: light;
+}
+
+/* -----------------------------------------------------------------------------
+   5. DARK SCHEME — system preference only. There is no JavaScript toggle.
+   Chroma hues are lifted slightly so they hold contrast against near-black.
+   -------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:            var(--ink);
+    --bg-rgb:        var(--ink-rgb);
+    --bg-raised:     var(--ink-soft);
+    --bg-sunken:     #141519;
+    --fg:            var(--paper);
+    --fg-strong:     #ffffff;
+    --fg-muted:      #9a9aa2;          /* 6.95:1 on --bg, 6.17:1 on --bg-raised */
+    --fg-faint:      #84848c;          /* 5.23:1 on --bg, 4.53:1 on --bg-raised */
+    --hairline:      rgba(255, 255, 255, 0.13);
+    --hairline-soft: rgba(255, 255, 255, 0.08);
+
+    --panel-bg:      rgba(28, 29, 34, 0.82);
+    --panel-border:  rgba(255, 255, 255, 0.10);
+    --overlay-scrim: rgba(0, 0, 0, 0.62);
+
+    /* The dark half of the hero ground. These three are exactly the stops
+       --matte-ground has always used, so the dark-mode hero is unchanged. */
+    --stage-1:       #383a40;
+    --stage-2:       #1a1c22;
+    --stage-3:       #0d0d10;
+
+    --selection-bg:  var(--c-amber);
+    --selection-fg:  var(--ink);
+    --focus-ring:    #6f9bff;
+
+    --link:          var(--fg);
+    --link-underline:#8dff5c;
+
+    --grid-line-v:   rgba(255, 255, 255, 0.05);
+    --grid-line-h:   rgba(255, 255, 255, 0.04);
+    --grain-opacity: 0.05;
+    --grain-blend:   screen;
+
+    --shadow-soft:   0 24px 60px -28px rgba(0, 0, 0, 0.75);
+    --shadow-deep:   0 36px 100px -38px rgba(0, 0, 0, 0.9);
+
+    /* Lifted chroma for dark grounds */
+    --c-magenta: #ff5c94;
+    --c-crimson: #ff4a58;
+    --c-orange:  #ff9440;
+    --c-amber:   #ffce4d;
+    --c-lemon:   #fff489;
+    --c-mint:    #5ee3b6;
+    --c-teal:    #35cbda;
+    --c-azure:   #5a8dff;
+    --c-ultra:   #7c63ff;
+    --c-violet:  #bd78ff;
+
+    color-scheme: dark;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   6. GRADIENTS, GEOMETRY, MOTION
+   Declared after the schemes so the gradients pick up the per-scheme hues.
+   -------------------------------------------------------------------------- */
+:root {
+  --grad-flow: linear-gradient(115deg,
+    var(--c-amber) 0%, var(--c-orange) 18%, var(--c-crimson) 35%,
+    var(--c-magenta) 52%, var(--c-violet) 68%, var(--c-azure) 84%, var(--c-teal) 100%);
+  --grad-heat: linear-gradient(90deg, var(--c-lemon), var(--c-orange), var(--c-crimson));
+  --grad-cool: linear-gradient(90deg, var(--c-mint), var(--c-teal), var(--c-ultra));
+  --grad-marble: conic-gradient(from 210deg at 40% 60%,
+    var(--c-crimson), var(--c-magenta), var(--c-violet), var(--c-azure),
+    var(--c-teal), var(--c-amber), var(--c-crimson));
+
+  /* The dark ground used by .matte-stage (the 404 page, gallery grounds).
+     Deliberately fixed in both schemes — see the note on .matte-stage in
+     input.css. .hero-stage no longer uses it; it stands on --stage-ground.  */
+  --matte-ground: radial-gradient(circle at 72% 28%, #383a40 0%, #1a1c22 42%, #0d0d10 100%);
+
+  /* The hero ground. Same geometry as --matte-ground, but built from the
+     per-scheme stops in sections 4 and 5, so it is a pale stage in light mode
+     and the old matte in dark. Declared here rather than in either scheme
+     block because var() resolves at use time: whichever set of --stage-*
+     wins, this one gradient picks it up. */
+  --stage-ground: radial-gradient(circle at 72% 28%,
+    var(--stage-1) 0%, var(--stage-2) 42%, var(--stage-3) 100%);
+
+  /* The overlay laid over a photographic hero so the headline stays legible
+     whatever is in the picture. Darkest at the top and bottom, where the type
+     and the buttons sit; thinnest across the middle, which is the part of the
+     photograph worth seeing. Fixed in both schemes for the same reason the
+     matte ground is: the contrast against --paper type must not depend on the
+     visitor's colour-scheme setting. Raise the three alpha values together if
+     a particular picture is too bright to read over. */
+  --hero-scrim: linear-gradient(180deg,
+    rgba(9, 9, 12, 0.80) 0%,
+    rgba(9, 9, 12, 0.42) 42%,
+    rgba(9, 9, 12, 0.58) 74%,
+    rgba(9, 9, 12, 0.78) 100%);
+
+  --radius: 4px;
+  --radius-pill: 999px;
+  --hairline-width: 1px;
+
+  /* The thickness of the rule that sweeps in under a .btn on hover. The label
+     is a step larger than the other mono text on the site, so this is a touch
+     heavier than a hairline — a 1px rule under type that size reads as a
+     scratch rather than as an underline. */
+  --btn-rule-width: 1.5px;
+
+  --ease-liquid: cubic-bezier(0.6, 0, 0.2, 1);
+  --dur-fast: 0.28s;
+  --dur-mid: 0.45s;
+  --dur-slow: 0.85s;
+
+  /* --- Entrance: the beat a leading hero arrives on ------------------------
+     The knobs for "Hero entrance" in input.css. Everything a hero animates in
+     on load is derived from these five, so the whole family of hero pages
+     retunes from here rather than block by block.
+
+     --ease-entrance decelerates harder than --ease-liquid and never
+     overshoots. A hero entrance is a settle, not a bounce: an ease with a
+     hump in it draws the eye to the motion, and the point of this one is to
+     draw the eye to the type once it has stopped moving.
+
+     --entrance-lead is the pause before the first element moves, and it is
+     deliberately short. It exists to let the first paint land before anything
+     animates — not to make the reader wait — and anything much past 0.2s
+     reads as the page having failed to load rather than as a beat.
+
+     --entrance-step is the gap between one element and the next. Under about
+     0.06s the stagger stops being legible and the whole hero simply fades;
+     over about 0.14s a four-part hero takes longer to arrive than a reader
+     will hold still for.
+
+     --entrance-rise is how far an element travels. Small on purpose: the
+     elements are display type and photographs, and at 6rem across a screen
+     the same fraction of travel reads as a lurch. In rem rather than a
+     viewport unit so it does not grow with the window.
+
+     --entrance-settle is the one theatrical value — the scale a full-bleed
+     photograph starts at before it comes to rest. Only .hero-media uses it.  */
+  --ease-entrance: cubic-bezier(0.22, 0.68, 0.24, 1);
+  --dur-entrance: 0.9s;
+  --entrance-lead: 0.12s;
+  --entrance-step: 0.09s;
+  --entrance-rise: 1.15rem;
+  --entrance-settle: 1.045;
+
+  /* Layout */
+  --shell-max: 1780px;
+  --shell-pad: 1.5rem;
+  --shell-pad-lg: 2.5rem;
+  --nav-height: 3.6rem;
+
+  /* --- Logo (svg/logo.svg, placed by nav.njk and footer.njk) ---------------
+     The mark is a CSS mask painted with currentColor, so it is always exactly
+     the colour of the text beside it and needs no colour token of its own.
+
+     THESE ARE THE KNOBS FOR MATCHING THE MARK TO THE TYPE BESIDE IT. Both are
+     heights; the width follows from --logo-aspect.
+
+     In em, not rem, and for the same reason .icon in input.css is: an em here
+     resolves against the font-size of the element the mark sits in, so the mark
+     tracks its neighbouring text instead of drifting away from it. Retune
+     --font-text-root or the --step scale and the logo follows on its own. The
+     nav value is therefore a multiple of --step--1 (what .nav-link sets) and
+     the footer value a multiple of --font-text-root (what body sets).
+
+     Both read larger than the ink they produce: the artwork carries about 11.5%
+     empty padding on all four sides, so the visible mark is roughly 77% of the
+     number set here. Budget for that when matching a cap height — to put the
+     ink at 1em of the text, the token wants to be about 1.3em.
+
+     Tune by eye. 1.54em / 2.13em are simply where the old fixed 2.05rem and
+     3.4rem landed, kept so the change of unit moved nothing on screen. */
+  --logo-nav-size:    1.01em;
+  --logo-footer-size: 2.13em;
+
+  /* Width divided by height of the artwork. A mask is painted onto a plain
+     element, and an element has no intrinsic size to take a ratio from — unlike
+     an <img>, which would read it out of the file. Swap in a mark that is not
+     square and this must be updated to match, or it will be squashed. */
+  --logo-aspect: 1;
+
+  /* Optical centring. A mark's visual centre is where its ink balances, which
+     is not the centre of its box: this artwork hangs a heavy vertical bar on
+     the right against lighter open shapes on the left, so the two do not
+     coincide. These shift the ink without touching layout — they are applied as
+     a translate, so nudging the mark never moves the name beside it or changes
+     the gap.
+
+     In percent of the mark's own size, deliberately, so one pair of values
+     stays right at both the nav and footer sizes and survives a swap to
+     artwork of different proportions. Positive x moves right, positive y down.
+     Tune by eye — that is what they are here for; the optical-shift tokens in
+     section 1 are the same kind of knob for type. */
+  --logo-nudge-x: 0%;
+  --logo-nudge-y: -6%;
+
+  /* Reading width cycle (see javascript/reading_width.js). The default is 100%;
+     the other five steps only ever apply when JavaScript has set data-width. */
+  --reading-width: 100%;
+}

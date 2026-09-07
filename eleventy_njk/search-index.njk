@@ -1,0 +1,28 @@
+---
+permalink: /search_index.json
+eleventyExcludeFromCollections: true
+layout: false
+---
+{#- The index search_bar.js fetches. Built at render time so it can never drift
+    from what was actually published; drafts are excluded because they are not
+    in collections.posts. -#}
+{
+  "generated": {{ build.date | jsonify | safe }},
+  "entries": [
+{%- for post in collections.posts %}
+    {
+      {#- `or ""` is load bearing, not decoration. jsonify is JSON.stringify,
+          which answers undefined for undefined, and Nunjucks prints that as
+          nothing at all — so one untitled post emitted `"title": ,` and took
+          the whole file down with it. This index is parsed as one document:
+          an unguarded field here is not a bad entry, it is no search at all. -#}
+      "title": {{ (post.data.title or "") | jsonify | safe }},
+      "url": {{ post.url | jsonify | safe }},
+      "date": {{ (post.data.date | isoDate) | jsonify | safe }},
+      "tags": {{ (post.data.tags or []) | jsonify | safe }},
+      "description": {{ (post.data.description or "") | jsonify | safe }},
+      "text": {{ (post.templateContent | plain(600)) | jsonify | safe }}
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+}

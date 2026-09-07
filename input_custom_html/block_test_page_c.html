@@ -1,0 +1,754 @@
+---
+title: Abstract hero page
+date: 2026-09-04
+image: /image/harald_sitting_on_stairs_may_2022.jpg
+tags: [test, reference]
+description:  More blocks and hero pages — a hero collage, offset thesis slices, glass notes pinned to a photograph and a staircase archive grid. Every layer is a stylesheet component; the page adds no script of its own.
+draft: false
+---
+
+<!--
+  ============================================================================
+  INDEX TEST PAGE — the layered treatment.
+
+  A second answer to the question index.njk answers: what does the front page
+  look like. Where index.njk stacks full-width bands (hero, card grid, tags),
+  this one overlaps them — a picture with a panel stepping over its edge, rows
+  that indent further with each step, notes pinned across a photograph, an
+  archive laid out as a staircase.
+
+  Five new stylesheet components carry it, all added to css/input.css beside
+  the ones they are built from:
+
+      .collage / .collage-visual / .collage-panel / .collage-stamp
+      .slice-list / .slice
+      .photo-stage / .stage-media
+      .panel-field
+      .stagger-grid
+
+  Nothing in this file hardcodes a colour, a type size or a breakpoint, and
+  nothing here needs JavaScript. The pictures open in the lightbox, which is
+  the only script on the page and is added automatically because the anchors
+  carry .glightbox — see eleventy_binary/lib/assets.js.
+
+  This file has NO <!doctype html>, so the generator wraps it in the site
+  layout and the nav, footer, fonts and stylesheet come for free.
+
+  Every block below is fenced with COPY FROM HERE / COPY TO HERE, like
+  block_test_page.html, so it doubles as a copy-paste library for the layered
+  arrangements.
+  ============================================================================
+-->
+
+<!-- ===== COPY FROM HERE: Hero — five-piece collage
+     Must be the FIRST thing in the page: .hero-stage only runs the full
+     viewport height and slides under the nav as main's first child.
+
+     Five pieces on twelve columns — portrait, landscape, glass panel, solid
+     block, stamp — plus the ruler. Each lays over the one behind it, and the
+     laps are shared column tracks and negative margins rather than absolute
+     percentages of the viewport, so the whole thing unwinds to six stacked
+     blocks in source order below 60rem.
+
+     Below 48rem, or on anything under 30rem tall, it stops unwinding and
+     changes shape instead: the portrait leaves the flow and becomes the hero's
+     ground, the glass panel is the only piece left standing on it, and the
+     other four are dropped. Six blocks stacked on a phone was two and a third
+     screenfuls of front page; one picture with the masthead over it is one
+     screen, and the picture is bigger. That is why the section carries
+     .collage-stage and the shell carries .collage-shell — the two names those
+     rules hold on to. Copy all three classes together or the phone layout has
+     nothing to select.
+
+     Both dark pieces set their type colour inline for the same reason the
+     feature block does: .display resolves to --fg-strong, which is black in
+     light mode, and both of these are dark in both schemes.
+
+     The entrance runs against source order, and that is the point. Source
+     order here starts with a PORTRAIT, and a photograph that size arriving
+     before the masthead is a hero that opens with a picture and then explains
+     itself. So the glass panel goes first, its type settles into it as it
+     lands, and only then do the pictures gather around them — portrait,
+     landscape, ink block, stamp, and the ruler last of all.
+
+     The ruler is DRAWN rather than faded: a clip-path wipe from the left
+     edge, so the label, the track and the closing label are ruled across the
+     foot of the composition in one movement. It is what closes the hero, and
+     the scroll cue waits for it.
+
+     None of that is in this markup. The order is a list of named pieces in
+     input.css ("The collage arrives masthead first"), where the numbers ARE
+     the running order — reordering the composition is changing one of them,
+     not re-counting :nth-child rules against markup that may since have
+     moved. The collage also runs a slower beat and a longer travel than the
+     other heroes, set on .collage so everything inside it moves at the same
+     tempo.
+
+     Below 48rem the portrait is the hero's ground rather than a piece in a
+     composition, so it goes first and fades in place instead of rising, with
+     the panel behind it. ===== -->
+<section class="hero-stage collage-stage">
+  <div class="editorial-grid" aria-hidden="true"></div>
+
+  <div class="shell collage-shell">
+    <div class="collage">
+
+      <div class="collage-portrait">
+        <figure class="art-plate fill">
+          <a class="glightbox" data-gallery="hero"
+             href="/image/harald_sitting_on_stairs_may_2022.jpg"
+             data-title="On the stairs, May 2022"
+             data-description="A person sitting on a concrete stairway beside a steel handrail, a speckled terrazzo wall behind them">
+            <!-- The full-size file, not the _min counterpart. This plate is
+                 roughly 40% of a wide viewport, which is past what a 720px
+                 thumbnail can cover; _min is for cards and gallery cells. -->
+            <img src="/image/harald_sitting_on_stairs_may_2022.jpg" width="2000" height="3200"
+                 alt="A person sitting on a concrete stairway beside a steel handrail, a speckled terrazzo wall behind them"
+                 loading="eager" fetchpriority="high" decoding="async">
+          </a>
+        </figure>
+      </div>
+
+      <div class="collage-landscape">
+        <figure class="art-plate fill">
+          <a class="glightbox" data-gallery="hero"
+             href="/image/2018augusti10stranden.jpg"
+             data-title="Onshore wind, August 2018"
+             data-description="Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind">
+            <img src="/image_min/2018augusti10stranden_min.jpg" width="1243" height="520"
+                 alt="Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind"
+                 loading="eager" decoding="async">
+          </a>
+        </figure>
+      </div>
+
+      <div class="collage-panel hero-copy glass-card glass-card-solid">
+        <p class="eyebrow" style="color:rgba(244,244,242,0.7);">Index — layered treatment</p>
+
+        <h1 class="display" style="color:var(--paper);">
+          A front page <br class="hero-break">that <span class="text-flow">overlaps</span>
+        </h1>
+
+        <p class="lede" style="color:rgba(244,244,242,0.8);">
+          The same material as the real index — pictures, notes, an archive —
+          arranged so the sections step over one another instead of stacking.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn" href="#plates">See the plates</a>
+          <a class="btn btn-ghost" href="/block_test_page.html">All blocks</a>
+        </div>
+      </div>
+
+      <div class="collage-block ink-panel">
+        <p class="micro" style="color:rgba(244,244,242,0.6);">Sections</p>
+        <div>
+          <p class="display" style="font-size:clamp(2.4rem,4vw,3.6rem); color:var(--paper);">06</p>
+          <p style="margin-top:0.6rem; font-size:var(--step--1); color:rgba(244,244,242,0.7);">
+            Plate 001 — a concrete stairway, May 2022. Available light, hand
+            held, and nothing done to it afterwards.
+          </p>
+        </div>
+      </div>
+
+      <div class="collage-stamp paper-panel">
+        <p class="micro" style="color:var(--fg-muted);">Set</p>
+        <p class="display-sm" style="margin-top:0.35rem;">04.09.2026</p>
+        <p class="micro" style="margin-top:0.5rem; color:var(--fg-faint);">Variant · 02</p>
+      </div>
+
+      <!-- The ruler. Segments are cut out of one --grad-flow laid on the track,
+           so there is no list of colours here to keep in step with theme.css.
+           Decorative: what it measures is in the labels either side of it.
+
+           It is also the last thing to arrive, and it is drawn rather than
+           faded — see .collage > .collage-rule in input.css. A clip-path wipe
+           rather than a scaleX, because the track is a row of segments with
+           gaps cut out of it and scaling would stretch those open as it grew:
+           a rubber band rather than a line. -->
+      <div class="collage-rule">
+        <span class="micro" style="color:var(--fg-faint); white-space:nowrap;">Sections 01 — 06</span>
+        <div class="scrubber" aria-hidden="true">
+          <span style="flex:14"></span><span class="seg-gap"></span>
+          <span style="flex:9"></span><span class="seg-gap"></span>
+          <span style="flex:11"></span><span class="seg-gap"></span>
+          <span style="flex:18"></span><span class="seg-gap"></span>
+          <span style="flex:7"></span><span class="seg-gap"></span>
+          <span class="seg-rest" style="flex:22"></span><span class="seg-gap"></span>
+          <span class="seg-rest" style="flex:5"></span>
+        </div>
+        <span class="micro" style="color:var(--fg-faint); white-space:nowrap;">2026 · Var. 02</span>
+      </div>
+
+    </div>
+  </div>
+  <!-- Lower-right scroll cue. Fades in a beat after load and drops the page
+       past the hero; the travel is the site's own smooth scrolling, so there
+       is no script behind it. The sentinel below is its landing point and
+       belongs to this block — keep the two together. -->
+  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>
+</section>
+<div class="hero-end" id="hero-end"></div>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Plate cluster — a dense broken grid with a double exposure
+     The other archive treatment. Where the stair in section 05 descends a pair
+     at a time, this one clusters: three across the top at three depths, three
+     under them pushed the other way, every cell lapping a neighbour.
+
+     Frame 006 is the piece the site had no equivalent of — a double exposure
+     composited in the browser, two photographs in one .art-plate with the
+     second in `screen`. It carries no lightbox because the picture exists only
+     as the browser makes it: there is no full-resolution file to open. Its
+     caption is therefore always drawn rather than revealed on hover, since the
+     cell holds no link for a keyboard to reach.
+
+     Heights are on the markup, deliberately — the composition is six frames of
+     six different depths and no rule can guess which is which. ===== -->
+<section class="shell" id="plates" style="padding-block:clamp(3.5rem,10vh,6rem);">
+  <div style="display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:1.5rem;">
+    <div>
+      <p class="eyebrow">Section 01 — Plates</p>
+      <h2 class="display-md" style="margin-top:0.9rem;">The archive<br>of <span class="text-flow">layered</span><br>things</h2>
+    </div>
+    <p class="micro" style="color:var(--fg-muted); line-height:2; text-align:right;">
+      06 plates · 07 photographs<br>
+      One frame exists only here<br>
+      Set 04.09.2026
+    </p>
+  </div>
+
+  <hr class="rule-grad" style="margin-block:2rem 3rem;">
+
+  <div class="plate-cluster">
+
+    <figure class="art-plate fill" style="height:clamp(15rem,38vh,24rem);">
+      <a class="glightbox" data-gallery="plates"
+         href="/image/2015-2023/bluelightstrikestunnel.jpg"
+         data-title="Under the road, 2019"
+         data-description="Long exposure under a concrete underpass, headlights drawn out into flat green streaks over snow">
+        <img src="/image_min/2015-2023/bluelightstrikestunnel_min.jpg" width="1600" height="675"
+             alt="Long exposure under a concrete underpass, headlights drawn out into flat green streaks over snow"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Plate 001 · Sweden</span>
+        <span class="display-sm" style="color:var(--paper);">Under the road</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">One shutter, several cars · 2019</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(12rem,30vh,19rem);">
+      <a class="glightbox" data-gallery="plates"
+         href="/image/2015-2023/mars2021_islandinice.jpg"
+         data-title="Island in ice, March 2021"
+         data-description="A rock islet carrying four pines, held in a cracked sheet of blue lake ice seen from above">
+        <img src="/image_min/2015-2023/mars2021_islandinice_min.jpg" width="1280" height="548"
+             alt="A rock islet carrying four pines, held in a cracked sheet of blue lake ice seen from above"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Plate 002 · Sweden</span>
+        <span class="display-sm" style="color:var(--paper);">Island in ice</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Frozen lake, from above · March 2021</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(11rem,27vh,17rem);">
+      <a class="glightbox" data-gallery="plates"
+         href="/image/2015-2023/churchofsangiorgiomaggiore2016.jpg"
+         data-title="San Giorgio Maggiore, 2016"
+         data-description="A brick campanile and white church front across flat green lagoon water, two boats crossing">
+        <img src="/image_min/2015-2023/churchofsangiorgiomaggiore2016_min.jpg" width="1600" height="686"
+             alt="A brick campanile and white church front across flat green lagoon water, two boats crossing"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Plate 003 · Italy</span>
+        <span class="display-sm" style="color:var(--paper);">Across the lagoon</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">San Giorgio Maggiore · 2016</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(15rem,38vh,24rem);">
+      <a class="glightbox" data-gallery="plates"
+         href="/image/2016mountains_and_clouds.jpg"
+         data-title="Mountains and clouds, 2016"
+         data-description="Snow-streaked ridges seen from above through a break in the cloud">
+        <img src="/image_min/2016mountains_and_clouds_min.jpg" width="1280" height="800"
+             alt="Snow-streaked ridges seen from above through a break in the cloud"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Plate 004 · In the air</span>
+        <span class="display-sm" style="color:var(--paper);">A break in the cloud</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Window seat · 2016</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(12rem,30vh,19rem);">
+      <a class="glightbox" data-gallery="plates"
+         href="/image/2015-2023/dustyhorizon2016.jpg"
+         data-title="Dusty horizon, 2016"
+         data-description="Sun breaking through cloud over layered blue ridges receding into haze">
+        <img src="/image_min/2015-2023/dustyhorizon2016_min.jpg" width="1600" height="497"
+             alt="Sun breaking through cloud over layered blue ridges receding into haze"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Plate 005 · Italy</span>
+        <span class="display-sm" style="color:var(--paper);">Dusty horizon</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Six ridges, one exposure · 2016</span>
+      </figcaption>
+    </figure>
+
+    <!-- The double exposure. Two layers, no anchor: this picture is composited
+         by the browser and has no file behind it to open. The first image
+         carries the alt for the composite; the second is a layer of it, not a
+         picture of its own, so its alt is empty. -->
+    <figure class="art-plate double-plate" style="height:clamp(14rem,34vh,21rem);">
+      <img class="layer-a" src="/image_min/2015-2023/harald_staircase_may2022_min.jpg"
+           width="1600" height="496"
+           alt="A double exposure: a person seated against a speckled wall, with a sunlit ridge and broken cloud showing through the shadows"
+           loading="lazy" decoding="async">
+      <img class="layer-b" src="/image_min/2015-2023/dustyhorizon2016_min.jpg"
+           width="1600" height="497" alt="" loading="lazy" decoding="async">
+      <figcaption class="plate-caption">
+        <span class="micro n">Plate 006 · Double exposure</span>
+        <span class="display-sm" style="color:var(--paper);">Face / ridge / same light</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Two frames, one blend mode · no negative</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+
+
+
+<!-- ===== COPY FROM HERE: Photo stage — full-bleed wash
+     .photo-stage is .matte-stage with a picture behind it and --hero-scrim
+     over that. It owns its own type colours, so nothing inside needs an inline
+     `color:` — paste any block in and it comes out light-on-dark. ===== -->
+<section class="photo-stage" id="wash" style="padding-block:clamp(4rem,14vh,8rem);">
+  <div class="stage-media">
+    <!-- Full-size file: this is a full-bleed band, the second largest surface
+         on the page after the hero. -->
+    <img src="/image/2015-2023/2020mist.jpg" width="4705" height="1460" alt=""
+         loading="lazy" decoding="async">
+    <!-- alt="" on purpose: the picture is the section's ground, and everything
+         it shows is said in the text over it. A description here would be read
+         out twice. -->
+  </div>
+
+  <div class="shell" style="position:relative;">
+    <p class="eyebrow">Section 02 — Wash</p>
+
+    <h2 class="display" style="margin-top:1.25rem;">
+      Fog is a<br><span class="text-flow">blend mode</span>
+    </h2>
+
+    <div class="block-two-col" style="margin-top:clamp(2.5rem,7vh,4rem); align-items:start;">
+      <blockquote style="font-size:var(--step-1); line-height:1.5; border-left:var(--hairline-width) solid rgba(255,255,255,0.35); padding-left:1.5rem; max-width:44ch;">
+        Fog does to a floodlit pitch exactly what a scrim does to a photograph:
+        it takes out the middle distance and leaves a foreground and a
+        suggestion. The difference is that one of the two is honest about being
+        an effect.
+      </blockquote>
+
+      <!-- .stat-grid-glass is the modifier for a tile grid standing on a
+           picture: each tile takes a fifth of black and blurs the photograph
+           behind it, so the mono labels are legible over the bright part of
+           the frame as well as the dark. It replaces the four inline
+           `background:transparent` styles these tiles used to carry. -->
+      <div class="stat-grid stat-grid-glass" style="grid-template-columns:repeat(auto-fit,minmax(min(15rem,100%),1fr)); --hairline:rgba(255,255,255,0.18);">
+        <div>
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Frame</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">A football ground in heavy fog, one figure under the lights.</p>
+        </div>
+        <div>
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Ground</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">Fixed dark in both schemes — the scrim is <code>--hero-scrim</code>.</p>
+        </div>
+        <div>
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Type</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">Set by the section, not by the markup inside it.</p>
+        </div>
+        <div>
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Edges</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">Hard, deliberately. Only the hero dissolves into the page.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Panel field — glass notes pinned across a photograph
+     Three .glass-card panels staggered over a .photo-stage. The glass has a
+     real picture behind it to blur here, which is the whole reason the panels
+     are on the photograph rather than beside it. ===== -->
+<section class="photo-stage" id="notes" style="padding-block:clamp(4rem,12vh,7rem);">
+  <div class="stage-media">
+    <!-- Decorative ground again — the notes over it describe the view. -->
+    <img src="/image/2025galdhoepiggen/2025jotunheimen_view_from_galdhopiggen1.jpg"
+         width="3844" height="1608" alt="" loading="lazy" decoding="async">
+  </div>
+
+  <div class="shell" style="position:relative;">
+    <p class="eyebrow">Section 03 — Field notes</p>
+    <h2 class="display-md" style="margin-top:0.9rem;">Jotunheimen,<br>from the top</h2>
+
+    <div class="panel-field" style="margin-top:clamp(2.5rem,7vh,4rem);">
+
+      <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
+        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 01 · 2469 m</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">The distance goes flat</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+          Above the last ridge every peak is the same colour. Depth stops coming
+          from tone and starts coming from where things overlap — which is a
+          layout problem the mountains solved first.
+        </p>
+      </article>
+
+      <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
+        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 02 · Glacier</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">Blue is a thickness</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+          Glacier blue is not a pigment, it is how far the light had to travel
+          through the ice before it came back out. The same is true of every
+          frosted panel on this page.
+        </p>
+      </article>
+
+      <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
+        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 03 · Descent</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">A photograph is not the walk</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+          Eleven hours compress to one frame, and the frame keeps the view but
+          loses the weather. The caption is where the rest of it has to go, so
+          the caption is worth writing.
+        </p>
+      </article>
+
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Stagger grid — a six-cell overlapping staircase
+     Neighbouring cells share a column track, so each pair genuinely laps the
+     other; the vertical offsets are margins, positive to drop a cell and
+     negative to pull a row up over the one above it. All of it is grid, so the
+     media query is the only thing holding the composition together and
+     dropping it gives six full-width rows in source order.
+
+     Every plate carries its own height rather than an aspect ratio — the stair
+     is made of frames of deliberately different depths, and a ratio ties a
+     cell's height to a column width it does not control.
+
+     The caption sits INSIDE the frame as a .plate-caption: on a pointer device
+     it fades in on hover or keyboard focus, and on a touch device it is simply
+     always there. It is a real <figcaption> either way, so it is the picture's
+     caption to a screen reader whether or not it has been painted.
+
+     data-gallery keeps this set to itself, so the lightbox arrows step through
+     these six and do not wander into the hero picture. ===== -->
+<section class="shell" id="archive" style="padding-block:clamp(3.5rem,10vh,6rem);">
+  <div style="display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:1.5rem;">
+    <div>
+      <p class="eyebrow">Section 04 — Archive</p>
+      <h2 class="display-md" style="margin-top:0.9rem;">Six frames,<br><span class="text-flow">hand set</span></h2>
+    </div>
+    <p class="micro" style="color:var(--fg-muted); line-height:2; text-align:right;">
+      06 plates · 04 years<br>
+      Norway · Sweden · Italy<br>
+      Updated 04.09.2026
+    </p>
+  </div>
+
+  <hr class="rule-grad" style="margin-block:2rem 3rem;">
+
+  <div class="stagger-grid">
+
+    <figure class="art-plate fill" style="height:clamp(16rem,42vh,30rem);">
+      <a class="glightbox" data-gallery="archive"
+         href="/image/2025galdhoepiggen/2025galdhopiggen_trail1.jpg"
+         data-title="Above the snowfield, Galdhøpiggen, 2025"
+         data-description="Broken grey boulders in the foreground, a wide snowfield below and brown ridges running to the horizon">
+        <img src="/image_min/2025galdhoepiggen/2025galdhopiggen_trail1_min.jpg" width="1280" height="800"
+             alt="Broken grey boulders in the foreground, a wide snowfield below and brown ridges running to the horizon"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Frame 001 · Norway</span>
+        <span class="display-sm" style="color:var(--paper);">Above the snowfield</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Galdhøpiggen · 2469 m · August 2025</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(16rem,50vh,36rem);">
+      <a class="glightbox" data-gallery="archive"
+         href="/image/padova2016.jpg"
+         data-title="Padova, 2016"
+         data-description="A stone statue on a tall plinth, thrown into silhouette by the sun directly behind it">
+        <img src="/image_min/padova2016_min.jpg" width="853" height="1280"
+             alt="A stone statue on a tall plinth, thrown into silhouette by the sun directly behind it"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Frame 002 · Italy</span>
+        <span class="display-sm" style="color:var(--paper);">Silhouette, Padova</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Backlit at noon · 2016</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(16rem,46vh,32rem);">
+      <a class="glightbox" data-gallery="archive"
+         href="/image/2025galdhoepiggen/2025styggebreen_glacier_1.jpg"
+         data-title="Styggebreen, 2025"
+         data-description="An unbroken white glacier basin between two dark rock buttresses under a deep blue sky">
+        <img src="/image_min/2025galdhoepiggen/2025styggebreen_glacier_1_min.jpg" width="1600" height="1000"
+             alt="An unbroken white glacier basin between two dark rock buttresses under a deep blue sky"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Frame 003 · Norway</span>
+        <span class="display-sm" style="color:var(--paper);">Styggebreen</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Glacier crossing · August 2025</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(16rem,44vh,31rem);">
+      <a class="glightbox" data-gallery="archive"
+         href="/image/2016romestreets.jpg"
+         data-title="Rome, 2016"
+         data-description="Wet cobblestones at night, street lights thrown out of focus behind them">
+        <img src="/image_min/2016romestreets_min.jpg" width="1280" height="720"
+             alt="Wet cobblestones at night, street lights thrown out of focus behind them"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Frame 004 · Italy</span>
+        <span class="display-sm" style="color:var(--paper);">Night streets, Rome</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Wide open, hand held · 2016</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(15rem,36vh,25rem);">
+      <a class="glightbox" data-gallery="archive"
+         href="/image/summersunset2018w.jpg"
+         data-title="A summer sunset, 2018"
+         data-description="Bare birches standing against a teal and orange sunset sky">
+        <img src="/image_min/summersunset2018w_min.jpg" width="1280" height="853"
+             alt="Bare birches standing against a teal and orange sunset sky"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Frame 005 · Sweden</span>
+        <span class="display-sm" style="color:var(--paper);">Birches at dusk</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">Teal over orange · summer 2018</span>
+      </figcaption>
+    </figure>
+
+    <figure class="art-plate fill" style="height:clamp(15rem,40vh,28rem);">
+      <a class="glightbox" data-gallery="archive"
+         href="/image/2015-2023/2019nightthings.jpg"
+         data-title="Night things, 2019"
+         data-description="A flooded car park between student blocks at night, every lamp doubled in the standing water">
+        <img src="/image_min/2015-2023/2019nightthings_min.jpg" width="1600" height="685"
+             alt="A flooded car park between student blocks at night, every lamp doubled in the standing water"
+             loading="lazy" decoding="async">
+      </a>
+      <figcaption class="plate-caption">
+        <span class="micro n">Frame 006 · Sweden</span>
+        <span class="display-sm" style="color:var(--paper);">Night things, doubled</span>
+        <span class="micro" style="color:rgba(244,244,242,0.55);">One frame, two of everything · 2019</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Quote lockup — a label column beside a pull quote
+     A quotation mark set at .display size was the first attempt and it does not
+     work in this face: Harald Revery Mono draws a small, high, light quote
+     glyph, so at 5rem it reads as a speck in an empty column rather than as a
+     mark. The left column carries the label instead, which is what the rest of
+     the page does anyway. ===== -->
+<section class="shell" style="padding-bottom:clamp(3.5rem,10vh,6rem);">
+  <div class="block-two-col" style="align-items:start;">
+    <div>
+      <p class="eyebrow">Interlude</p>
+      <p class="display-md" style="margin-top:0.9rem;">On<br><span class="text-flow">grids</span></p>
+    </div>
+    <div class="prose">
+      <blockquote>
+        A grid is a promise about where the next thing will be. Breaking it is
+        only interesting if the reader can still feel the promise underneath —
+        otherwise it is not a broken grid, it is no grid.
+      </blockquote>
+      <p class="micro" style="margin-top:1.5rem; color:var(--fg-muted);">
+        — Notes on the layered index, 2026
+      </p>
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Catalogue — five-column index rows
+     .index-row carries the hairline and the gradient marker; .catalogue-row
+     changes the column ladder to numeral / title / description / class / arrow
+     and adds the hover indent. Below the cutover the middle three collapse and
+     it is a numbered title list again.
+
+     The arrow is aria-hidden: the title beside it is the link, and a screen
+     reader reading "right arrow" after every entry is ten pieces of furniture
+     announced as content. ===== -->
+<section class="shell" id="catalogue" style="padding-bottom:clamp(3.5rem,10vh,6rem);">
+  <div style="display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:1rem; border-bottom:var(--hairline-width) solid var(--hairline); padding-bottom:1.5rem;">
+    <div>
+      <p class="eyebrow">Section 05 — Catalogue</p>
+      <h2 class="display-md" style="margin-top:0.9rem;">What this page is<br><span class="text-flow">made of</span></h2>
+    </div>
+    <p class="micro" style="color:var(--fg-muted);">10 entries · 2026</p>
+  </div>
+
+  <div>
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">001</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#top">A hero of five overlapping pieces</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Portrait, landscape, glass panel, solid block and stamp on twelve columns. The laps are shared column tracks and negative margins, so all five unwind to stacked blocks on a phone.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.collage</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">002</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#top">A ruler cut out of the spectrum</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Segments are transparent boxes over one continuous <code>--grad-flow</code>, with the rules between them painted in the page ground. No list of hex values to keep in step.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.scrubber</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">003</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#thesis">Rows that indent with each step</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Three panels offset 0, 6 and 12 per cent into the page, each with a gradient edge. Flush and full width on a phone, where an indent is only a narrower column.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.slice</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">004</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#wash">A dark band standing on a photograph</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Matte ground, picture, scrim, in that order and all at negative z-index. Owns its own type colours, so a block pasted into it cannot come out in ink on near-black.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.photo-stage</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">005</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#notes">Glass notes staggered across a view</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Three panels on twelve columns at different depths. Each carries its own darkness, because the scrim is at its thinnest exactly where they sit.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.panel-field</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">006</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#plates">Six frames clustered, not stacked</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Three across the top at three depths, three below pushed the other way, every cell lapping a neighbour. The denser of the page's two archive treatments.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.plate-cluster</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">007</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#plates">Two photographs in one frame</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">A double exposure composited in the browser: the second picture laid over the first in <code>screen</code>, so it survives only where the first is dark.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.double-plate</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">008</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#archive">Six frames as a descending stair</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Cells that share a column track and lap each other, offset by margins and lifted on hover. Six full-width rows the moment the media query stops applying.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.stagger-grid</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">009</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#archive">A caption laid inside the frame</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Fades in on hover or focus where there is a pointer, always drawn where there is not. A real figcaption in both cases, so it is never lost to a screen reader.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.plate-caption</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">010</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#catalogue">This row, five columns of it</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">The site's compact index row with a numeral, a description, a classification and an arrow added, and a hover that steps the whole row aside.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.catalogue-row</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- Closing note. Not a block to copy — it is what this page is for. -->
+<section class="shell" style="padding-bottom:clamp(3.5rem,10vh,6rem);">
+  <div class="block-two-col" style="align-items:start;">
+    <div class="prose">
+      <h2>Reading this against the real index</h2>
+      <p>
+        <a class="link-underline" href="/">The front page</a> stacks its bands:
+        hero, then a card grid, then the subject chips. Every edge is horizontal
+        and every section starts where the last one ended. It is easy to scan and
+        it never surprises you.
+      </p>
+      <p>
+        This one overlaps instead, and pays for it. The collage needs two
+        photographs that agree with each other and a portrait strong enough to
+        sit under a masthead; the cluster and the staircase each need exactly six
+        pictures and a person to decide which of them is wide; the double
+        exposure needs one frame dark enough for another to show through it; the
+        notes need a photograph with a quiet middle. None of that survives being
+        generated from a folder of posts, which is why the real index is not
+        built this way and this page is hand-written HTML.
+      </p>
+      <p>
+        Compare the two hero treatments as well —
+        <a class="link-underline" href="/block_test_page_a.html">variant A</a> and
+        <a class="link-underline" href="/block_test_page_b.html">variant B</a> —
+        and every other block on
+        <a class="link-underline" href="/block_test_page.html">the block test page</a>.
+      </p>
+    </div>
+
+    <aside class="download-block">
+      <p class="eyebrow">What to check</p>
+      <ul style="list-style:none; display:grid; gap:0.75rem; font-size:var(--step--1); color:var(--fg-muted);">
+        <li>Both colour schemes. The hero and the slices follow the system setting; the two photo stages deliberately do not.</li>
+        <li>A phone. Every overlap unwinds to a single column — nothing here is absolutely positioned.</li>
+        <li>Reduced motion. The gradient headlines stop animating and stay legible on the dark bands.</li>
+        <li>Scripting off. Only the lightbox goes; the page is otherwise complete.</li>
+        <li>The double exposure in section 01. The ridge should show through the dark half of the portrait and nowhere else; if the sky bleeds onto the page behind the frame, the blend has escaped its stacking context.</li>
+        <li>The archive on a touch screen. The frames should stop overlapping and every caption should be drawn — the lap and the hover reveal are one feature.</li>
+        <li>The archive with a keyboard. Tabbing to a frame should reveal its caption and lift it over its neighbours, exactly as pointing at it does.</li>
+        <li>The lightbox arrows. They should step through those six frames and no others.</li>
+      </ul>
+    </aside>
+  </div>
+</section>

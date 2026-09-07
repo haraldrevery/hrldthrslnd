@@ -1,0 +1,5 @@
+# Harald Revery Text & Mono
+
+```
+Copyright © 2026 Harald Thirslund. These font files are for display purposes on this website only. All rights reserved. For licensing inquiries, contact haraldreverycontact@gmail.com
+```

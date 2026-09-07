@@ -1,0 +1,41 @@
+{# Lower-right corner dock.
+
+   The outline toggle is a checkbox driving a sibling panel: it opens, closes
+   and scrolls to a heading with scripting fully disabled, which website.md
+   requires. The width cycler above it is the one control here that does need
+   JavaScript, and CSS keeps it hidden until reading_width.js has loaded. #}
+{# The dock renders on every post, not only ones with headings: the width
+   control belongs to the reading column, which exists either way. The outline
+   toggle inside it is what depends on there being headings to list. #}
+<div class="corner-dock">
+
+  {# The face is a glyph, not a readout: >< while the next click narrows the
+     column, <> on the last step where the next click opens it back to full.
+     reading_width.js swaps it. The per cent is gone from the button, so the
+     aria-label is now the only place it is stated — keep it there. #}
+  <button class="dock-btn width-cycle" type="button" id="width-cycle"
+          aria-label="Cycle reading width">
+    <span id="width-cycle-label">&gt;&lt;</span>
+  </button>
+
+  {# aria-label, because the accessible name would otherwise be whichever
+     glyph the label is showing — "E" tells a screen reader nothing. #}
+  {% if outline and outline.length %}
+  <input class="outline-toggle" type="checkbox" id="outline-toggle"
+         aria-label="Outline">
+
+  <div class="outline-panel">
+    <p class="micro" style="color:var(--fg-muted); margin-bottom:0.75rem;">Outline</p>
+    <nav class="outline-list" aria-label="Table of contents">
+      {% outlineList outline %}
+    </nav>
+  </div>
+
+  {# Both glyphs ship; CSS shows one at a time off the checkbox's state, so the
+     face still changes with scripting disabled. #}
+  <label class="dock-btn outline-toggle-label" for="outline-toggle">
+    <span class="outline-glyph-open">E</span>
+    <span class="outline-glyph-close">X</span>
+  </label>
+  {% endif %}
+</div>

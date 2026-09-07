@@ -1,0 +1,26 @@
+# Generated output — rebuilt from scratch on every run of site_generate.
+# _site.tmp/ is where a build is staged before it replaces _site, and
+# _site.previous/ holds the old copy for the moment the swap takes; neither
+# should survive a finished build, but an interrupted one can leave them.
+_site/
+_site.tmp/
+_site.previous/
+
+# Development only. Site generation never touches these.
+node_modules/
+node_modules.off/
+
+# The compiled generators are large; build them with
+# ./eleventy_binary/compile.sh rather than committing them.
+# Delete these two lines if you would rather ship the binaries in the repo.
+site_generate
+site_generate.exe
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Tailwind
+tailwindcss-linux-x64
+tailwindcss-windows-x64.exe

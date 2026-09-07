@@ -1,0 +1,111 @@
+---
+layout: base.njk
+permalink: /index.html
+title: false
+---
+{% import "card.njk" as cards %}
+
+{# ---------------------------------------------------------------- hero --- #}
+{#
+   The cinematic title card, .cine-stage — the same block block_test_page_e.html
+   demonstrates, with the site's own name set in it. The CSS is a component in
+   main.css; nothing about the treatment lives on this page.
+
+   The title is the one part that is built rather than written, because the name
+   comes from site_settings.json and every letter needs its own delay. Two
+   loops: words, so a multi-word name wraps between words rather than mid-word,
+   and letters inside them.
+
+   DELAYS is a fixed table, not a random draw. The values are the ones frozen
+   into variant E, and a fixed table is what keeps the page static — the scatter
+   is identical on every build and on every visit, so the markup is cacheable
+   and the title develops the same way twice.
+
+   The stride of 7 is why the table is not simply read from the start for each
+   word. 7 and 15 are coprime, so a word beginning at offset 7·n lands on a
+   different run of the table than the word before it; read from index 0 every
+   time and a two-word name would develop both words in step, which is the one
+   pattern the scatter exists to avoid.
+
+   The letters are aria-hidden and the whole name is on the h1's aria-label: a
+   screen reader gets "SITE_NAME", not fifteen separate letters.
+#}
+{% set DELAYS = [0.32, 1.05, 0.61, 0.88, 0.14, 1.22, 0.47, 0.73,
+                 1.36, 0.09, 0.96, 0.52, 1.11, 0.28, 0.67] %}
+
+<section class="cine-stage">
+  <div class="cine-media" aria-hidden="true">
+    <img src="{{ settings.default_image }}" alt=""{{ settings.default_image | sizeAttrs | safe }}
+         loading="eager" decoding="async">
+    <div class="cine-scrim"></div>
+  </div>
+  <div class="cine-grain" aria-hidden="true"></div>
+
+  <div class="cine-card">
+    <p class="cine-eyebrow">{{ settings.short_name }} — index</p>
+
+    <h1 class="cine-title" aria-label="{{ settings.name }}">
+      {%- for word in settings.name.split(" ") -%}
+        {%- set stride = loop.index0 * 7 -%}
+        <span aria-hidden="true">
+        {%- for letter in word | list -%}
+          <span class="cine-letter" style="--letter-delay:{{ DELAYS[(stride + loop.index0) % DELAYS.length] }}s">{{ letter }}</span>
+        {%- endfor -%}
+        </span>
+      {%- endfor -%}
+    </h1>
+
+    <div class="cine-rule" aria-hidden="true"></div>
+
+    {# No .cine-actions here, deliberately. The title card is the front door and
+       nothing else; the nav bar above it already carries Journal and About, so
+       a pair of buttons repeating them is a second navigation over the first.
+       The scroll cue in the corner is the only thing asking for a click, and
+       what it asks for is to keep reading. The component still ships
+       .cine-actions and .cine-btn — block_test_page_e.html uses them. #}
+    <p class="cine-tagline">{{ settings.description }}</p>
+  </div>
+
+  {# Lower-right scroll cue — the site's own component, .hero-scroll-cue, which
+     works over this stage because .cine-stage declares the three --hero-*
+     tokens it reads. The travel is the site's own smooth scrolling, so there is
+     no script behind it. The sentinel below is its landing point and belongs to
+     this block — keep the two together. #}
+  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>
+</section>
+<div class="hero-end" id="hero-end"></div>
+
+{# ------------------------------------------------------------- featured --- #}
+{% set featured = collections.posts | limit(5) %}
+{% if featured.length %}
+<section class="shell" style="padding-block:clamp(3rem,8vh,5.5rem);">
+  <header style="display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:1rem;">
+    <h2 class="display-md">Latest</h2>
+    <a class="nav-link link-underline" href="/blog.html">All entries →</a>
+  </header>
+
+  <hr class="rule-grad" style="margin-block:1.75rem 2.5rem;">
+
+  <div class="card-grid card-grid--fill">
+    {% for post in featured %}{{ cards.card(post, settings) }}{% endfor %}
+  </div>
+</section>
+{% else %}
+<section class="shell" style="padding-block:clamp(3rem,8vh,5.5rem);">
+  <h2 class="display-md">Latest</h2>
+  <hr class="rule-grad" style="margin-block:1.75rem 2.5rem;">
+  <p class="lede">
+    No published entries yet. Drop a markdown file into <code>input_markdown/</code>
+    with <code>draft: false</code> in its front matter and rebuild.
+  </p>
+</section>
+{% endif %}
+
+{# ------------------------------------------------------------- subjects --- #}
+{% if collections.tagList.length %}
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,5.5rem);">
+  <h2 class="display-md">Subjects</h2>
+  <hr style="margin-block:1.5rem 0.25rem;">
+  {% include "tag_filter.njk" %}
+</section>
+{% endif %}

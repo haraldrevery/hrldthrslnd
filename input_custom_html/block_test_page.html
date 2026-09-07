@@ -1,0 +1,1052 @@
+---
+title: Block test page
+date: 2026-09-03
+image: /image/2016mountains_and_clouds.jpg
+tags: [test, reference]
+description: Every page block this site can render, in single and two column arrangements. A visual stress test, and a copy-paste library.
+draft: false
+---
+
+<!--
+  ============================================================================
+  BLOCK TEST PAGE
+
+  Two jobs:
+
+    1. A stress test. Every block type appears here, so a change to theme.css
+       or input.css can be checked against all of them at once.
+
+    2. A copy-paste library. Until the page builder app exists, this is how you
+       hand-write a page. Every block is fenced with
+
+           COPY FROM HERE: <name>   …   COPY TO HERE
+
+       Copy what is between the fences into a new file in input_custom_html/,
+       add the YAML front matter block at the top, and rebuild.
+
+  VERTICAL RHYTHM
+
+  Nothing in the stylesheet puts space between two sections, so each block
+  carries its own. The rule is: a block pads its BOTTOM only, by
+
+      padding-bottom: clamp(3rem, 8vh, 4.5rem);
+
+  and never its top. The gap above any block is the previous block's bottom
+  padding. Padding does not collapse the way margins do, so a top padding
+  stacks on top of that and shows up as a double gap.
+
+  Three deliberate exceptions:
+
+    - The heading block pads its top (it is the first thing after the hero,
+      which pads only for its own fade) and closes with a tight 1rem, because
+      the block underneath it is what it is a heading for.
+    - .photo-stage bands pad both sides. That padding is the inside of a
+      full-bleed band, not a gap between blocks, so it is symmetric and larger.
+    - .feature-overlay takes its padding from input.css rather than inline,
+      already bottom-only, on the same scale.
+
+  This file has NO <!doctype html>, so the generator wraps it in the site
+  layout — you get the nav, footer, fonts and stylesheet for free. Start a file
+  with <!doctype html> instead and it is published exactly as written.
+  ============================================================================
+-->
+
+<!-- ===== COPY FROM HERE: Hero — full-viewport stage (always first on the page) ===== -->
+<section class="hero-stage">
+  <div class="editorial-grid" aria-hidden="true"></div>
+  <div class="shell" style="position:relative;">
+    <p class="eyebrow">Reference — 01</p>
+    <h1 class="display" style="margin-top:1.5rem;">
+      Block<br><span class="text-flow">test</span><br>page
+    </h1>
+    <p class="lede" style="margin-top:2rem;">
+      Every block type, in single and two column arrangements. If something is
+      broken in the theme, it will be visible somewhere on this page.
+    </p>
+    <div style="display:flex; flex-wrap:wrap; gap:2.25rem; margin-top:2.5rem;">
+      <a class="btn" href="#galleries">Jump to galleries</a>
+      <a class="btn btn-ghost" href="/block_test_page_a.html">Hero variant A</a>
+    </div>
+  </div>
+  <!-- Lower-right scroll cue. Fades in a beat after load and drops the page
+       past the hero; the travel is the site's own smooth scrolling, so there
+       is no script behind it. The sentinel below is its landing point and
+       belongs to this block — keep the two together. -->
+  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>
+</section>
+<div class="hero-end" id="hero-end"></div>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Heading block ===== -->
+<section class="shell" style="padding-block:clamp(3rem,8vh,4.5rem) 1rem;">
+  <p class="eyebrow">Section label</p>
+  <h2 class="display-md" style="margin-top:0.9rem;">Heading block</h2>
+  <hr class="rule-grad" style="margin-top:1.75rem;">
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Text section — single column (markdown + KaTeX) =====
+     KaTeX is typeset to static HTML. In a .md post you write $…$ and the build
+     does this for you; in a hand-written .html page paste the rendered output,
+     which is what you see below. Either way no script runs in the browser. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <div class="prose">
+    <h3>Text section, single column</h3>
+    <p>
+      Body copy sits in a <code>.prose</code> container, which is where all the
+      markdown typography rules live — headings, lists, quotes, tables, code and
+      footnotes. Inline mathematics such as <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>χ</mi><mn>2</mn></msup><mo>=</mo><msub><mo>∑</mo><mi>i</mi></msub><mfrac><mrow><mo stretchy="false">(</mo><msub><mi>O</mi><mi>i</mi></msub><mo>−</mo><msub><mi>E</mi><mi>i</mi></msub><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><msub><mi>E</mi><mi>i</mi></msub></mfrac></mrow><annotation encoding="application/x-tex">\chi^2 = \sum_i \frac{(O_i - E_i)^2}{E_i}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0085em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">χ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.554em;vertical-align:-0.4451em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.162em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2997em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.1089em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">E</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3281em;"><span style="top:-2.357em;margin-left:-0.0576em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.485em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0278em;">O</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3281em;"><span style="top:-2.357em;margin-left:-0.0278em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="mbin mtight">−</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">E</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3281em;"><span style="top:-2.357em;margin-left:-0.0576em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="mclose mtight"><span class="mclose mtight">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8913em;"><span style="top:-2.931em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4451em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span> flows with the
+      sentence and keeps its own metrics, independent of the body type scale.
+    </p>
+    <p>Display mathematics gets its own block and scrolls sideways if it has to:</p>
+    <span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msubsup><mo>∫</mo><mrow><mo>−</mo><mi mathvariant="normal">∞</mi></mrow><mi mathvariant="normal">∞</mi></msubsup><msup><mi>e</mi><mrow><mo>−</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></msup><mtext> </mtext><mi>d</mi><mi>x</mi><mo>=</mo><msqrt><mi>π</mi></msqrt></mrow><annotation encoding="application/x-tex">\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.3846em;vertical-align:-0.9703em;"></span><span class="mop"><span class="mop op-symbol large-op" style="margin-right:0.4445em;position:relative;top:-0.0011em;">∫</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.4143em;"><span style="top:-1.7881em;margin-left:-0.4445em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">∞</span></span></span></span><span style="top:-3.8129em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">∞</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9703em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:1.0369em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8913em;"><span style="top:-2.931em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">d</span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.04em;vertical-align:-0.1908em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8492em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord" style="padding-left:0.833em;"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span></span></span><span style="top:-2.8092em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
+c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
+c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
+c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
+s173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429
+c69,-144,104.5,-217.7,106.5,-221
+l0 -0
+c5.3,-9.3,12,-14,20,-14
+H400000v40H845.2724
+s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
+c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
+M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1908em;"><span></span></span></span></span></span></span></span></span></span>
+    <blockquote>
+      A pull quote uses a gradient left border rather than a heavier weight,
+      because these fonts have exactly one weight each.
+    </blockquote>
+    <ul>
+      <li>Unordered lists use square markers in the accent colour</li>
+      <li>Nested items indent normally
+        <ul><li>like this</li></ul>
+      </li>
+    </ul>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Text section — two column ===== -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <div class="block-two-col">
+    <div class="prose">
+      <h3>Left column</h3>
+      <p>
+        Two-column blocks collapse to one column below the mobile breakpoint,
+        which is defined once in <code>css/input.css</code> as
+        <code>--breakpoint-md</code>. Nothing here sets its own breakpoint.
+      </p>
+    </div>
+    <div class="prose">
+      <h3>Right column</h3>
+      <p>
+        Any two blocks can be paired this way — text beside an image, a gallery
+        beside a download, an FAQ beside a feature panel. Wrap them in
+        <code>.block-two-col</code> and they line up.
+      </p>
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Image gallery — justified, native ratios =====
+     Cells keep their native ratio. Give each figure its --ar (the _min file's
+     width divided by its height) and the stylesheet does the rest — --ar is
+     both the width the cell asks for and its share of the leftover space, which
+     is the whole of the justifying. No measuring script.
+     Omitting --ar is not fatal: the cell falls back to 3:2.
+     Every lightbox link carries data-title and data-description, and every
+     image an alt that is not a copy of the caption. The waterfall block below
+     spells out why each of the four is there. -->
+<section class="shell" id="galleries" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Gallery — justified</h2>
+  <p class="lede" style="margin-top:0.9rem; font-size:var(--step--1);">
+    Cells keep their native aspect ratio and the row justifies itself. Pure
+    flexbox, no measuring script.
+  </p>
+
+  <div class="gallery gallery-justified" style="--gallery-gap:0.75rem; margin-top:2rem;">
+    <figure class="art-plate fill" style="--ar:1.6;">
+      <a class="glightbox" data-gallery="justified" href="/image/2016mountains_and_clouds.jpg"
+         data-title="Mountains and clouds, 2016"
+         data-description="Snow-streaked ridges seen from above through a break in the cloud">
+        <img src="/image_min/2016mountains_and_clouds_min.jpg" width="1280" height="800"
+             alt="Snow-streaked ridges seen from above through a break in the cloud" loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <figure class="art-plate fill" style="--ar:1.7778;">
+      <a class="glightbox" data-gallery="justified" href="/image/2016nicemountains.jpg"
+         data-title="Ridge line, 2016"
+         data-description="A run of snow-covered peaks from a plane window, hazy blue distance behind">
+        <img src="/image_min/2016nicemountains_min.jpg" width="1280" height="720"
+             alt="A run of snow-covered peaks from a plane window, hazy blue distance behind" loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <figure class="art-plate fill" style="--ar:1.7778;">
+      <a class="glightbox" data-gallery="justified" href="/image/2016romestreets.jpg"
+         data-title="Rome, 2016"
+         data-description="Wet cobblestones at night, street lights thrown out of focus behind them">
+        <img src="/image_min/2016romestreets_min.jpg" width="1280" height="720"
+             alt="Wet cobblestones at night, street lights thrown out of focus behind them" loading="lazy" decoding="async">
+      </a>
+    </figure>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Image gallery — uniform crop grid (with SVG) =====
+     Every cell cropped to one ratio, so the grid reads as a grid. Vector
+     cells use .tile-vector and no lightbox: an SVG is already the
+     full-resolution file, so there is nothing larger to open.
+     Every lightbox link carries data-title and data-description, and every
+     image an alt that is not a copy of the caption. The waterfall block below
+     spells out why each of the four is there. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Gallery — uniform crop</h2>
+  <p class="lede" style="margin-top:0.9rem; font-size:var(--step--1);">
+    Every cell is cropped to the same ratio. SVG and GIF work here too — the
+    last two cells are vector.
+  </p>
+
+  <div class="gallery gallery-uniform" style="--gallery-gap:0.5rem; margin-top:2rem;">
+    <figure class="art-plate fill">
+      <a class="glightbox" data-gallery="uniform" href="/image/2016just_mountains.jpg"
+         data-title="Over the Alps, 2016"
+         data-description="A wide field of snow-covered peaks under a pale horizon, seen from altitude">
+        <img src="/image_min/2016just_mountains_min.jpg" width="1280" height="800"
+             alt="A wide field of snow-covered peaks under a pale horizon, seen from altitude" loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <figure class="art-plate fill">
+      <a class="glightbox" data-gallery="uniform" href="/image/2016moremountains.jpg"
+         data-title="Green ridges, 2016"
+         data-description="Cloud shadows crossing green and grey ridges far below the aircraft">
+        <img src="/image_min/2016moremountains_min.jpg" width="1280" height="548"
+             alt="Cloud shadows crossing green and grey ridges far below the aircraft" loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <figure class="art-plate fill">
+      <a class="glightbox" data-gallery="uniform" href="/image/2016somemountains.jpg"
+         data-title="Peaks through cloud, 2016"
+         data-description="A sheet of low cloud broken by dark summits, thinning towards the horizon">
+        <img src="/image_min/2016somemountains_min.jpg" width="1280" height="720"
+             alt="A sheet of low cloud broken by dark summits, thinning towards the horizon" loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <figure class="art-plate fill">
+      <a class="glightbox" data-gallery="uniform" href="/image/summersunset2018w.jpg"
+         data-title="A summer sunset, 2018"
+         data-description="Bare birches standing against a teal and orange sunset sky">
+        <img src="/image_min/summersunset2018w_min.jpg" width="1280" height="853"
+             alt="Bare birches standing against a teal and orange sunset sky" loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <figure class="tile-vector">
+      <img src="/svg/compass_navigation.svg" width="522" height="538" alt="Compass rose" loading="lazy">
+    </figure>
+    <figure class="tile-vector">
+      <img src="/svg/gear.svg" width="578" height="579" alt="Gear" loading="lazy">
+    </figure>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Image gallery — waterfall with captions =====
+     CSS columns, so the cells keep their own proportions and the columns
+     balance themselves — no measuring script and nothing to re-run on resize.
+     Column count follows --gallery-column-width, not a breakpoint.
+
+     Two things follow from it being columns rather than a grid:
+
+       Reading order runs down column one, then column two — not across the
+       row. Fine for pictures, wrong for anything you expect to be read.
+
+       The browser balances by fitting the shortest height that holds
+       everything, filling each column in turn, and a cell will not be split.
+       So the bottom edge comes out ragged, and it comes out worst when the
+       tall cells are bunched together in the source. Space the portraits
+       through the run, as below, and the columns land much closer.
+
+     Every cell carries the same four things, and all four earn their place:
+
+       alt              what the picture shows, for a screen reader and for
+                        image search. Never the same string as the caption —
+                        that just reads the caption out twice.
+       <figcaption>     the visible caption. Search engines weigh text next to
+                        an image, and a <figure>/<figcaption> pair is the markup
+                        that says the two belong together.
+       data-title       the heading on the lightbox slide.
+       data-description the line under it. Set from the alt text, which is the
+                        same pairing the markdown pipeline emits — see
+                        renderFigure() in eleventy_binary/lib/markdown.js.
+
+     width and height are the file's real pixel dimensions, so the column
+     reserves the right height before the picture arrives and nothing jumps.
+     They are the dimensions of the *_min counterpart in src, not of the
+     full-resolution file in href. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Gallery — waterfall</h2>
+  <p class="lede" style="margin-top:0.9rem; font-size:var(--step--1);">
+    Mixed proportions on purpose — portrait, landscape and panorama in one run,
+    which is the arrangement this layout exists for.
+  </p>
+
+  <div class="gallery gallery-waterfall" style="--gallery-gap:0.75rem; margin-top:2rem;">
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2018augusti10stranden.jpg"
+           data-title="The beach, August 2018" data-description="Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind">
+          <img src="/image_min/2018augusti10stranden_min.jpg" width="1600" height="669" alt="Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>The beach, August 2018</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/edinburghharbournight2015.jpg"
+           data-title="Edinburgh harbour, 2015" data-description="Lit harbour buildings across black water at night, their reflections broken on the surface">
+          <img src="/image_min/2015-2023/edinburghharbournight2015_min.jpg" width="1600" height="495" alt="Lit harbour buildings across black water at night, their reflections broken on the surface" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Edinburgh harbour, 2015</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/padova2016.jpg"
+           data-title="Padova, 2016" data-description="A stone statue silhouetted against a bright hazy sky">
+          <img src="/image_min/padova2016_min.jpg" width="1067" height="1600" alt="A stone statue silhouetted against a bright hazy sky" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Padova, 2016</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/venezia2016.jpg"
+           data-title="Venezia, 2016" data-description="A narrow canal between ochre houses, moored boats and their reflections filling the water">
+          <img src="/image_min/2015-2023/venezia2016_min.jpg" width="1280" height="720" alt="A narrow canal between ochre houses, moored boats and their reflections filling the water" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Venezia, 2016</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/2020mist.jpg"
+           data-title="Mist, 2020" data-description="Streetlights burning through fog over an empty lot at night, a single figure crossing it">
+          <img src="/image_min/2015-2023/2020mist_min.jpg" width="1600" height="496" alt="Streetlights burning through fog over an empty lot at night, a single figure crossing it" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Mist, 2020</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/2021march07klippor_1.jpg"
+           data-title="Cliffs in the ice, March 2021" data-description="Looking straight down on a pine-topped rocky outcrop ringed by cracked lake ice">
+          <img src="/image_min/2015-2023/2021march07klippor_1_min.jpg" width="767" height="1024" alt="Looking straight down on a pine-topped rocky outcrop ringed by cracked lake ice" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Cliffs in the ice, March 2021</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/summersunset2018w.jpg"
+           data-title="Summer sunset, 2018" data-description="Bare birches standing against a teal and orange sunset sky">
+          <img src="/image_min/summersunset2018w_min.jpg" width="1600" height="1067" alt="Bare birches standing against a teal and orange sunset sky" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Summer sunset, 2018</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/churchofsangiorgiomaggiore2016.jpg"
+           data-title="San Giorgio Maggiore, 2016" data-description="The campanile and dome of San Giorgio Maggiore across the Venetian lagoon, boats passing in front">
+          <img src="/image_min/2015-2023/churchofsangiorgiomaggiore2016_min.jpg" width="1600" height="686" alt="The campanile and dome of San Giorgio Maggiore across the Venetian lagoon, boats passing in front" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>San Giorgio Maggiore, 2016</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/2019campuswinter.jpg"
+           data-title="Campus in winter, 2019" data-description="A snow-covered road at night, a streetlamp flaring above parked cars and heavy pines">
+          <img src="/image_min/2015-2023/2019campuswinter_min.jpg" width="1600" height="675" alt="A snow-covered road at night, a streetlamp flaring above parked cars and heavy pines" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Campus in winter, 2019</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/2018summerlake.jpg"
+           data-title="A summer lake, 2018" data-description="Turquoise water meeting smooth grey rock, a wooded shoreline far off under a pale sky">
+          <img src="/image_min/2015-2023/2018summerlake_min.jpg" width="989" height="1280" alt="Turquoise water meeting smooth grey rock, a wooded shoreline far off under a pale sky" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>A summer lake, 2018</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/fourstones.jpg"
+           data-title="Four stones" data-description="Four rounded stones balanced into a cairn on a lakeshore beach">
+          <img src="/image_min/2015-2023/fourstones_min.jpg" width="1600" height="900" alt="Four rounded stones balanced into a cairn on a lakeshore beach" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Four stones</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/bluelightstrikestunnel.jpg"
+           data-title="Blue light strikes the tunnel" data-description="Teal and white light trails streaking the length of a concrete road tunnel">
+          <img src="/image_min/2015-2023/bluelightstrikestunnel_min.jpg" width="1600" height="675" alt="Teal and white light trails streaking the length of a concrete road tunnel" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Blue light strikes the tunnel</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/karlstadriver2022december.jpg"
+           data-title="The river at Karlstad, December 2022" data-description="A lit riverfront terrace of houses reflected in still water at dusk">
+          <img src="/image_min/2015-2023/karlstadriver2022december_min.jpg" width="1600" height="496" alt="A lit riverfront terrace of houses reflected in still water at dusk" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>The river at Karlstad, December 2022</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/2023december23.jpg"
+           data-title="23 December 2023" data-description="Snow-laden pine branches framing a frozen bay below">
+          <img src="/image_min/2015-2023/2023december23_min.jpg" width="800" height="1280" alt="Snow-laden pine branches framing a frozen bay below" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>23 December 2023</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/forestrun2019.jpg"
+           data-title="Forest run, 2019" data-description="A lone runner on a road cut straight through dense spruce forest">
+          <img src="/image_min/2015-2023/forestrun2019_min.jpg" width="1280" height="549" alt="A lone runner on a road cut straight through dense spruce forest" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>Forest run, 2019</figcaption>
+    </figure>
+    <figure>
+      <span class="art-plate">
+        <a class="glightbox" data-gallery="waterfall" href="/image/2015-2023/2016field.jpg"
+           data-title="The field at sunset, 2016" data-description="A figure standing alone in a field of dry grass, backlit by a low sun over the treeline">
+          <img src="/image_min/2015-2023/2016field_min.jpg" width="1600" height="900" alt="A figure standing alone in a field of dry grass, backlit by a low sun over the treeline" loading="lazy" decoding="async">
+        </a>
+      </span>
+      <figcaption>The field at sunset, 2016</figcaption>
+    </figure>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Feature block — one image, catch text over glass ===== -->
+<section>
+  <div class="shell" style="position:relative; padding-block:0 clamp(3rem,8vh,4.5rem);">
+    <div class="block-two-col" style="align-items:center; gap:3rem;">
+      <div class="art-plate fill" style="aspect-ratio:3/4;">
+        <a class="glightbox" data-gallery="feature" href="/image/2016mountains_and_clouds.jpg"
+           data-title="Mountains and clouds, 2016"
+           data-description="Snow-streaked ridges seen from above through a break in the cloud">
+          <img src="/image_min/2016mountains_and_clouds_min.jpg" width="1280" height="800"
+               alt="Snow-streaked ridges seen from above through a break in the cloud" loading="lazy" decoding="async">
+        </a>
+      </div>
+
+      <div class="glass-card glass-card-solid" style="padding:clamp(1.75rem,4vw,3rem);">
+        <p class="eyebrow" style="color:rgba(244,244,242,0.6);">Featured — 01</p>
+        <h2 class="display-md" style="margin-top:1rem; color:var(--paper);">One image,<br>one argument</h2>
+        <p style="margin-top:1.5rem; color:rgba(244,244,242,0.82); max-width:46ch;">
+          Use this when a run of text-and-image columns needs breaking up. The
+          panel carries its own dark ground in both themes, so the contrast is
+          fixed and predictable rather than depending on the page or the photo.
+        </p>
+        <p style="margin-top:1.75rem;">
+          <a class="btn btn-ghost" href="#galleries">Read on</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Feature block — glass panel over an image =====
+     A counterpart to the block above: instead of sitting beside the photograph,
+     the panel overlaps it, so the glass has a real picture behind it to blur
+     rather than flat colour.
+
+     The picture and the panel sit on the same content column as every other
+     section, on the page's own ground. It is deliberately tall — one per page is usually enough. The image keeps the
+     .art-plate hover zoom and opens full resolution in the lightbox, like every
+     other picture on the site. -->
+<section>
+  <div class="shell feature-overlay">
+    <div class="feature-overlay-visual art-plate fill">
+      <a class="glightbox" data-gallery="feature-overlay" href="/image/summersunset2018w.jpg"
+         data-title="Summer sunset, 2018"
+         data-description="Bare birches standing against a teal and orange sunset sky">
+        <img src="/image_min/summersunset2018w_min.jpg" width="1280" height="853"
+             alt="Bare birches standing against a teal and orange sunset sky" loading="lazy" decoding="async">
+      </a>
+    </div>
+
+    <div class="feature-overlay-panel glass-card">
+      <!-- A touch brighter than the eyebrow in the block above: this one can land
+           over a bright part of the photograph, where 0.6 fell under 4.5:1. -->
+      <p class="eyebrow" style="color:rgba(244,244,242,0.7);">Featured dispatch — 01</p>
+      <h2 class="display-md" style="margin-top:1rem; color:var(--paper);">Text over<br>the picture</h2>
+      <p style="margin-top:1.5rem; color:rgba(244,244,242,0.82); max-width:44ch;">
+        Use this when a run of one- and two-column text needs breaking up. The text
+        sits on the photograph rather than beside it, and the panel keeps it legible
+        whatever the picture underneath happens to be doing.
+      </p>
+      <p style="margin-top:1.75rem;">
+        <a class="btn btn-ghost" href="#galleries">Read on</a>
+      </p>
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Video block =====
+     A plain <video> element with controls and a poster frame. No player
+     library, so it degrades to the browser's own controls. Uncomment the
+     <source> line and point it at your file in /video/. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Video</h2>
+  <div style="margin-top:2rem;">
+    <video controls preload="none"
+           poster="/image_min/2016nicemountains_min.jpg"
+           style="width:100%; background:#111217;">
+      <!-- Point this at your own file -->:
+      <source src="/video/branas_snowboarding.mp4" type="video/mp4">
+      -
+      <p class="prose">Your browser cannot play this video.</p>
+    </video>
+    <p class="micro" style="margin-top:0.75rem; color:var(--fg-muted);">
+      Poster frame shown — no sample video ships with this repository.
+    </p>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Text beside video =====
+     .block-media is prose in the left cell, media in the right. It gives the
+     media the larger share (--media-col, default 1.25fr against the text's 1fr)
+     and centres the text against it, then collapses to one column below
+     --breakpoint-md with the text on top.
+
+     Add .media-left to swap the sides on desktop. That reorders the painted
+     columns only — the text stays first in the source, so it is still what a
+     screen reader meets first and what stacks on top on a phone. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Text beside video</h2>
+
+  <div class="block-media" style="margin-top:2rem;">
+
+    <div class="prose block-media-text">
+      <p class="eyebrow">Field recording</p>
+      <h3 style="margin-top:0.5rem;">Mirth</h3>
+      <p>
+        The left cell is ordinary <code>.prose</code>, so everything that works
+        in a text block works here — links, lists, emphasis, a button. Keep it
+        short: this column is narrower than a full measure, and a long passage
+        beside a video makes the row taller than the video is tall.
+      </p>
+      <p>
+        The video keeps its own aspect ratio in an <code>.art-plate</code>, and
+        loads nothing until it is played — <code>preload="none"</code> means the
+        poster frame is the only bytes the page fetches.
+      </p>
+    </div>
+
+    <!-- aspect-ratio on the plate, not the video: with preload="none" the file
+         is never touched, so the browser has no intrinsic size to reserve and
+         the page would reflow the moment a viewer pressed play. -->
+    <figure class="art-plate fill" style="aspect-ratio:16/9;">
+      <video controls preload="none" playsinline
+             poster="/video/thumbnail/mirth_thumbnail.jpg"
+             width="1280" height="720">
+        <source src="/video/under_25_mb/harald_revery_-_mirth.mp4" type="video/mp4">
+        <p class="prose">
+          Your browser cannot play this video.
+          <a href="/video/under_25_mb/harald_revery_-_mirth.mp4">Download it.</a>
+        </p>
+      </video>
+    </figure>
+
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Audio block =====
+     The controls are the browser's own. They cannot be restyled — replacing
+     them means writing a player in JavaScript, which this site does not do — so
+     .audio-block does not try: no plate, no pill, no well around the strip. It
+     names the track in the site's type, gives the player the full width, and
+     puts the numbers you want before pressing play underneath.
+
+     It is a <figure>, so the caption is tied to the player rather than being a
+     loose paragraph beneath it. Drop the <figcaption> if you have nothing to
+     say, and drop the meta row if you have no numbers worth printing. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Audio</h2>
+
+  <figure class="audio-block" style="margin-top:2rem;">
+    <div class="audio-head">
+      <p class="eyebrow">Track 01 — WAV</p>
+      <p class="display-sm">One second of silence</p>
+    </div>
+
+    <audio controls preload="none">
+      <source src="/audio/silence_test.wav" type="audio/wav">
+      <p>Your browser cannot play this audio. <a href="/audio/silence_test.wav">Download it.</a></p>
+    </audio>
+
+    <p class="audio-meta">
+      <span>0:01</span>
+      <span>44.1 kHz &middot; 16 bit</span>
+      <a class="link-underline" href="/audio/silence_test.wav" download>Download</a>
+    </p>
+
+    <figcaption class="micro" style="letter-spacing:0.08em; text-transform:none; color:var(--fg-muted);">
+      A second of digital silence, kept here so the player has something to
+      load that is not a real recording.
+    </figcaption>
+  </figure>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Download block (hashes filled in at build time) =====
+     Put data-download="<path as served>" on the wrapper. The generator hashes
+     the file it actually shipped and writes the result into the [data-sha]
+     and [data-filesize] elements — you never type a hash by hand. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Download</h2>
+
+  <div class="download-block" data-download="/audio/silence_test.wav" style="margin-top:2rem;">
+    <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between;">
+      <div>
+        <p class="eyebrow">WAV — audio</p>
+        <p class="display-sm" style="margin-top:0.5rem;">silence_test.wav</p>
+      </div>
+      <!-- .btn-slim: the site's one remaining pill. Every other button is a
+           text link now; a download commits you to a file transfer, so it keeps
+           a solid target. It stands alone — there is no .btn on it. .icon-download
+           masks /svg/download.svg, so the glyph lives in svg/ and is not
+           duplicated as a path here. -->
+      <a class="btn-slim" href="/audio/silence_test.wav" download>
+        <span class="icon icon-download" aria-hidden="true"></span>
+        Download
+      </a>
+    </div>
+
+    <div class="hash-row"><span class="micro">Size</span><span data-filesize>—</span></div>
+    <div class="hash-row"><span class="micro">SHA-256</span><span data-sha="256">—</span></div>
+    <div class="hash-row"><span class="micro">SHA-512</span><span data-sha="512">—</span></div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: FAQ section =====
+     <details>/<summary>, so it opens and closes with JavaScript disabled. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem); max-width:min(var(--shell-max),60rem);">
+  <h2 class="display-md">FAQ</h2>
+  <div style="margin-top:2rem;">
+
+    <details class="faq-item" open>
+      <summary class="faq-trigger">
+        <span>Does this work without JavaScript?</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </summary>
+      <div class="faq-panel">
+        Yes. It is a native <code>&lt;details&gt;</code> element. The plus turns
+        into a minus and the gradient fills the ring, all in CSS.
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-trigger">
+        <span>Can several be open at once?</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </summary>
+      <div class="faq-panel">
+        Yes, by default. Give every <code>&lt;details&gt;</code> in a group the
+        same <code>name</code> attribute if you want them to behave as an
+        accordion where opening one closes the rest.
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-trigger">
+        <span>How long can an answer be?</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </summary>
+      <div class="faq-panel">
+        As long as you like. The panel is a normal block, so lists, images and
+        mathematics all work inside it.
+      </div>
+    </details>
+
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: FAQ + feature, two column ===== -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Two column: FAQ beside a panel</h2>
+  <!-- align-items:start, or the grid stretches the panel to the FAQ column and it
+       grows every time an answer is opened. -->
+  <div class="block-two-col" style="margin-top:2rem; align-items:start;">
+
+    <div>
+      <details class="faq-item">
+        <summary class="faq-trigger">
+          <span>Narrow column behaviour</span>
+          <span class="faq-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="faq-panel">The trigger wraps rather than overflowing.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-trigger">
+          <span>A deliberately long question that has to wrap onto a second line</span>
+          <span class="faq-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="faq-panel">The icon stays pinned to the right and does not shrink.</div>
+      </details>
+    </div>
+
+    <aside class="download-block">
+      <p class="eyebrow">Side panel</p>
+      <p style="color:var(--fg-muted);">
+        <code>.download-block</code> is a general-purpose bordered panel. It is
+        not only for downloads — use it for notes, callouts and sidebars.
+      </p>
+    </aside>
+
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Photo stage — full-bleed wash
+     .photo-stage is .matte-stage with a picture behind it and --hero-scrim
+     over that. It owns its own type colours, so nothing inside needs an inline
+     `color:` — paste any block in and it comes out light-on-dark. ===== -->
+<section class="photo-stage" id="wash" style="padding-block:clamp(4rem,14vh,8rem);">
+  <div class="stage-media">
+    <!-- Full-size file: this is a full-bleed band, the second largest surface
+         on the page after the hero. -->
+    <img src="/image/2015-2023/2020mist.jpg" width="4705" height="1460" alt=""
+         loading="lazy" decoding="async">
+    <!-- alt="" on purpose: the picture is the section's ground, and everything
+         it shows is said in the text over it. A description here would be read
+         out twice. -->
+  </div>
+
+  <div class="shell" style="position:relative;">
+    <p class="eyebrow">Section 03 — Wash</p>
+
+    <h2 class="display" style="margin-top:1.25rem;">
+      Fog is a<br><span class="text-flow">blend mode</span>
+    </h2>
+
+    <div class="block-two-col" style="margin-top:clamp(2.5rem,7vh,4rem); align-items:start;">
+      <blockquote style="font-size:var(--step-1); line-height:1.5; border-left:var(--hairline-width) solid rgba(255,255,255,0.35); padding-left:1.5rem; max-width:44ch;">
+        Fog does to a floodlit pitch exactly what a scrim does to a photograph:
+        it takes out the middle distance and leaves a foreground and a
+        suggestion. The difference is that one of the two is honest about being
+        an effect.
+      </blockquote>
+
+      <!-- .stat-grid-glass is the modifier for a tile grid standing on a
+           picture: each tile takes a fifth of black and blurs the photograph
+           behind it, so the mono labels are legible over the bright part of
+           the frame as well as the dark. It replaces the four inline
+           `background:transparent` styles these tiles used to carry. -->
+      <div class="stat-grid stat-grid-glass" style="grid-template-columns:repeat(auto-fit,minmax(min(15rem,100%),1fr)); --hairline:rgba(255,255,255,0.18);">
+        <div>
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Frame</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">A football ground in heavy fog, one figure under the lights.</p>
+        </div>
+        <div>
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Ground</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">Fixed dark in both schemes — the scrim is <code>--hero-scrim</code>.</p>
+        </div>
+        <div>
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Type</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">Set by the section, not by the markup inside it.</p>
+        </div>
+        <div>
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Edges</p>
+          <p style="margin-top:0.5rem; font-size:var(--step--1);">Hard, deliberately. Only the hero dissolves into the page.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+
+<!-- ===== COPY FROM HERE: Telemetry tiles
+      .stat-grid is the stylesheet's hairline-ruled tile grid: shared 1px
+      rules drawn inside the tiles' own boxes, so there is no channel and no
+      cropping. The tile order is the console's rows, expanded. -->
+<section class="shell" id="telemetry" style="padding-block:clamp(3.5rem,9vh,6rem) clamp(2rem,5vh,3.5rem);">
+  <p class="eyebrow">Extended readout</p>
+  <h2 class="display-md" style="margin-top:1.25rem;">The page, in six instruments</h2>
+  <p class="lede" style="margin-top:1.25rem;">
+    The console's rows, carried down the page and widened. Each tile is one
+    fact about this document; each hairline is drawn by the grid, not by the
+    tiles.
+  </p>
+
+  <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(15rem,100%),1fr)); margin-top:clamp(2rem,5vh,3rem);">
+    <div>
+      <p class="micro" style="color:var(--fg-faint);">01 · GROUND</p>
+      <p class="display-sm" style="margin-top:0.55rem;">Blueprint grid</p>
+      <p style="margin-top:0.55rem; font-size:var(--step--1); color:var(--fg-muted);">.editorial-grid, promoted from wallpaper to the design itself.</p>
+    </div>
+    <div>
+      <p class="micro" style="color:var(--fg-faint);">02 · ACCENT</p>
+      <p class="display-sm" style="margin-top:0.55rem;">Cool spectrum</p>
+      <p style="margin-top:0.55rem; font-size:var(--step--1); color:var(--fg-muted);">--grad-cool re-inks the masthead word; the dots mix its own pigments.</p>
+    </div>
+    <div>
+      <p class="micro" style="color:var(--fg-faint);">03 · SURFACE</p>
+      <p class="display-sm" style="margin-top:0.55rem;">Glass console</p>
+      <p style="margin-top:0.55rem; font-size:var(--step--1); color:var(--fg-muted);">One .paper-panel, blurred, bordered and dressed as an instrument.</p>
+    </div>
+    <div>
+      <p class="micro" style="color:var(--fg-faint);">04 · VOICE</p>
+      <p class="display-sm" style="margin-top:0.55rem;">Mono throughout</p>
+      <p style="margin-top:0.55rem; font-size:var(--step--1); color:var(--fg-muted);">The readout speaks in Harald Revery Mono at --step--2, all caps.</p>
+    </div>
+    <div>
+      <p class="micro" style="color:var(--fg-faint);">05 · MOTION</p>
+      <p class="display-sm" style="margin-top:0.55rem;">One rule, pulsing</p>
+      <p style="margin-top:0.55rem; font-size:var(--step--1); color:var(--fg-muted);">.rule-grad pans the spectrum; everything else on the stage is still.</p>
+    </div>
+    <div>
+      <p class="micro" style="color:var(--fg-faint);">06 · SCHEME</p>
+      <p class="display-sm" style="margin-top:0.55rem;">Both, always</p>
+      <p style="margin-top:0.55rem; font-size:var(--step--1); color:var(--fg-muted);">Every colour is a token; switch the system setting and the console follows.</p>
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+
+<!-- ===== COPY FROM HERE: Field guide — the catalogue index
+      .index-row is the site's compact list row and .catalogue-row is its
+      dressier cut: a numeral, a linked heading, a description, a
+      classification and an arrow, with a hover that steps the whole row
+      aside and lifts the numeral into the accent colour. The numbering here
+      continues the layered page's catalogue (001–010), because the two
+      pages are issues of the same title.
+
+      Every row's heading is a real link — to a section of this page or to a
+      sibling test page — so the row is keyboard-reachable and the hover
+      state has a focus state that matches it. ===== -->
+<section class="shell" id="fieldguide" style="padding-block:0 clamp(3rem,9vh,5rem);">
+  <div style="display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:1.5rem; padding-block:clamp(3.5rem,10vh,6rem) 0;">
+    <div>
+      <p class="eyebrow">Section 06 — Field guide</p>
+      <h2 class="display-md" style="margin-top:0.9rem;">What this issue<br>is made of</h2>
+    </div>
+    <p class="micro" style="color:var(--fg-muted);">Hover a row. Every one is a link.</p>
+  </div>
+
+  <div style="margin-top:2.5rem;">
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">011</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#cover">A panel that steps over its photograph</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Picture and panel share one grid cell, so the section's height is whoever is taller and the lap is a variable, not a guess.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.feature-overlay</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">012</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#specimens">Frames that drift</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">A conic-gradient mat behind each picture, animating slowly enough to be noticed twice a minute. Reduced motion stops it.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.chroma-frame</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">013</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#interlude">One dark room</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">A fixed-dark band with no photograph in it, owning its type colours so anything pasted inside comes out legible.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.matte-stage</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">014</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#notes">Glass notes on a panorama</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Three frosted panels staggered across a 6262-pixel band, blurred by the photograph they sit on.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.panel-field</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">015</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#archive">An archive with no composition</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Multi-column masonry where the pictures' own proportions are the layout and the column width is the only decision.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.gallery-waterfall</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">016</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="/another_test_page.html">The layered cut, issue one</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">The previous answer to the same question: a hero collage, offset slices, a double exposure and a staircase archive.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">another_test_page.html</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">017</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="/block_test_page.html">Every block, flat set</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">The block test page: all of these components in single and two column arrangements, without the editorialising.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">block_test_page.html</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+
+
+<!-- ===== COPY FROM HERE: Panel field — glass notes pinned across a photograph
+     Three .glass-card panels staggered over a .photo-stage. The glass has a
+     real picture behind it to blur here, which is the whole reason the panels
+     are on the photograph rather than beside it. ===== -->
+<section class="photo-stage" id="notes" style="padding-block:clamp(4rem,12vh,7rem);">
+  <div class="stage-media">
+    <!-- Decorative ground again — the notes over it describe the view. -->
+    <img src="/image/2025galdhoepiggen/2025jotunheimen_view_from_galdhopiggen1.jpg"
+         width="3844" height="1608" alt="" loading="lazy" decoding="async">
+  </div>
+
+  <div class="shell" style="position:relative;">
+    <p class="eyebrow">Section 04 — Field notes</p>
+    <h2 class="display-md" style="margin-top:0.9rem;">Jotunheimen,<br>from the top</h2>
+
+    <div class="panel-field" style="margin-top:clamp(2.5rem,7vh,4rem);">
+
+      <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
+        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 01 · 2469 m</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">The distance goes flat</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+          Above the last ridge every peak is the same colour. Depth stops coming
+          from tone and starts coming from where things overlap — which is a
+          layout problem the mountains solved first.
+        </p>
+      </article>
+
+      <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
+        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 02 · Glacier</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">Blue is a thickness</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+          Glacier blue is not a pigment, it is how far the light had to travel
+          through the ice before it came back out. The same is true of every
+          frosted panel on this page.
+        </p>
+      </article>
+
+      <article class="glass-card" style="padding:clamp(1.5rem,3vw,2.25rem);">
+        <p class="micro" style="color:rgba(244,244,242,0.68);">Note 03 · Descent</p>
+        <h3 style="margin-top:0.9rem; font-size:var(--step-1); color:var(--paper);">A photograph is not the walk</h3>
+        <p style="margin-top:0.9rem; font-size:var(--step--1); color:rgba(244,244,242,0.82);">
+          Eleven hours compress to one frame, and the frame keeps the view but
+          loses the weather. The caption is where the rest of it has to go, so
+          the caption is worth writing.
+        </p>
+      </article>
+
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+<!-- ===== COPY FROM HERE: Stat grid ===== -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Stat grid</h2>
+  <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(12rem,100%),1fr)); margin-top:2rem;">
+    <div><p class="micro" style="color:var(--fg-muted);">Blocks</p><p class="display-sm" style="margin-top:0.5rem;">11</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Scripts</p><p class="display-sm" style="margin-top:0.5rem;">3</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Third parties</p><p class="display-sm" style="margin-top:0.5rem;">0</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Themes</p><p class="display-sm" style="margin-top:0.5rem;">2</p></div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Index rows (compact list) ===== -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Index rows</h2>
+  <div style="margin-top:2rem;">
+    <article class="index-row">
+      <time class="micro" style="color:var(--fg-faint);" datetime="2026-09-03">2026-09-03</time>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="/blog.html">A row with a gradient marker on hover</a></h3>
+      <p class="micro" style="color:var(--fg-muted);">reference</p>
+    </article>
+    <article class="index-row">
+      <time class="micro" style="color:var(--fg-faint);" datetime="2026-09-02">2026-09-02</time>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="/blog.html">Another row</a></h3>
+      <p class="micro" style="color:var(--fg-muted);">reference</p>
+    </article>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Raw HTML block =====
+     An escape hatch. Anything you put here is emitted verbatim — the generator
+     runs no template engine over author-written HTML, so {{ and {% are safe. -->
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
+  <h2 class="display-md">Raw HTML</h2>
+  <div class="download-block" style="margin-top:2rem;">
+    <p class="eyebrow">Verbatim output</p>
+    <table style="width:100%; border-collapse:collapse; font-size:var(--step--1);">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:0.5rem; border-bottom:1px solid var(--hairline);">Token</th>
+          <th style="text-align:left; padding:0.5rem; border-bottom:1px solid var(--hairline);">Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:0.5rem; border-bottom:1px solid var(--hairline);"><code>--font-text-root</code></td>
+            <td style="padding:0.5rem; border-bottom:1px solid var(--hairline);">Base size for all body type</td></tr>
+        <tr><td style="padding:0.5rem; border-bottom:1px solid var(--hairline);"><code>--font-katex-root</code></td>
+            <td style="padding:0.5rem; border-bottom:1px solid var(--hairline);">Base size for mathematics, isolated</td></tr>
+        <tr><td style="padding:0.5rem;"><code>--grad-flow</code></td>
+            <td style="padding:0.5rem;">The chroma spectrum accent</td></tr>
+      </tbody>
+    </table>
+    <p class="micro" style="color:var(--fg-muted);">
+      Literal braces survive: {{ this }} and {% that %} reach the browser as typed.
+    </p>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->

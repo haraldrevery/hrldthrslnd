@@ -1,0 +1,379 @@
+---
+title: Hero variant D — the salon
+date: 2026-09-06
+image: /image/harald_sitting_on_stairs_may_2022.jpg
+tags: [test, reference]
+description: The third hero treatment — an ivory salon with a gilded masthead, one portrait hung on an offset mount and an engraved line at the foot. Composed entirely from existing components; no stylesheet was touched.
+draft: false
+---
+
+<!--
+  ============================================================================
+  HERO VARIANT D — "the salon". The elegant one.
+
+  The family so far: variant A is a type stage, B is a photograph, C is a
+  collage of overlapping pieces. D composes instead of layering — a column of
+  type and one hung portrait share the stage like two voices in a quiet room,
+  and the space around them is left alone. Where C overlaps five pieces, D
+  hangs ONE thing and lets the air do the work.
+
+  Four moves, and every one of them is an existing component plus inline
+  tokens — nothing was added to css/input.css for this page:
+
+    1. The gilded word. .text-flow already gradient-clips and animates its
+       fill; the inline `--flow-image: var(--grad-heat)` re-inks it with
+       the warm end of the palette (lemon -> orange -> crimson) instead of
+       the full spectrum. A masthead that reads as gold leaf rather than as
+       a rainbow, in both schemes, for the price of one attribute.
+
+       The custom property rather than a plain `background-image`, and the
+       distinction matters: an inline background outranks the two rules that
+       hand .text-flow back to solid ink — the @supports guard for a browser
+       without background-clip: text, and the reduced-motion block — so the
+       gradient would paint back in as a solid rectangle behind black type in
+       both of those cases. See the note on .text-flow in css/input.css.
+
+    2. The hung portrait. .art-plate.fill crops the picture; a .paper-panel
+       behind it, translated down-and-right, is the mount the frame hangs
+       on. The mount picks up each scheme's panel colour and blur, so it
+       reads as a second sheet of stock in light mode and as a dark mat in
+       dark mode without a single scheme query. The stamp at the top right
+       corner is another .paper-panel, pinned over the mount's edge.
+
+    3. The engraved line. The flex row of hairlines and micro type at the
+       foot is a dedication — the kind of line a salon carries under the
+       lintel. It reaches the bottom of the stage, so it reserves
+       --hero-cue-lane, the token .hero-stage defines for exactly this, to
+       stay clear of the scroll cue on the same line.
+
+    4. The two voices. .block-two-col carries the composition and unwinds
+       it below 48rem — type column first, portrait after it, centred.
+       Nothing is absolutely positioned except the mount and the stamp,
+       which belong to the frame they hang on.
+
+    5. The entrance. The type column stages itself — .hero-copy's own
+       :nth-child rules in input.css do that for every hero on the site —
+       and the three pieces this composition adds carry .hero-in with a
+       --hero-in-beat, which is the utility for an element those structural
+       rules cannot reach: the hung frame on beat 2, alongside the headline;
+       the plate caption on 4; the engraved line last, on 6.
+
+       .hero-in is on the frame's WRAPPER rather than on the frame, the mount
+       or the stamp, and that is not arbitrary. The mount is placed with an
+       inline `transform: translate(...)`, and the entrance animation ends on
+       `transform: none` with a fill mode that holds it there — put it on the
+       mount and the animation would quietly flatten the offset that makes it
+       a mount at all. Animating the wrapper moves all three as one hung
+       picture and leaves their own transforms alone.
+
+  The pictures open in the lightbox, the page's only script, added
+  automatically because the anchors carry .glightbox. The wall loads the
+  _min thumbnails; the lightbox links carry the full-size files. Text sits
+  in .prose where it should justify, per the website guide.
+
+  No <!doctype html> in this file, so the generator wraps it in the site
+  layout and the nav, footer, fonts and stylesheet come for free.
+  ============================================================================
+-->
+
+<!-- ===== COPY FROM HERE: Hero D — the salon =====
+     Must be the FIRST thing in the page: .hero-stage only runs the full
+     viewport height and slides under the nav as main's first child. -->
+<section class="hero-stage">
+  <div class="editorial-grid" aria-hidden="true"></div>
+
+  <div class="shell">
+    <div class="block-two-col" style="align-items:center; gap:clamp(2.5rem,6vw,5rem);">
+
+      <!-- The type column. .hero-copy sets the vertical rhythm between
+           eyebrow, headline, lede and buttons, and the short-viewport
+           rules in input.css retune those gaps on a phone for free. -->
+      <div class="hero-copy">
+        <p class="eyebrow">Variant D · The salon</p>
+
+        <h1 class="display">
+          A quiet <br class="hero-break">room in <br class="hero-break"><span class="text-flow" style="--flow-image:var(--grad-heat);">gilded light</span>
+        </h1>
+
+        <p class="lede">
+          Variant D composes instead of filling. The type and one portrait
+          share the stage like two voices in a quiet room, and the space
+          around them is left alone — elegance measured in what is not here.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn" href="#plates">Enter the gallery</a>
+          <a class="btn btn-ghost" href="/block_test_page_c.html">See variant C</a>
+          <a class="btn btn-ghost" href="/block_test_page.html">All blocks</a>
+        </div>
+      </div>
+
+      <!-- The hung portrait. The mount is a .paper-panel translated out
+           from behind the frame; the stamp is another one pinned over its
+           corner. Both belong to this wrapper — move them with it. -->
+      <div>
+        <!-- .hero-in is the entrance utility from input.css: it arrives on the
+             beat --hero-in-beat names, in step with the type column beside it.
+             It is on the frame's wrapper rather than on the frame, the mount
+             or the stamp, because those two carry transforms of their own and
+             an animation that ends on `transform: none` would flatten them. -->
+        <div class="hero-in" style="--hero-in-beat:2; position:relative; width:100%; max-width:34rem; margin-inline:auto;">
+          <div class="paper-panel" aria-hidden="true"
+               style="position:absolute; inset:0; transform:translate(clamp(0.6rem,1.4vw,1.4rem), clamp(0.6rem,1.4vw,1.4rem));"></div>
+
+          <!-- Full-size file behind the lightbox link, the way variant C's
+               portrait does it — this frame is near half a wide viewport.
+               The .fill plate crops the picture to the frame. -->
+          <figure class="art-plate fill" style="position:relative; height:clamp(15rem,48vh,28rem); margin:0;">
+            <a class="glightbox" data-gallery="salon"
+               href="/image/harald_sitting_on_stairs_may_2022.jpg"
+               data-title="On the stairs, May 2022"
+               data-description="A person sitting on a concrete stairway beside a steel handrail, a speckled terrazzo wall behind them">
+              <img src="/image/harald_sitting_on_stairs_may_2022.jpg" width="2000" height="3200"
+                   alt="A person sitting on a concrete stairway beside a steel handrail, a speckled terrazzo wall behind them"
+                   loading="eager" fetchpriority="high" decoding="async">
+            </a>
+          </figure>
+
+          <div class="paper-panel" style="position:absolute; top:-1.1rem; right:-1.1rem; padding:0.8rem 1.1rem; text-align:center;">
+            <p class="micro" style="color:var(--fg-faint);">Variant</p>
+            <p class="display-sm" style="margin-top:0.3rem;">IV</p>
+          </div>
+        </div>
+
+        <!-- Caption centred under the frame; the top margin clears the
+             mount's lower lip. -->
+        <p class="micro hero-in" style="--hero-in-beat:4; margin-top:clamp(1.5rem,3vh,2rem); text-align:center; color:var(--fg-faint);">
+          Plate i — On the stairs · May 2022
+        </p>
+      </div>
+    </div>
+
+    <!-- The engraved line. It sits on the stage's bottom line, so it
+         reserves --hero-cue-lane for the scroll cue beside it. -->
+    <div class="hero-in" style="--hero-in-beat:6; display:flex; align-items:center; gap:clamp(1rem,3vw,1.75rem); margin-top:clamp(1.75rem,5vh,3.25rem); margin-bottom:var(--hero-cue-lane);">
+      <span class="hairline" aria-hidden="true" style="flex:1;"></span>
+      <p class="micro" style="color:var(--fg-faint); text-align:center;">Harald Revery · Established MMXXVI · Variant D of IV</p>
+      <span class="hairline" aria-hidden="true" style="flex:1;"></span>
+    </div>
+  </div>
+
+  <!-- Lower-right scroll cue. Fades in a beat after load and drops the page
+       past the hero; the travel is the site's own smooth scrolling, so there
+       is no script behind it. The sentinel below is its landing point and
+       belongs to this block — keep the two together. -->
+  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>
+</section>
+<div class="hero-end" id="hero-end"></div>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Gallery wall
+     Four frames hung with air between them: one wide centrepiece, a pair,
+     then a low band. Grids load the _min thumbnails; the lightbox links
+     carry the full-size files. Captions are plain .micro under each frame. -->
+<section class="shell" id="plates" style="padding-block:clamp(3.5rem,9vh,6rem) clamp(2rem,5vh,3.5rem);">
+  <p class="eyebrow">The gallery wall</p>
+  <h2 class="display-md" style="margin-top:1.25rem;">Four frames, hung with air between them</h2>
+  <p class="lede" style="margin-top:1.25rem;">
+    The same manners as the hero, carried down the page: a plate, a mount of
+    space around it, a small engraved caption. Nothing touches; nothing
+    shouts.
+  </p>
+
+  <!-- Centrepiece -->
+  <div style="max-width:58rem; margin:clamp(2.5rem,6vh,4rem) auto 0;">
+    <figure class="art-plate fill" style="height:clamp(13rem,34vh,22rem); margin:0;">
+      <a class="glightbox" data-gallery="wall"
+         href="/image/2018augusti10stranden.jpg"
+         data-title="Onshore wind, August 2018"
+         data-description="Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind">
+        <img src="/image_min/2018augusti10stranden_min.jpg" width="1243" height="520"
+             alt="Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind"
+             loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <p class="micro" style="margin-top:0.9rem; text-align:center; color:var(--fg-faint);">Plate ii — Onshore wind · August 2018</p>
+  </div>
+
+  <!-- The pair -->
+  <div class="block-two-col" style="margin-top:clamp(2.5rem,6vh,4rem); align-items:start;">
+    <div>
+      <figure class="art-plate fill" style="height:clamp(12rem,28vh,17rem); margin:0;">
+        <a class="glightbox" data-gallery="wall"
+           href="/image/2016romestreets.jpg"
+           data-title="Roman evening, 2016"
+           data-description="A narrow street warming in the last of the day's light, shutters and stone holding the heat">
+          <img src="/image_min/2016romestreets_min.jpg" width="1280" height="720"
+               alt="A narrow street warming in the last of the day's light, shutters and stone holding the heat"
+               loading="lazy" decoding="async">
+        </a>
+      </figure>
+      <p class="micro" style="margin-top:0.9rem; text-align:center; color:var(--fg-faint);">Plate iii — Roman evening · 2016</p>
+    </div>
+
+    <div>
+      <figure class="art-plate fill" style="height:clamp(12rem,28vh,17rem); margin:0;">
+        <a class="glightbox" data-gallery="wall"
+           href="/image/summersunset2018w.jpg"
+           data-title="Last light, 2018"
+           data-description="The sun going down over quiet water, the sky keeping one warm band to itself">
+          <img src="/image_min/summersunset2018w_min.jpg" width="1280" height="853"
+               alt="The sun going down over quiet water, the sky keeping one warm band to itself"
+               loading="lazy" decoding="async">
+        </a>
+      </figure>
+      <p class="micro" style="margin-top:0.9rem; text-align:center; color:var(--fg-faint);">Plate iv — Last light · 2018</p>
+    </div>
+  </div>
+
+  <!-- The low band -->
+  <div style="margin-top:clamp(2.5rem,6vh,4rem);">
+    <figure class="art-plate fill" style="height:clamp(7rem,16vh,11rem); margin:0;">
+      <a class="glightbox" data-gallery="wall"
+         href="/image/2015-2023/dustyhorizon2016.jpg"
+         data-title="Dusty horizon, 2016"
+         data-description="Sun breaking through cloud over layered blue ridges receding into haze">
+        <img src="/image_min/2015-2023/dustyhorizon2016_min.jpg" width="1600" height="497"
+             alt="Sun breaking through cloud over layered blue ridges receding into haze"
+             loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <p class="micro" style="margin-top:0.9rem; text-align:center; color:var(--fg-faint);">Plate v — Dusty horizon · 2016</p>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Collection note
+     .ink-panel is fixed dark in both schemes — a velvet room inside the page.
+     The stat-grid tiles go transparent so the panel's own ink shows through,
+     and --hairline is retuned for the dark ground, the way variant C does it. -->
+<section class="shell" style="padding-block:clamp(1rem,3vh,2rem) clamp(2rem,5vh,3.5rem);">
+  <div class="ink-panel" style="padding:clamp(2rem,5vw,3.5rem);">
+    <div class="block-two-col" style="align-items:center; gap:clamp(2rem,5vw,3.5rem); --hairline:rgba(255,255,255,0.18);">
+      <blockquote style="margin:0; font-size:var(--step-2); line-height:1.45; border-left:var(--hairline-width) solid rgba(255,255,255,0.35); padding-left:1.5rem; text-align:justify; hyphens:auto;">
+        A gallery is a room that has agreed to stay quiet. The frames do the
+        talking; the wall, the light and the air between them do the rest.
+      </blockquote>
+
+      <div class="stat-grid" style="grid-template-columns:repeat(2, minmax(0, 1fr));">
+        <div style="background:transparent;">
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Frames</p>
+          <p class="display-sm" style="margin-top:0.5rem;">V</p>
+        </div>
+        <div style="background:transparent;">
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Rooms</p>
+          <p class="display-sm" style="margin-top:0.5rem;">II</p>
+        </div>
+        <div style="background:transparent;">
+          <p class="micro" style="color:rgba(244,244,242,0.6);">Scripts</p>
+          <p class="display-sm" style="margin-top:0.5rem;">00</p>
+        </div>
+        <div style="background:transparent;">
+          <p class="micro" style="color:rgba(244,244,242,0.6);">New CSS</p>
+          <p class="display-sm" style="margin-top:0.5rem;">00</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- ===== COPY FROM HERE: Catalogue
+     The site's compact index rows, for the family of hero treatments. -->
+<section class="shell" style="padding-block:clamp(1rem,3vh,2rem) clamp(2.5rem,6vh,4rem);">
+  <p class="eyebrow">The family</p>
+  <h2 class="display-md" style="margin-top:1.25rem;">Four treatments, one stage</h2>
+
+  <div style="margin-top:clamp(1.5rem,4vh,2.5rem);">
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">I</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="/block_test_page_a.html">The type stage</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Full viewport, no imagery, follows the colour scheme. The default, and what index.html leads with.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.hero-stage</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">II</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="/block_test_page_b.html">The photograph</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">A full-bleed picture under a fixed scrim. Light-on-dark in both schemes, because a photograph is behind the type.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.hero-stage-photo</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">III</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="/block_test_page_c.html">The layered front page</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">A five-piece collage, offset slices, glass notes and a staircase archive. The overlaps carried to their conclusion.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.collage-stage</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">IV</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="#plates">The salon — this page</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">Two voices and one hung portrait, a gilded masthead word, a mount and a stamp. Built entirely from existing components.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">.hero-stage + inline tokens</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+
+    <article class="index-row catalogue-row">
+      <p class="display-sm num">&nbsp;</p>
+      <h3 style="font-size:var(--step-1);"><a class="card-link link-underline" href="/block_test_page.html">Every block, flat set</a></h3>
+      <p class="desc" style="font-size:var(--step--1); color:var(--fg-muted);">The block test page: all of these components in single and two column arrangements, without the editorialising.</p>
+      <p class="tags micro" style="color:var(--fg-faint);">block_test_page.html</p>
+      <p class="arrow" aria-hidden="true">&rarr;</p>
+    </article>
+  </div>
+</section>
+<!-- ===== COPY TO HERE ===== -->
+
+
+<!-- Closing note. Not a block to copy — it is what this page is for. -->
+<section class="shell" style="padding-bottom:clamp(3.5rem,10vh,6rem);">
+  <div class="block-two-col" style="align-items:start;">
+    <div class="prose">
+      <h2>When to reach for the salon</h2>
+      <p>
+        Variant D is for a page that wants to feel curated rather than busy:
+        a portfolio front, a collection, a single essay with one picture worth
+        framing. It needs the same thing variant C's collage needs — a
+        portrait strong enough to hang — but only one of them, and nothing
+        else. Where there is no such picture,
+        <a class="link-underline" href="/block_test_page_a.html">variant A</a>
+        is still the better answer, and where there are six of them, see
+        <a class="link-underline" href="/block_test_page_c.html">variant C</a>.
+      </p>
+      <p>
+        It follows the colour scheme like the other stages do: an ivory salon
+        in light mode, the old matte in dark. The gilded word, the mount and
+        the stamp all move with the scheme, because every colour on the page
+        is a token — the only inline override is which gradient the
+        <code>.text-flow</code> word wears.
+      </p>
+      <p>
+        Compare the other treatments —
+        <a class="link-underline" href="/block_test_page_a.html">I</a>,
+        <a class="link-underline" href="/block_test_page_b.html">II</a> and
+        <a class="link-underline" href="/block_test_page_c.html">III</a> — and
+        every other block on
+        <a class="link-underline" href="/block_test_page.html">the block test page</a>.
+      </p>
+    </div>
+
+    <aside class="download-block">
+      <p class="eyebrow">What to check</p>
+      <ul style="list-style:none; display:grid; gap:0.75rem; font-size:var(--step--1); color:var(--fg-muted);">
+        <li>Both colour schemes. The stage follows the system setting; the ink-panel note deliberately does not.</li>
+        <li>A phone. The two voices stack — type first, portrait after it, centred — and the stamp stays on the mount's corner.</li>
+        <li>A short viewport. The gaps retune themselves through .hero-copy's tokens; the engraved line reserves the scroll cue's lane.</li>
+        <li>Reduced motion. The gilded word stops panning and stays legible on the stage.</li>
+        <li>Scripting off. Only the lightbox goes; the page is otherwise complete.</li>
+        <li>The mount in dark mode. It should read as a dark mat behind the frame, not as a second shadow — it is one panel, translated.</li>
+      </ul>
+    </aside>
+  </div>
+</section>

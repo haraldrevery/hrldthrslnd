@@ -1,0 +1,35 @@
+{# Tag filter.
+
+   Every tag is a real page generated at build time, so filtering works with
+   scripting disabled — there is no client-side filtering to break.
+
+   Beyond a threshold the list is clamped to about two rows with a CSS-only
+   "show all" toggle, so a site with many subjects does not grow an unbounded
+   wall of chips above the cards. The threshold is applied here rather than in
+   CSS because CSS cannot count wrapped flex rows. #}
+{% if collections.tagList.length %}
+{% set collapsible = collections.tagList.length > 10 %}
+
+<nav class="tag-filter{% if collapsible %} is-overflowing{% endif %}"
+     aria-label="Filter by subject" style="margin-top:2rem;">
+
+  {% if collapsible %}
+  <input class="tag-expand" type="checkbox" id="tag-expand" aria-label="Show all subjects">
+  {% endif %}
+
+  <div class="tag-filter-list"{% if not collapsible %} style="max-height:none;"{% endif %}>
+    <a class="tag-chip" href="/blog.html"{% if not currentTag %} aria-current="page"{% endif %}>All</a>
+    {% for entry in collections.tagList %}
+    <a class="tag-chip" href="/blog_tag_{{ entry.slug }}.html"
+       {% if currentTag == entry.slug %}aria-current="page"{% endif %}>{{ entry.tag }} ({{ entry.count }})</a>
+    {% endfor %}
+  </div>
+
+  {% if collapsible %}
+  <label class="tag-expand-label" for="tag-expand">
+    <span class="more">Show all {{ collections.tagList.length }} subjects</span>
+    <span class="less">Show fewer</span>
+  </label>
+  {% endif %}
+</nav>
+{% endif %}

@@ -1,0 +1,544 @@
+/**
+ * Site health check.
+ *
+ * Runs over the generated output rather than the sources, so it reports what a
+ * visitor would actually hit: a link that resolves in the templates but points
+ * at a file nobody copied is exactly the failure this is meant to catch.
+ *
+ * The same findings are printed to the terminal and rendered into
+ * _site/status_check.html.
+ */
+import fs from "node:fs";
+import path from "node:path";
+
+import log from "./log.js";
+import { getRegistry } from "./slugs.js";
+import { escapeHtml } from "./paths.js";
+import { frontMatterBlock, firstToken, hasKey, hasValue } from "./front_matter.js";
+import { humanBytes } from "./format.js";
+
+const REQUIRED_FRONT_MATTER = ["title", "date", "description", "tags"];
+
+/**
+ * Attributes that point at a local asset we can verify exists.
+ *
+ * Both quoting styles, because HTML allows either and hand-written pages use
+ * either. Matching only double quotes meant a broken `src='/image/gone.jpg'`
+ * was reported as no problem at all — a silent hole in the one check that
+ * exists to catch exactly that.
+ *
+ * The leading look-behind pins the name to the start of an attribute. Without
+ * it `href` also matched inside `data-href` and `xlink:href` — attributes the
+ * browser never fetches — and every such value was reported as a broken link.
+ *
+ * `srcset` is listed because a responsive image whose candidates are all
+ * missing still renders nothing; the attribute name is captured so the loop
+ * can split that one into its comma-separated candidates.
+ */
+const ASSET_ATTR = /(?<![-\w:])(src|srcset|href|data-src|poster)\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
+
+/**
+ * Sub-resource loads only — things the browser fetches to render the page.
+ *
+ * A plain <a href> to another site is an ordinary outbound link and says
+ * nothing about third-party requests; flagging those made the report cry wolf
+ * over every citation in a post. What actually breaks the no-third-party
+ * promise is loading an asset from somewhere else.
+ */
+const SUBRESOURCE = /<(?:(?:img|script|iframe|source|video|audio|embed|track)\b[^>]*?\b(src|poster|srcset)|link\b[^>]*?\b(href))\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
+
+/**
+ * The value out of a quoted-attribute match: the double-quoted body, else the
+ * single-quoted one. Exactly one of the two ever participates in a match.
+ *
+ * The attribute patterns above capture a name first, so they pass their own
+ * pair of group indices rather than relying on the default 1/2.
+ */
+const quotedValue = (match, dq = 1, sq = 2) => match[dq] ?? match[sq];
+
+/**
+ * Files this build writes *after* the check has already walked the output.
+ *
+ * status_check.html is the report itself: it can only be rendered once the
+ * findings exist, so at the moment the link check runs it is legitimately not
+ * on disk yet. Treating that as a broken link meant that the moment the author
+ * put a "Status" entry in the site nav, every single page in the build reported
+ * an error pointing at a file that was sitting in _site by the time they went
+ * to look — the exact shape of false positive that teaches you to stop reading
+ * the report.
+ */
+const WRITTEN_AFTER_CHECK = new Set(["status_check.html"]);
+
+/**
+ * decodeURIComponent, but a malformed escape is not a crash.
+ *
+ * A literal `%` in a filename (`/100%_guide.html`) makes the real one throw
+ * URIError, which took down the whole build with a stack trace and no hint
+ * about which page held the link. An undecodable reference is just used as
+ * written — if that path is not on disk it gets reported like any other.
+ */
+function safeDecode(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+/** The candidate URLs in one attribute value. Only srcset holds more than one. */
+function attributeRefs(attr, value) {
+  if (attr !== "srcset") return [value];
+  // "url 400w, url 2x" — each candidate is a URL followed by an optional
+  // descriptor. Commas inside a URL are legal but vanishingly rare in a static
+  // site that names its own files; splitting on them is what the browser does.
+  return value
+    .split(",")
+    .map((candidate) => candidate.trim().split(/\s+/)[0])
+    .filter(Boolean);
+}
+
+function walk(dir, base = dir, out = []) {
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(full, base, out);
+    else if (entry.isFile()) out.push(path.relative(base, full));
+  }
+  return out;
+}
+
+
+/**
+ * Front matter checks run against the SOURCE files, because that is where the
+ * author would fix them. Everything else runs against the output.
+ */
+function checkFrontMatter(root, findings) {
+  const registry = getRegistry(root);
+
+  for (const record of registry.all) {
+    const file = path.join(root, record.inputPath);
+    if (!fs.existsSync(file)) continue;
+
+    const block = frontMatterBlock(fs.readFileSync(file, "utf8"));
+
+    if (block === null) {
+      findings.push({
+        level: "error",
+        scope: "front matter",
+        page: record.inputPath,
+        message: "no YAML front matter block",
+        detail: "the page cannot get a title, date, tags or social image",
+      });
+      continue;
+    }
+
+    for (const key of REQUIRED_FRONT_MATTER) {
+      if (!hasValue(block, key)) {
+        findings.push({
+          level: key === "title" || key === "date" ? "error" : "warn",
+          scope: "front matter",
+          page: record.inputPath,
+          // A key written with no value is its own mistake and reads nothing
+          // like a forgotten line, so it is worth naming separately.
+          message: hasKey(block, key) ? `"${key}" has no value` : `missing "${key}"`,
+          detail:
+            key === "description"
+              ? "used for the meta description, cards and search results"
+              : key === "tags"
+                ? "the page will not appear on any subject page"
+                : "required",
+        });
+      }
+    }
+
+    if (!hasValue(block, "image")) {
+      findings.push({
+        level: "warn",
+        scope: "front matter",
+        page: record.inputPath,
+        message: hasKey(block, "image") ? '"image" has no value' : 'missing "image"',
+        detail: "falls back to the site default for the card and Open Graph image",
+      });
+    }
+
+    const draftValue = firstToken(block, "draft");
+    if (draftValue && !/^(true|false)$/i.test(draftValue)) {
+      findings.push({
+        level: "warn",
+        scope: "front matter",
+        page: record.inputPath,
+        message: `"draft: ${draftValue}" is not true or false`,
+        detail: "anything other than true is treated as published",
+      });
+    }
+
+    // Quotes are stripped for this test and this test only. `date: "2026-06-03"`
+    // is a perfectly good date — Eleventy parses the quoted string into the same
+    // day as the bare one — so warning about it was crying wolf. The draft check
+    // above deliberately does NOT do this: there, quoting changes the meaning.
+    const dateValue = firstToken(block, "date")?.replace(/^['"]|['"]$/g, "");
+    if (dateValue && !/^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+      findings.push({
+        level: "warn",
+        scope: "front matter",
+        page: record.inputPath,
+        message: `date "${dateValue}" is not YYYY-MM-DD`,
+        detail: "sort order and the sitemap may be wrong",
+      });
+    }
+  }
+}
+
+/** Broken local links, missing media, images without alt text. */
+function checkHtml(outputDir, findings, stats) {
+  const htmlFiles = walk(outputDir).filter((f) => f.endsWith(".html"));
+  stats.pageCount = htmlFiles.length;
+
+  for (const relative of htmlFiles) {
+    const rawHtml = fs.readFileSync(path.join(outputDir, relative), "utf8");
+    const pageUrl = `/${relative.split(path.sep).join("/")}`;
+
+    // Commented-out markup is not a reference. The block test pages carry
+    // example <source> and <img> tags inside comments on purpose, and flagging
+    // those as broken links would train the author to ignore this report.
+    const html = rawHtml.replace(/<!--[\s\S]*?-->/g, "");
+
+    // --- local references resolve to a real file ---------------------------
+    const pageDir = path.dirname(path.join(outputDir, relative));
+
+    for (const match of html.matchAll(ASSET_ATTR)) {
+      const attr = match[1].toLowerCase();
+      for (const ref of attributeRefs(attr, quotedValue(match, 2, 3))) {
+        const raw = ref.trim();
+        if (!raw || raw.startsWith("#") || raw.startsWith("data:")) continue;
+
+        if (/^(https?:)?\/\//i.test(raw)) continue; // handled by the sub-resource pass
+        if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) continue; // mailto:, tel:, javascript:, any other scheme
+
+        const withoutQuery = safeDecode(raw.split(/[?#]/)[0]);
+        if (!withoutQuery) continue; // "?x=1" or "#frag" — same page
+
+        // Root-relative against the output, everything else against the page
+        // that holds it. Skipping relative links entirely meant a post linking
+        // a sibling file by name was never checked at all — the references most
+        // likely to rot were the ones the check refused to look at.
+        const target = raw.startsWith("/")
+          ? path.join(outputDir, withoutQuery)
+          : path.resolve(pageDir, withoutQuery);
+
+        // A reference that climbs out of _site cannot resolve for a visitor
+        // however it looks on this disk.
+        const insideOutput = path.relative(outputDir, target);
+        if (insideOutput.startsWith("..") || path.isAbsolute(insideOutput)) {
+          findings.push({
+            level: "error",
+            scope: "broken link",
+            page: pageUrl,
+            message: raw,
+            detail: "resolves to a path outside _site",
+          });
+          continue;
+        }
+
+        // Written by this build once the findings are in; see WRITTEN_AFTER_CHECK.
+        if (WRITTEN_AFTER_CHECK.has(insideOutput.split(path.sep).join("/"))) continue;
+
+        if (fs.existsSync(target)) continue;
+        // A bare directory link resolves to its index.html.
+        if (fs.existsSync(path.join(target, "index.html"))) continue;
+
+        findings.push({
+          level: "error",
+          scope: "broken link",
+          page: pageUrl,
+          message: raw,
+          detail: "no such file in _site",
+        });
+      }
+    }
+
+    // --- assets loaded from somewhere else --------------------------------
+    for (const match of html.matchAll(SUBRESOURCE)) {
+      const attr = (match[1] ?? match[2]).toLowerCase();
+      for (const ref of attributeRefs(attr, quotedValue(match, 3, 4))) {
+        const raw = ref.trim();
+        if (/^(https?:)?\/\//i.test(raw)) stats.remoteRefs.push({ page: pageUrl, url: raw });
+      }
+    }
+
+    // --- images carry alt text --------------------------------------------
+    for (const tag of html.matchAll(/<img\b[^>]*>/gi)) {
+      if (/\salt\s*=/i.test(tag[0])) continue;
+      findings.push({
+        level: "warn",
+        scope: "accessibility",
+        page: pageUrl,
+        message: "an <img> has no alt attribute",
+        detail: tag[0].slice(0, 120),
+      });
+    }
+
+    // --- exactly one h1 ----------------------------------------------------
+    const h1Count = (html.match(/<h1\b/gi) ?? []).length;
+    if (h1Count === 0) {
+      findings.push({
+        level: "warn", scope: "structure", page: pageUrl,
+        message: "no <h1>", detail: "search engines use it as the page's title",
+      });
+    } else if (h1Count > 1) {
+      findings.push({
+        level: "warn", scope: "structure", page: pageUrl,
+        message: `${h1Count} <h1> elements`, detail: "a page should have exactly one",
+      });
+    }
+
+    // --- meta description --------------------------------------------------
+    // Pages marked noindex are developer tools, not published pages; they have
+    // nothing to gain from a meta description.
+    const noindex = /<meta\s+name=["']robots["']\s+content=["'][^"']*noindex/i.test(html);
+    const description = html.match(
+      /<meta\s+name=["']description["']\s+content=(?:"([^"]*)"|'([^']*)')/i,
+    );
+    if (!noindex && (!description || !quotedValue(description).trim())) {
+      findings.push({
+        level: "warn", scope: "seo", page: pageUrl,
+        message: "empty meta description", detail: "add `description:` to the front matter",
+      });
+    }
+  }
+}
+
+/** Oversized assets, and _min counterparts that blew the budget. */
+function checkAssets(outputDir, settings, findings, stats) {
+  const limits = settings.status_check;
+  const checks = [
+    { dir: "image", limit: limits.max_image_bytes, label: "photograph" },
+    { dir: "image_min", limit: limits.max_image_min_bytes, label: "thumbnail" },
+    { dir: "gif", limit: limits.max_gif_bytes, label: "gif" },
+    { dir: "video", limit: limits.max_video_bytes, label: "video" },
+  ];
+
+  for (const check of checks) {
+    const dir = path.join(outputDir, check.dir);
+    for (const relative of walk(dir)) {
+      const size = fs.statSync(path.join(dir, relative)).size;
+      stats.totalAssetBytes += size;
+      stats.assetCount += 1;
+      if (size <= check.limit) continue;
+
+      findings.push({
+        level: "warn",
+        scope: "asset size",
+        page: `/${check.dir}/${relative.split(path.sep).join("/")}`,
+        message: `${check.label} is ${humanBytes(size)}`,
+        detail: `over the ${humanBytes(check.limit)} budget in site_settings.json`,
+      });
+    }
+  }
+
+  // Every image/ file should have its image_min/ counterpart in the output.
+  const sources = walk(path.join(outputDir, "image"));
+  for (const relative of sources) {
+    const ext = path.extname(relative);
+    if (!/\.(jpe?g|png|webp)$/i.test(ext)) continue;
+    const counterpart = path.join(
+      outputDir,
+      "image_min",
+      path.dirname(relative),
+      `${path.basename(relative, ext)}_min.jpg`,
+    );
+    if (fs.existsSync(counterpart)) continue;
+    findings.push({
+      level: "error",
+      scope: "image mirror",
+      page: `/image/${relative.split(path.sep).join("/")}`,
+      message: "no _min counterpart in the output",
+      detail: "galleries and cards will fall back to the full-resolution file",
+    });
+  }
+}
+
+/**
+ * Slug collisions the registry had to resolve with a suffix.
+ *
+ * Compared against the slug the file actually asked for, not against the shape
+ * of the result. Testing for a `_2` ending instead warned about every file
+ * legitimately named `test_post_2.md`, on every build — a permanent false
+ * positive, which is the fastest way to teach an author to skim past the
+ * report.
+ */
+function checkSlugs(root, findings) {
+  const registry = getRegistry(root);
+  for (const record of registry.all) {
+    if (record.slug === record.desired) continue;
+    findings.push({
+      level: "warn",
+      scope: "slug",
+      page: record.inputPath,
+      message: `published as "${record.slug}", not "${record.desired}"`,
+      detail: "another input file already claimed the name it wanted",
+    });
+  }
+}
+
+export async function runStatusCheck({ root, outputDir, settings, images }) {
+  const findings = [];
+  const stats = {
+    pageCount: 0,
+    assetCount: 0,
+    totalAssetBytes: 0,
+    remoteRefs: [],
+  };
+
+  if (!fs.existsSync(outputDir)) {
+    log.error("status", "_site does not exist", "nothing to check");
+    return { findings, ...stats };
+  }
+
+  checkFrontMatter(root, findings);
+  checkHtml(outputDir, findings, stats);
+  checkAssets(outputDir, settings, findings, stats);
+  checkSlugs(root, findings);
+
+  // Assets fetched from another origin break the no-third-party promise, so
+  // these are worth flagging. Outbound <a> links are not, and are not counted.
+  const external = stats.remoteRefs.filter((ref) => !ref.url.startsWith(settings.url));
+  for (const ref of external) {
+    findings.push({
+      level: "warn",
+      scope: "third party asset",
+      page: ref.page,
+      message: ref.url,
+      detail: "loaded from another domain — this site is meant to serve every asset itself",
+    });
+  }
+
+  for (const finding of findings) {
+    const method = finding.level === "error" ? "error" : "warn";
+    log[method](finding.scope, `${finding.page} — ${finding.message}`, finding.detail);
+  }
+
+  return { findings, ...stats };
+}
+
+/* ---------------------------------------------------------------- HTML page */
+
+const sevClass = { error: "sev-error", warn: "sev-warn" };
+
+/**
+ * Write _site/status_check.html.
+ *
+ * A standalone document rather than an Eleventy template: it reports on the
+ * finished output, so it can only be produced after Eleventy has already run.
+ * It links the site stylesheet and reuses the site's own classes.
+ */
+export function writeStatusPage({ outputDir, settings, status, images }) {
+  const errors = status.findings.filter((f) => f.level === "error");
+  const warnings = status.findings.filter((f) => f.level === "warn");
+
+  const verdict =
+    errors.length > 0
+      ? { klass: "sev-error", text: `${errors.length} error(s)` }
+      : warnings.length > 0
+        ? { klass: "sev-warn", text: `${warnings.length} warning(s)` }
+        : { klass: "sev-ok", text: "All clear" };
+
+  const rows = [...errors, ...warnings]
+    .map(
+      (f) => `
+      <tr>
+        <td><span class="sev ${sevClass[f.level]}">${f.level}</span></td>
+        <td>${escapeHtml(f.scope)}</td>
+        <td><code>${escapeHtml(f.page)}</code></td>
+        <td>${escapeHtml(f.message)}${
+          f.detail ? `<br><span style="color:var(--fg-muted);">${escapeHtml(f.detail)}</span>` : ""
+        }</td>
+      </tr>`,
+    )
+    .join("");
+
+  const generated = images.reports.flatMap((r) =>
+    r.generated.map((g) => `${path.basename(g.file)} — ${humanBytes(g.bytes)} at q${g.quality}`),
+  );
+
+  const html = `<!doctype html>
+<html lang="${escapeHtml(settings.language)}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Status — ${escapeHtml(settings.name)}</title>
+<link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="grain">
+<main class="shell" style="padding-block:3rem 5rem;">
+
+  <p class="eyebrow">${escapeHtml(settings.name)} — build report</p>
+  <h1 class="display" style="margin-top:1rem;">Status</h1>
+  <p class="lede" style="margin-top:1.5rem;">
+    Generated ${escapeHtml(new Date().toISOString().replace("T", " ").slice(0, 19))} UTC.
+    This page is not linked from the site; open it directly after a build.
+  </p>
+
+  <p style="margin-top:1.5rem;"><span class="sev ${verdict.klass}">${escapeHtml(verdict.text)}</span></p>
+
+  <hr class="rule-grad" style="margin-block:2.5rem;">
+
+  <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(12rem,100%),1fr));">
+    <div><p class="micro" style="color:var(--fg-muted);">Pages</p>
+         <p class="display-sm" style="margin-top:0.5rem;">${status.pageCount}</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Assets</p>
+         <p class="display-sm" style="margin-top:0.5rem;">${status.assetCount}</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Asset weight</p>
+         <p class="display-sm" style="margin-top:0.5rem;">${humanBytes(status.totalAssetBytes)}</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Errors</p>
+         <p class="display-sm" style="margin-top:0.5rem;">${errors.length}</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Warnings</p>
+         <p class="display-sm" style="margin-top:0.5rem;">${warnings.length}</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Thumbnails made</p>
+         <p class="display-sm" style="margin-top:0.5rem;">${images.totals.generated}</p></div>
+  </div>
+
+  ${
+    generated.length
+      ? `<section style="margin-top:3rem;">
+    <h2 class="display-md">Thumbnails generated this build</h2>
+    <p class="lede" style="margin-top:1rem; font-size:var(--step--1);">
+      These <code>_min</code> files were missing and the builder made them. Commit
+      them, or replace them with your own compression, to keep builds reproducible.
+    </p>
+    <ul class="prose" style="margin-top:1rem;">
+      ${generated.map((g) => `<li><code>${escapeHtml(g)}</code></li>`).join("\n      ")}
+    </ul>
+  </section>`
+      : ""
+  }
+
+  <section style="margin-top:3rem;">
+    <h2 class="display-md">Findings</h2>
+    ${
+      rows
+        ? `<div class="table-scroll" style="margin-top:1.5rem;">
+      <table class="status-table">
+        <thead><tr><th>Level</th><th>Kind</th><th>Where</th><th>What</th></tr></thead>
+        <tbody>${rows}
+        </tbody>
+      </table>
+    </div>`
+        : `<p class="lede" style="margin-top:1.5rem;">
+      Nothing to report. Every link resolves, every image has a counterpart and
+      alt text, and no page reaches outside this domain.
+    </p>`
+    }
+  </section>
+
+</main>
+</body>
+</html>
+`;
+
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(outputDir, "status_check.html"), html, "utf8");
+}
+
+export default runStatusCheck;

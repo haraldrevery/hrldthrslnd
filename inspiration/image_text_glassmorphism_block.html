@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image + Text block element</title>
+<!-- Note: Colors, conrner and border style should match your actual template. -->
+<style>
+    :root {
+        --deep-cyan: #0a1a1f;
+        --oceanic-teal: #114b5f;
+        --burnt-orange: #e8995c;
+        --sandy-beige: #e6d5b8;
+        --glass-border: rgba(230, 213, 184, 0.15);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        background-color: var(--deep-cyan);
+        color: var(--sandy-beige);
+        overflow-x: hidden;
+    }
+
+    .featured-section {
+        position: relative;
+        min-height: 100vh;
+        width: 100vw;
+        padding: 10vh 5vw;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    .featured-visual {
+        position: absolute;
+        top: 10%;
+        left: 5%;
+        width: 45vw;
+        height: 70vh;
+        background: url('https://images.unsplash.com/photo-1505144808419-1957a94ca61e?q=80&w=1470&auto=format&fit=crop') center/cover;
+        z-index: 1;
+        filter: grayscale(0.3) contrast(1.1);
+    }
+
+    .featured-glass-panel {
+        position: relative;
+        z-index: 2;
+        width: 50vw;
+        margin-right: 5vw;
+        background: rgba(10, 26, 31, 0.7);
+        backdrop-filter: blur(20px) brightness(1.1);
+        -webkit-backdrop-filter: blur(20px) brightness(1.1);
+        border: 1px solid var(--glass-border);
+        border-top: 4px solid var(--burnt-orange);
+        padding: 60px;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    }
+
+    .section-tag {
+        font-size: 0.7rem;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--burnt-orange);
+        margin-bottom: 20px;
+        display: block;
+    }
+
+    .featured-title {
+        font-size: 3.5rem;
+        font-weight: 300;
+        line-height: 1;
+        margin-bottom: 30px;
+        text-transform: uppercase;
+    }
+    
+    .featured-title b {
+        font-weight: 700;
+    }
+
+    .featured-excerpt {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: rgba(230, 213, 184, 0.8);
+        max-width: 400px;
+        margin-bottom: 40px;
+    }
+
+    .read-more-bar {
+        width: 200px;
+        height: 2px;
+        display: flex;
+        gap: 2px;
+    }
+    .bar-segment {
+        flex-grow: 1;
+        background: rgba(230, 213, 184, 0.2);
+    }
+    .bar-segment.active:nth-child(1) { background: var(--burnt-orange); }
+    .bar-segment.active:nth-child(2) { background: var(--sandy-beige); }
+    .bar-segment.active:nth-child(3) { background: var(--oceanic-teal); }
+</style>
+</head>
+<body>
+
+<!-- To make it feel interactive, have a hover effect for the image and GlightBox popup slider for the image. -->
+
+    <section class="featured-section">
+        <div class="featured-visual"></div>
+        
+        <div class="featured-glass-panel">
+            <span class="section-tag">Featured Dispatch // 01</span>
+            <h2 class="featured-title">Very <b>Nice</b> Title and <em>website</em></h2>
+            <p class="featured-excerpt">
+                This block is very nice to use when wanting to switch up from only having one/two
+                columns of text with images on the side/ between. Here We put text on top of the image
+                with a container so the text is still readable. 
+            </p>
+
+           <!--Decorative elements, consider removing them if it feels clutter / doesn't fill any functionality. -->
+
+            <div class="read-more-bar">
+                <div class="bar-segment active"></div>
+                <div class="bar-segment active"></div>
+                <div class="bar-segment active"></div>
+                <div class="bar-segment"></div>
+                <div class="bar-segment"></div>
+                <div class="bar-segment"></div>
+                <div class="bar-segment"></div>
+            </div>
+        </div>
+    </section>
+
+</body>
+</html>

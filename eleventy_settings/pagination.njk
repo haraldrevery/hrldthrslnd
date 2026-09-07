@@ -1,0 +1,25 @@
+{# Pagination.
+
+   Pure links, generated at build time — no client-side paging, so it works
+   with scripting disabled and each page is independently crawlable. #}
+{% if pagination and pagination.pages.length > 1 %}
+<nav class="shell pagination" aria-label="Pagination">
+  {% if pagination.href.previous %}
+  <a class="page-link" href="{{ pagination.href.previous }}" rel="prev" aria-label="Previous page">←</a>
+  {% else %}
+  <span class="page-link" aria-disabled="true" aria-hidden="true">←</span>
+  {% endif %}
+
+  {% for pageEntry in pagination.hrefs %}
+  <a class="page-link" href="{{ pageEntry }}"
+     {% if pageEntry == page.url %}aria-current="page"{% endif %}
+     aria-label="Page {{ loop.index }}">{{ loop.index }}</a>
+  {% endfor %}
+
+  {% if pagination.href.next %}
+  <a class="page-link" href="{{ pagination.href.next }}" rel="next" aria-label="Next page">→</a>
+  {% else %}
+  <span class="page-link" aria-disabled="true" aria-hidden="true">→</span>
+  {% endif %}
+</nav>
+{% endif %}

@@ -1,0 +1,84 @@
+---
+title: A page folder
+date: 2026-09-01
+image: /post_i/thumbnail.jpg
+tags: [reference, test]
+description: A post folder — one HTML page plus its own media, kept together and published as a unit.
+draft: false
+---
+
+<!--
+  A post folder: input_custom_post/post_i/
+
+  Everything this page needs lives beside it. On build, the folder's assets are
+  copied to /post_i/ and the page is published at /post_i.html — so the relative
+  layout you see while editing is the layout the browser gets.
+
+  Two files are NOT copied: this .html (the generator renders it) and
+  post_i.json (the page builder's save file, which is a working file rather
+  than part of the site).
+
+  This is the format the page builder app will read and write. It works by hand
+  today, which is the point.
+-->
+
+<section class="shell" style="padding-block:clamp(3rem,10vh,6rem);">
+  <div class="block-two-col" style="align-items:center; gap:clamp(2rem,5vw,4rem);">
+    <div>
+      <p class="eyebrow">Page folder</p>
+      <h1 class="display" style="margin-top:1.25rem;">Kept<br><span class="text-flow">together</span></h1>
+      <p class="lede" style="margin-top:1.75rem;">
+        A page and its media in one folder, published as a unit. Asset paths are
+        relative to the page, so nothing has to be rewritten when the folder moves.
+      </p>
+    </div>
+
+    <div class="chroma-frame">
+      <div class="art-plate fill" style="aspect-ratio:4/5;">
+        <a class="glightbox" data-gallery="post_i" href="/post_i/street_scene.jpg"
+           data-title="Rome by night, 2016"
+           data-description="Wet cobblestones at night, street lights thrown out of focus behind them">
+          <img src="/post_i/street_scene_min.jpg" alt="Wet cobblestones at night, street lights thrown out of focus behind them"
+               width="1600" height="900" loading="eager" decoding="async">
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <hr class="rule-grad" style="margin-top:clamp(2.5rem,6vh,4rem);">
+</section>
+
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,5rem);">
+  <div class="prose">
+    <h2>How the folder is published</h2>
+    <p>
+      The page becomes <code>/post_i.html</code>. Everything beside it — images,
+      audio, anything else — is copied to <code>/post_i/</code>, so a reference
+      like <code>/post_i/statue.jpg</code> resolves without any rewriting.
+    </p>
+    <p>
+      The slug comes from the folder name, and shares one namespace with
+      <code>input_markdown/</code> and <code>input_custom_html/</code>. Two inputs
+      cannot claim the same URL — the build warns and adds a suffix.
+    </p>
+  </div>
+
+  <div class="gallery gallery-justified" style="--gallery-gap:0.75rem; margin-top:2.5rem;">
+    <figure class="art-plate fill" style="flex-grow:1.2;">
+      <a class="glightbox" data-gallery="post_i" href="/post_i/street_scene.jpg"
+         data-title="Rome by night, 2016"
+         data-description="Wet cobblestones at night, street lights thrown out of focus behind them">
+        <img src="/post_i/street_scene_min.jpg" alt="Wet cobblestones at night, street lights thrown out of focus behind them"
+             width="1600" height="900" loading="lazy" decoding="async">
+      </a>
+    </figure>
+    <figure class="art-plate fill" style="flex-grow:1;">
+      <a class="glightbox" data-gallery="post_i" href="/post_i/statue.jpg"
+         data-title="Padova, 2016"
+         data-description="A stone statue silhouetted against a bright hazy sky">
+        <img src="/post_i/statue_min.jpg" alt="A stone statue silhouetted against a bright hazy sky"
+             width="1067" height="1600" loading="lazy" decoding="async">
+      </a>
+    </figure>
+  </div>
+</section>

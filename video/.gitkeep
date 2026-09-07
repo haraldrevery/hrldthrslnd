@@ -1,0 +1,3 @@
+# Placeholder so this folder survives a clone. Git does not track empty
+# directories, and the generator copies this one into _site as an asset folder
+# (see asset_folders in site_settings.json).

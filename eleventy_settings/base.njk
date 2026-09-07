@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="{{ settings.language }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if title %}{{ title }} — {{ settings.name }}{% else %}{{ settings.name }}{% endif %}</title>
+<meta name="description" content="{{ description or settings.description }}">
+<meta name="generator" content="site_generate">
+{% if author or settings.author %}<meta name="author" content="{{ author or settings.author }}">{% endif %}
+<link rel="canonical" href="{{ page.url | absolute }}">
+
+{# Open Graph / social. The thumbnail is the compressed counterpart, which is
+   what every social scraper wants anyway.
+
+   Resolved once, and the image tags are emitted only when there is an image.
+   With no thumbnail and no default_image the `absolute` filter used to hand
+   back the bare domain, so every card advertised the homepage as its picture. #}
+{%- set socialImage = (thumbnail or settings.default_image) | absolute -%}
+<meta property="og:type" content="{% if pageKind %}article{% else %}website{% endif %}">
+<meta property="og:site_name" content="{{ settings.name }}">
+<meta property="og:title" content="{{ title or settings.name }}">
+<meta property="og:description" content="{{ description or settings.description }}">
+<meta property="og:url" content="{{ page.url | absolute }}">
+{% if socialImage %}<meta property="og:image" content="{{ socialImage }}">
+<meta property="og:image:alt" content="{{ title or settings.name }}">
+{% endif %}<meta property="og:locale" content="{{ settings.language }}">
+{% if date %}<meta property="article:published_time" content="{{ date | isoDate }}">{% endif %}
+{% for tag in tags %}<meta property="article:tag" content="{{ tag }}">
+{% endfor %}
+<meta name="twitter:card" content="{% if socialImage %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="{{ title or settings.name }}">
+<meta name="twitter:description" content="{{ description or settings.description }}">
+{% if socialImage %}<meta name="twitter:image" content="{{ socialImage }}">
+<meta name="twitter:image:alt" content="{{ title or settings.name }}">
+{% endif %}
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+{# Fonts are same-origin, so no preconnect is needed and none is emitted:
+   the site makes zero third-party requests. #}
+<link rel="preload" href="/font/HaraldReveryTextFont.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/font/HaraldReveryMonoFont.woff2" as="font" type="font/woff2" crossorigin>
+
+{# Vendor stylesheets are injected HERE, before main.css.
+
+   The order no longer depends on this position. A layer's place is fixed where
+   it is FIRST named, and BOTH sides now name the full order: every vendored
+   sheet opens with `@layer properties, theme, base, vendor, components,
+   utilities;` (added by eleventy_binary/vendor_assets.sh), and Tailwind
+   compiles the identical statement from css/input.css into main.css, where it
+   emits `@layer vendor;` between the base and components blocks. Whichever of
+   the two the browser reads first therefore registers the same order — which
+   is what lets assets.js append a sheet after main.css on a hand-written
+   document without demoting `vendor` under `base`.
+
+   Keeping them first is belt and braces, not the mechanism. What IS load
+   bearing is that both order statements keep existing: delete either one and
+   the layer it names falls back to wherever it is first mentioned implicitly.
+
+   Which sheets appear depends on what each page's markup needs; see
+   eleventy_binary/lib/assets.js. #}
+<!--vendor-css-->
+<link rel="stylesheet" href="/css/main.css">
+<link rel="alternate" type="application/rss+xml" title="{{ settings.name }}" href="/feed.xml">
+
+{# Structured data for search engines.
+
+   This is a data block, not executable code — `application/ld+json` is never
+   run by the browser, so it does not breach the no-JavaScript rule. It is what
+   lets a search result show the author, date and image rather than a bare link.
+
+   A page from one of the three input folders is an Article; everything else
+   describes the site itself. #}
+{% if pageKind %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  {#- Same fallback as og:title above, and for a stronger reason: an untitled
+      page printed `"headline": ,` here, which is not valid JSON, so search
+      engines discarded the whole block — author, date and image with it. -#}
+  "headline": {{ (title or settings.name) | jsonify | safe }},
+  "description": {{ (description or settings.description) | jsonify | safe }},
+  "image": {{ socialImage | jsonify | safe }},
+  "datePublished": {{ (date | isoDate) | jsonify | safe }},
+  "dateModified": {{ (date | isoDate) | jsonify | safe }},
+  "inLanguage": {{ settings.language | jsonify | safe }},
+  "keywords": {{ (tags or []) | jsonify | safe }},
+  "mainEntityOfPage": { "@type": "WebPage", "@id": {{ page.url | absolute | jsonify | safe }} },
+  "author": { "@type": "Person", "name": {{ (author or settings.author or settings.name) | jsonify | safe }} },
+  "publisher": {
+    "@type": "Organization",
+    "name": {{ settings.name | jsonify | safe }},
+    "url": {{ settings.url | jsonify | safe }},
+    "logo": { "@type": "ImageObject", "url": {{ "/apple-touch-icon.png" | absolute | jsonify | safe }} }
+  }
+}
+</script>
+{% else %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": {{ settings.name | jsonify | safe }},
+  "alternateName": {{ settings.short_name | jsonify | safe }},
+  "description": {{ settings.description | jsonify | safe }},
+  "url": {{ settings.url | jsonify | safe }},
+  "inLanguage": {{ settings.language | jsonify | safe }},
+  "publisher": {
+    "@type": "Organization",
+    "name": {{ settings.name | jsonify | safe }},
+    "url": {{ settings.url | jsonify | safe }},
+    "logo": { "@type": "ImageObject", "url": {{ "/apple-touch-icon.png" | absolute | jsonify | safe }} }
+  }
+}
+</script>
+{% endif %}
+</head>
+
+<body class="grain" id="top">
+<a class="skip-link" href="#main">Skip to content</a>
+
+{% include "nav.njk" %}
+
+<main id="main" tabindex="-1">
+{{ content | safe }}
+</main>
+
+{% include "footer.njk" %}
+
+{# Scripts: all local, all deferred, all optional. Nothing above depends on
+   them — with scripting disabled the page is complete as delivered.
+   The lightbox and reading-width scripts are added automatically to the pages
+   that need them; these two are site-wide because both act on the nav bar,
+   which is on every page. nav_reveal.js only does anything where the page
+   opens with a hero, and returns immediately everywhere else. #}
+<script src="/javascript/search_bar.js" defer></script>
+<script src="/javascript/nav_reveal.js" defer></script>
+</body>
+</html>

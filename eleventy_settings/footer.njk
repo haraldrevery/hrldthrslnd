@@ -1,0 +1,54 @@
+{# Site footer.
+
+   The links come from settings.footer_nav, NOT settings.nav: the bar at the
+   top carries the places a reader is going, this carries the fine print. See
+   eleventy_binary/lib/settings.js, which sorts both lists and falls back to
+   nav when a project has not declared a footer list of its own.
+
+   "Back to top" is the last entry in that same row and wears the same
+   .nav-link as the rest. It is a bare anchor to #top on <body> — no script:
+   the smooth travel is html { scroll-behavior: smooth } in section E of
+   input.css, and section I already disables it under prefers-reduced-motion. #}
+<footer class="site-footer">
+  <div class="shell" style="padding-block:3.5rem 4rem;">
+    <hr class="rule-grad" style="margin-bottom:2.5rem;">
+
+    <div class="block-two-col" style="align-items:start;">
+      <div>
+        {# Same file and same mask as the nav mark, at --logo-footer-size, so
+           there is one artwork to swap for both placements. Hidden from
+           assistive tech because the site name is printed in text beside it.
+           It takes currentColor from the footer's body text, not from the
+           gradient wordmark next to it.
+
+           The mark sits OUTSIDE the <p>, not inside it: --logo-footer-size is
+           in em and resolves against the font-size it is inherited at, so
+           inside the display type it would scale with the wordmark instead of
+           with the footer's body text. The .footer-wordmark row centres the
+           two on each other. #}
+        <div class="footer-wordmark">
+          <span class="site-logo footer-logo" aria-hidden="true"></span>
+          <p class="display-sm"><span class="text-flow">{{ settings.name }}</span></p>
+        </div>
+      </div>
+
+      <nav class="footer-nav" aria-label="Footer">
+        {% for item in settings.footer_nav %}
+        <a class="nav-link" href="{{ item.link }}"{% if page.url == item.link %} aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+        {# Last in the same row, and .nav-link like the rest of them: it is a
+           link the reader picks out of the footer cluster, not a control
+           bolted onto the copyright line. #}
+        <a class="nav-link back-to-top" href="#top"><span class="arrow" aria-hidden="true">↑</span> Back to top</a>
+      </nav>
+    </div>
+
+    <p class="micro" style="margin-top:2.5rem; color:var(--fg-faint);">
+      © {{ build.date | year }} {{ settings.author or settings.name }}
+    </p>
+
+    {% if settings.footer_note %}
+    <p style="margin-top:0.6rem; font-size:var(--step--1); color:var(--fg-muted); max-width:60ch;">{{ settings.footer_note }}</p>
+    {% endif %}
+  </div>
+</footer>

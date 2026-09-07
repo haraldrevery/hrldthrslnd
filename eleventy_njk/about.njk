@@ -1,0 +1,136 @@
+---
+layout: base.njk
+permalink: /about.html
+title: About
+description: What this site is, how it is built, and why it works without JavaScript.
+---
+{# PLACEHOLDER COPY — written to show the layout working end to end.
+   Rewrite the prose; the structure is meant to stay. #}
+
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 2rem;">
+  <p class="eyebrow">{{ settings.name }}</p>
+  <h1 class="display" style="margin-top:1rem;">A working<br><span class="text-flow">notebook</span></h1>
+  <p class="lede" style="margin-top:2rem;">
+    This is a personal archive kept in public: photographs, working notes, and
+    the occasional long argument with a formula. Nothing here is optimised for
+    an algorithm. It is optimised for still being readable in ten years.
+  </p>
+  <hr class="rule-grad" style="margin-top:3rem;">
+</section>
+
+{# ------------------------------------------------- feature: image + text --- #}
+<section style="position:relative;">
+  <div class="shell" style="position:relative; padding-block:clamp(3.5rem,10vh,6rem);">
+    <div class="block-two-col" style="align-items:center; gap:3rem;">
+      <div class="art-plate fill" style="aspect-ratio:4/5;">
+        <a class="glightbox" data-gallery="about" href="/image/harald_sitting_on_stairs_may_2022.jpg"
+           data-title="On the stairs, May 2022"
+           data-description="A person sitting on a flight of stone stairs, looking out past the camera">
+          <img src="/image_min/harald_sitting_on_stairs_may_2022_min.jpg"
+               alt="A person sitting on a flight of stone stairs, looking out past the camera"
+               width="800" height="1280" loading="lazy" decoding="async">
+        </a>
+      </div>
+
+      <div class="glass-card glass-card-solid" style="padding:clamp(1.75rem,4vw,3rem);">
+        <p class="eyebrow" style="color:rgba(244,244,242,0.6);">Colophon</p>
+        <h2 class="display-md" style="margin-top:1rem; color:var(--paper);">Built to last</h2>
+        <p style="margin-top:1.5rem; color:rgba(244,244,242,0.82); max-width:46ch;">
+          Every page here is a static file. There is no framework rendering the
+          text you are reading, no analytics, and no third-party request of any
+          kind — the fonts, the stylesheet and the mathematics all come from
+          this domain.
+        </p>
+        <p style="margin-top:1rem; color:rgba(244,244,242,0.82); max-width:46ch;">
+          Turn JavaScript off and almost nothing changes. The navigation still
+          opens, the outline panel still works, the equations are still typeset.
+          Two conveniences disappear, because they were only ever conveniences.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ------------------------------------------------------------- the stack --- #}
+<section class="shell" style="padding-block:clamp(3rem,8vh,5rem);">
+  <h2 class="display-md">How it is made</h2>
+  <hr style="margin-block:1.5rem 0;">
+
+  <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(15rem,100%),1fr)); border-top:0;">
+    <div>
+      <p class="micro" style="color:var(--fg-muted);">Generator</p>
+      <p class="display-sm" style="margin-top:0.6rem;">Eleventy</p>
+      <p style="margin-top:0.6rem; font-size:var(--step--1); color:var(--fg-muted);">
+        Compiled to a single binary, so a rebuild needs no toolchain installed.
+      </p>
+    </div>
+    <div>
+      <p class="micro" style="color:var(--fg-muted);">Type</p>
+      <p class="display-sm" style="margin-top:0.6rem;">Harald Revery</p>
+      <p style="margin-top:0.6rem; font-size:var(--step--1); color:var(--fg-muted);">
+        Two faces, one weight each. Hierarchy comes from size and spacing.
+      </p>
+    </div>
+    <div>
+      <p class="micro" style="color:var(--fg-muted);">Mathematics</p>
+      <p class="display-sm" style="margin-top:0.6rem;">KaTeX</p>
+      <p style="margin-top:0.6rem; font-size:var(--step--1); color:var(--fg-muted);">
+        Typeset at build time to static HTML and MathML. No script runs to read it.
+      </p>
+    </div>
+    <div>
+      <p class="micro" style="color:var(--fg-muted);">Theme</p>
+      <p class="display-sm" style="margin-top:0.6rem;">System</p>
+      <p style="margin-top:0.6rem; font-size:var(--step--1); color:var(--fg-muted);">
+        Light and dark follow the operating system. There is no toggle to forget.
+      </p>
+    </div>
+  </div>
+</section>
+
+{# -------------------------------------------------------------------- FAQ --- #}
+<section class="shell" style="padding-bottom:clamp(3rem,8vh,5rem); max-width:min(var(--shell-max), 60rem);">
+  <h2 class="display-md">Questions</h2>
+  <div style="margin-top:2rem;">
+
+    <details class="faq-item">
+      <summary class="faq-trigger">
+        <span>Why no JavaScript?</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </summary>
+      <div class="faq-panel">
+        Because none is needed. Text, images and mathematics are all things HTML
+        and CSS do well. The three scripts that do ship — a lightbox, a search
+        field and a reading-width control — are conveniences, and each is hidden
+        entirely when scripting is unavailable rather than left visible and dead.
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-trigger">
+        <span>Can I reuse the page blocks?</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </summary>
+      <div class="faq-panel">
+        Yes. <a class="link-underline" href="/block_test_page.html">block_test_page.html</a>
+        holds every block type this site knows how to render, each fenced with
+        copy-from / copy-to comments. Paste one into a file in
+        <code>input_custom_html/</code>, add front matter, and rebuild.
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-trigger">
+        <span>How are images handled?</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </summary>
+      <div class="faq-panel">
+        Every photograph has a compressed counterpart under
+        <code>image_min/</code>, and that is what a page loads. The full
+        resolution file is only fetched when you open the lightbox. If a
+        counterpart is missing the build generates one and says so.
+      </div>
+    </details>
+
+  </div>
+</section>

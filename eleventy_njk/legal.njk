@@ -1,0 +1,41 @@
+---
+layout: base.njk
+permalink: /legal.html
+title: Legal
+description: Terms, privacy and the licences this site is built on.
+---
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 2rem;">
+  <p class="eyebrow">{{ settings.name }}</p>
+  <h1 class="display" style="margin-top:1rem;">Legal</h1>
+  <hr class="rule-grad" style="margin-top:2.5rem;">
+</section>
+
+<section class="shell" style="padding-bottom:3rem;">
+  <div class="prose">
+    {{ legal.body | safe }}
+  </div>
+</section>
+
+{# Every licence in licence_and_legal/ is published as its own section, so the
+   attribution obligations of the bundled software are met on one page. #}
+{% if legal.licences.length %}
+<section class="shell" style="padding-bottom:4rem;">
+  <hr class="rule-grad" style="margin-bottom:2.5rem;">
+  <h2 class="display-md">Licences</h2>
+
+  <nav aria-label="Licences" style="display:flex; flex-wrap:wrap; gap:0.6rem; margin-block:1.75rem 3rem;">
+    {% for licence in legal.licences %}
+    <a class="tag-chip" href="#{{ licence.id }}">{{ licence.title }}</a>
+    {% endfor %}
+  </nav>
+
+  {% for licence in legal.licences %}
+  <section id="{{ licence.id }}" class="download-block" style="margin-bottom:1.5rem;">
+    <h3 class="display-sm">{{ licence.title }}</h3>
+    <div class="prose">
+      {{ licence.html | safe }}
+    </div>
+  </section>
+  {% endfor %}
+</section>
+{% endif %}

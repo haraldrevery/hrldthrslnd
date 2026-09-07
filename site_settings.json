@@ -1,0 +1,73 @@
+{
+  "name": "SITE_NAME",
+  "short_name": "SITE",
+  "description": "A journal of process — pictures, notes and the occasional long argument with a formula.",
+  "url": "https://example.com",
+  "language": "en",
+  "date_locale": "en-GB",
+  "author": "SITE_NAME",
+  "posts_per_page": 40,
+  "default_image": "/image/2016mountains_and_clouds.jpg",
+  "nav": [
+    {
+      "label": "Index",
+      "link": "/",
+      "order": 1
+    },
+    {
+      "label": "Journal",
+      "link": "/blog.html",
+      "order": 2
+    },
+    {
+      "label": "About",
+      "link": "/about.html",
+      "order": 3
+    },
+    {
+      "label": "Contact",
+      "link": "/contact.html",
+      "order": 4
+    }
+  ],
+  "footer_nav": [
+    {
+      "label": "Contact",
+      "link": "/contact.html",
+      "order": 1
+    },
+    {
+      "label": "Legal",
+      "link": "/legal.html",
+      "order": 2
+    },
+    {
+      "label": "Status",
+      "link": "/status_check.html",
+      "order": 3
+    },
+    {
+      "label": "RSS",
+      "link": "/feed.xml",
+      "order": 4
+    }
+  ],
+  "footer_note": "Set in Harald Revery Text and Harald Revery Mono. Built as static files; no trackers, no third-party requests.",
+  "asset_folders": [
+    "image",
+    "image_min",
+    "card_thumbnail",
+    "svg",
+    "font",
+    "javascript",
+    "video",
+    "gif",
+    "audio"
+  ],
+  "status_check": {
+    "max_image_bytes": 900000,
+    "max_image_min_bytes": 80000,
+    "max_gif_bytes": 3000000,
+    "max_video_bytes": 40000000
+  }
+}
