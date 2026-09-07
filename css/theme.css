@@ -503,7 +503,7 @@
      the name has stopped and ends up taller than it. Lower the ceiling toward
      the title's own if that reads wrong on a large display; it is invisible at
      laptop sizes either way. */
-  --logo-hero-size:   clamp(1.9rem, 6.6vw, 8.2rem);
+  --logo-hero-size:   clamp(2.47rem, 8.58vw, 10.66rem);
 
   /* Width divided by height of the artwork. A mask is painted onto a plain
      element, and an element has no intrinsic size to take a ratio from — unlike

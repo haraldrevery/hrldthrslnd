@@ -455,7 +455,7 @@
   --nav-height: 3.6rem;
   --logo-nav-size: 1.00em;
   --logo-footer-size: 1.04em;
-  --logo-hero-size: clamp(1.9rem, 6.6vw, 8.2rem);
+  --logo-hero-size: clamp(2.47rem, 8.58vw, 10.66rem);
   --logo-aspect: 1;
   --logo-nudge-x: -4%;
   --logo-nudge-y: -14%;
@@ -1190,7 +1190,7 @@
     --cine-ink: 13, 13, 16;
     --cine-title-size: clamp(2.4rem, 9vw, 7.5rem);
     --cine-eyebrow-size: 1.2rem;
-    --cine-lockup-gap: 1.5rem;
+    --cine-lockup-gap: 4.8rem;
     --cine-logo-lift: calc(var(--logo-hero-size) * 0.14);
     --cine-eyebrow-tail: calc(var(--cine-eyebrow-size) * 0.714);
     --cine-title-head: calc(var(--cine-title-size) * 0.159);
@@ -1468,10 +1468,10 @@
       padding-top: calc(clamp(1.25rem, 4vh, 2.5rem) + var(--nav-height));
     }
     .cine-stage {
-      --cine-lockup-gap: clamp(0.5rem, 1.6vh, 1rem);
+      --cine-lockup-gap: clamp(1.25rem, 4vh, 2rem);
     }
     .cine-eyebrow {
-      margin-bottom: clamp(0.5rem, 1.6vh, 1rem);
+      margin-bottom: clamp(1.25rem, 4vh, 2rem);
     }
     .cine-rule {
       margin-block: clamp(0.75rem, 2.6vh, 1.5rem);
@@ -1494,7 +1494,7 @@
     .cine-stage {
       --cine-title-size: clamp(1.6rem, min(9vw, 7vh), 7.5rem);
       --cine-eyebrow-size: 0.64rem;
-      --logo-hero-size: clamp(1.6rem, min(6.6vw, 5.1vh), 8.2rem);
+      --logo-hero-size: clamp(2.08rem, min(8.58vw, 6.63vh), 10.66rem);
     }
     .cine-eyebrow {
       letter-spacing: 0.3em;
