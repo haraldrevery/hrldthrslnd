@@ -22,8 +22,10 @@ Click around, not much to say. The website should look nice, not drain your lapt
 - Check that the `site_settings.json` actually works and is utilized for the generated website.
 - Double check that `status_check.sh`/`status_check.bat` actually catchers errors and broken links etc and that `status_check.html` shows correct data and said errors etc. It's important to know if you have made some mistake when updating the site and there is an visual and easy way to just see what pages have problems.
 - When using justified text alignment, check that the very last row for any text isn't too spaced out, check that the last row of text is sensibly cut off. Note: Check that KaTeX isn't getting odd alignment issues too, that it's not aligned to the right/left when it's supposed to be centered and so on.
-- Make sure KaTeX syntax parts are rendered out with the KaTeX font and not mixed up with another fonts glyphs (rare instances can occur where other fonts hijacks the glyphs). 
-  
+- Make sure KaTeX syntax parts are rendered out with the KaTeX font and not mixed up with another fonts glyphs (rare instances can occur where other fonts hijacks the glyphs).
+- If you choose to have a full view port hero page, consider having a "click here to scroll down" text button that scrolls past the hero page. Have this text button animate in after 2 seconds the page load, this is in case users don't understand that they have to scroll to see the actual content.
+- Check that the RSS utilizes everything in the YAML: title, description, thumbnail and so on so it looks correct for visitors using RSS readers.
+
 
 
 
