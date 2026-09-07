@@ -714,8 +714,14 @@
        stands on rather than competing with it. This is the gentle lever; if a
        particular photograph is still too loud, raise --hero-scrim's alphas in
        theme.css rather than dropping this much further — past about 0.8 the
-       picture starts to look flat instead of quiet. */
-    opacity: 0.50;
+       picture starts to look flat instead of quiet.
+
+       A token with the old literal as its fallback, so nothing here moves: the
+       scheme-following variant in section L is the only thing that sets it, and
+       it sets it only in light mode, where the picture is mixed into a pale
+       ground rather than a near-black one and 0.50 is not the same amount of
+       photograph. See the note there. */
+    opacity: var(--hero-photo-opacity, 0.50);
     /* The full-size file, not the _min thumbnail — this is the largest surface
        on the site and an upscaled thumbnail shows it. See the note in the
        markup. */
@@ -849,6 +855,26 @@
       --cue-clear: max(clamp(1.25rem, 3vh, 2rem),
                        calc(var(--hero-fade-clear) * 0.76));
     }
+  }
+
+  /* Centred variant, for a stage whose content is centred too — the index's
+     title card, where a mark in the right-hand corner is the one thing on the
+     screen off the centre line.
+
+     Both edges are pinned to the content column instead of just the right one,
+     and the label is centred in the lane that makes. An absolutely positioned
+     box is blockified, so the inline-flex above computes to flex and stretches
+     between the two insets; justify-content is then what does the centring.
+
+     Deliberately NOT `left: 50%` with a translate. The entrance keyframe
+     animates `transform`, and its `both` fill mode holds the to-frame —
+     `transform: none` — for good once the animation ends, which would undo a
+     centring transform a beat and a half after load. Nothing here touches
+     transform, so the two stay out of each other's way.                       */
+  .hero-scroll-cue-center {
+    left: calc(max(0px, (100% - var(--shell-max)) / 2) + var(--cue-gutter));
+    right: calc(max(0px, (100% - var(--shell-max)) / 2) + var(--cue-gutter));
+    justify-content: center;
   }
 
   .hero-scroll-cue:hover,
@@ -3895,7 +3921,8 @@
     border-radius: var(--radius);
     background: var(--bg-raised);
   }
-  .audio-head { display: grid; gap: 0.4rem; }
+  .audio-head,
+  .video-head { display: grid; gap: 0.4rem; }
   /* The height is not cosmetic. <audio> is a replaced element with no intrinsic
      size, so with a width set and the height left auto it falls back to the CSS
      default object size — 300x150 — and the control strip sits at the bottom of
@@ -3910,7 +3937,8 @@
 
   /* Format, duration, size — the things you want before pressing play, in the
      same mono micro type the download block uses for its hashes. */
-  .audio-meta {
+  .audio-meta,
+  .video-meta {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
@@ -3924,9 +3952,76 @@
     color: var(--fg-muted);
   }
   /* Pushes the last item — normally the download link — to the far end. */
-  .audio-meta > :last-child { margin-inline-start: auto; }
+  .audio-meta > :last-child,
+  .video-meta > :last-child { margin-inline-start: auto; }
   @media (max-width: 30rem) {
-    .audio-meta > :last-child { margin-inline-start: 0; }
+    .audio-meta > :last-child,
+    .video-meta > :last-child { margin-inline-start: 0; }
+  }
+
+  /* -- Video block ------------------------------------------------------------
+     The audio block's frame, around a <video> instead of an <audio>. Same
+     three parts in the same order — a head that says what the thing is, the
+     browser's own player, and the numbers underneath — so a page that carries
+     both reads as one component used twice rather than two components that
+     happen to sit near each other. The head is deliberately a title and a
+     description and nothing else; anything longer belongs beside the video in
+     .block-media, not stacked above it.
+
+     It shares .video-head, .video-meta and their rules with the audio block
+     above rather than restating them, which is why those selectors are paired:
+     one change retunes both, and they cannot drift apart.
+
+     The only thing this adds is the picture itself. Two properties matter:
+
+       aspect-ratio  <video> is a replaced element and preload="none" means the
+                     file is never touched, so the browser has no intrinsic size
+                     to reserve — exactly the reason .art-plate carries a ratio
+                     rather than the video inside it. Without one the box falls
+                     back to the CSS default object size, 300x150, and the page
+                     reflows the moment a viewer presses play. 16/9 covers every
+                     file in /video/; a portrait or square clip overrides it
+                     with --video-ratio on the block, not with a second rule.
+
+       background    what shows through in the letterbox bars when the file's
+                     own ratio is not the box's. Fixed near-black in both
+                     schemes, because those bars are part of the picture rather
+                     than part of the page.                                    */
+  .video-block {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1.5rem;
+    border: var(--hairline-width) solid var(--hairline);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  .video-block video {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--video-ratio, 16 / 9);
+    background: #111217;
+    border-radius: calc(var(--radius) - var(--hairline-width));
+    /* Same two lines .audio-block sets on its player, and for the same reason:
+       these are the only properties that reach the browser's native controls. */
+    accent-color: var(--link-underline);
+    color-scheme: light dark;
+  }
+
+  /* The block used as the media cell of a .block-media row. The frame is the
+     point — it is what makes the video beside a column of prose the same object
+     as the video standing on its own — but the padding is not: the plate it
+     replaces sat flush against the text column, and 1.5rem of inset on every
+     side pulls the picture visibly narrower than the cell holding it. Tightened
+     rather than dropped, so the frame still reads as a frame.
+
+     Only from the breakpoint where .block-media is actually two columns. Below
+     it the row is stacked, this block is full width like every other one on the
+     page, and a tighter inset here than on the standalone video above is a
+     difference with nothing behind it — the two sit one under the other on a
+     phone and have to match. */
+  @media (min-width: 48rem) {
+    .block-media > .video-block { padding: 0.75rem; }
   }
 
   /* -- Two-column block arrangement ------------------------------------------ */
@@ -5321,6 +5416,68 @@ html[data-width="18"]  { --reading-width: 18%; }
      its rules from that token, so one line re-inks the whole grid. */
   .photo-stage-adaptive .stat-grid { --hairline: var(--panel-adaptive-border); }
   .photo-stage-adaptive .stat-grid-glass > * { background: var(--panel-adaptive-tile); }
+
+  /* -- .hero-stage-photo-adaptive: a photographic hero that follows the scheme
+     What .photo-stage-adaptive is to .photo-stage, this is to
+     .hero-stage-photo — and it is used INSTEAD of that class, never beside it,
+     because .hero-stage-photo pins the type to --paper in four places
+     (including the two .text-flow fallbacks at the foot of this file) and a
+     hero carrying both would come out paper-on-paper in light mode.
+
+     Everything about the geometry — the viewport height, the bottom dissolve,
+     the masked layers, the copy's clearance — is .hero-stage's and is
+     untouched. Three things change, and all three are the same move the
+     cinematic stage makes: the scrim washes towards the scheme's own ground
+     rather than always towards black, the backdrop the picture is held off
+     full strength against is that ground rather than a fixed near-black, and
+     the type is ink or paper according to the scheme instead of always paper.
+
+     Read the ordering carefully before adding to it. .hero-stage sets the
+     three tokens at (0,1,0); this modifier ties with it and wins on source
+     order, since section L is last in the components layer. The .hero-media
+     rule has to out-rank .hero-stage .hero-media (0,2,0), which is why it is
+     written with the descendant rather than as a bare class.
+
+     When to reach for it: whenever the photograph is quiet enough that a wash
+     can hold ink over it. When NOT to: a picture with a bright, busy top third
+     — there .hero-stage-photo's fixed dim is the honest answer, and a hero that
+     answers to the visitor's setting is not worth an unreadable headline. */
+  .hero-stage-photo-adaptive {
+    --hero-ground: var(--stage-scrim);
+    --hero-fg: var(--panel-adaptive-fg-strong);
+    --hero-fg-muted: var(--panel-adaptive-fg-muted);
+
+    /* The picture sits further forward on paper than it does in the dark, and
+       the two numbers are not a preference. They are the same asymmetry the
+       cinematic stage documents: mixing a photograph towards black darkens its
+       midtones fast, while mixing it towards white mostly flattens them, so the
+       opacity that reads as a quiet ground under a dim reads as an almost-empty
+       frame under a wash. Compounded here by the scrim — --hero-scrim-pale is
+       heavier than --hero-scrim at every stop, because near-black type needs
+       more of the picture taken out from under it — and at 0.50 the two
+       together left about a tenth of the photograph showing.
+
+       0.72 puts the light frame at roughly the presence the dark one has, and
+       it is not paid for in contrast: over the darkest ground this makes, black
+       type still measures near 10:1 and the muted lede stays over 6:1. Both
+       floors are what set the ceiling on this number — raise it further and the
+       lede is the first thing to go. */
+    --hero-photo-opacity: 0.72;
+  }
+  /* The dark half puts the shared value back, so a hero that opts into this
+     modifier is pixel-for-pixel the fixed variant in the dark scheme and only
+     the light half is new — the same contract .photo-stage-adaptive keeps. */
+  @media (prefers-color-scheme: dark) {
+    .hero-stage-photo-adaptive { --hero-photo-opacity: 0.50; }
+  }
+  /* The ground the picture's own opacity blends into. Fixed near-black on the
+     dark-pinned variant, because the type over that one is fixed too; here it
+     is the darkest stop of the stage's own ground, so the photograph washes
+     towards pale in light mode instead of always sinking into black. In the
+     dark scheme that stop is #0d0d10 against the fixed variant's #09090c —
+     four values of grey under a half-opaque picture, which is below anything
+     visible, and worth it for a backdrop that is named rather than typed. */
+  .hero-stage-photo-adaptive .hero-media { background: var(--stage-3); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5424,6 +5581,7 @@ html[data-width="18"]  { --reading-width: 18%; }
    --paper in the dark scheme, so the rule above is what this becomes there. */
 @media (prefers-reduced-motion: reduce) {
   .photo-stage-adaptive .text-flow,
+  .hero-stage-photo-adaptive .text-flow,
   .panel-adaptive .text-flow { color: var(--panel-adaptive-fg-strong); }
 }
 @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
@@ -5435,6 +5593,7 @@ html[data-width="18"]  { --reading-width: 18%; }
 }
 @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
   .photo-stage-adaptive .text-flow,
+  .hero-stage-photo-adaptive .text-flow,
   .panel-adaptive .text-flow { color: var(--panel-adaptive-fg-strong); }
 }
 

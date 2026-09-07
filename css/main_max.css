@@ -200,6 +200,27 @@
   .sticky {
     position: sticky;
   }
+  .container {
+    width: 100%;
+    @media (width >= 26rem) {
+      max-width: 26rem;
+    }
+    @media (width >= 40rem) {
+      max-width: 40rem;
+    }
+    @media (width >= 48rem) {
+      max-width: 48rem;
+    }
+    @media (width >= 64rem) {
+      max-width: 64rem;
+    }
+    @media (width >= 80rem) {
+      max-width: 80rem;
+    }
+    @media (width >= 96rem) {
+      max-width: 96rem;
+    }
+  }
   .block {
     display: block;
   }
@@ -850,7 +871,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.50;
+    opacity: var(--hero-photo-opacity, 0.50);
   }
   .hero-stage .display, .hero-stage h1 {
     color: var(--hero-fg);
@@ -900,6 +921,11 @@
       --cue-clear: max(clamp(1.25rem, 3vh, 2rem),
                        calc(var(--hero-fade-clear) * 0.76));
     }
+  }
+  .hero-scroll-cue-center {
+    left: calc(max(0px, (100% - var(--shell-max)) / 2) + var(--cue-gutter));
+    right: calc(max(0px, (100% - var(--shell-max)) / 2) + var(--cue-gutter));
+    justify-content: center;
   }
   .hero-scroll-cue:hover, .hero-scroll-cue:focus-visible {
     color: var(--hero-fg);
@@ -2588,7 +2614,7 @@
     border-radius: var(--radius);
     background: var(--bg-raised);
   }
-  .audio-head {
+  .audio-head, .video-head {
     display: grid;
     gap: 0.4rem;
   }
@@ -2598,7 +2624,7 @@
     accent-color: var(--link-underline);
     color-scheme: light dark;
   }
-  .audio-meta {
+  .audio-meta, .video-meta {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
@@ -2611,12 +2637,35 @@
     text-transform: uppercase;
     color: var(--fg-muted);
   }
-  .audio-meta > :last-child {
+  .audio-meta > :last-child, .video-meta > :last-child {
     margin-inline-start: auto;
   }
   @media (max-width: 30rem) {
-    .audio-meta > :last-child {
+    .audio-meta > :last-child, .video-meta > :last-child {
       margin-inline-start: 0;
+    }
+  }
+  .video-block {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1.5rem;
+    border: var(--hairline-width) solid var(--hairline);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  .video-block video {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--video-ratio, 16 / 9);
+    background: #111217;
+    border-radius: calc(var(--radius) - var(--hairline-width));
+    accent-color: var(--link-underline);
+    color-scheme: light dark;
+  }
+  @media (min-width: 48rem) {
+    .block-media > .video-block {
+      padding: 0.75rem;
     }
   }
   .block-single {
@@ -3662,6 +3711,20 @@ html[data-width="18"] {
   .photo-stage-adaptive .stat-grid-glass > * {
     background: var(--panel-adaptive-tile);
   }
+  .hero-stage-photo-adaptive {
+    --hero-ground: var(--stage-scrim);
+    --hero-fg: var(--panel-adaptive-fg-strong);
+    --hero-fg-muted: var(--panel-adaptive-fg-muted);
+    --hero-photo-opacity: 0.72;
+  }
+  @media (prefers-color-scheme: dark) {
+    .hero-stage-photo-adaptive {
+      --hero-photo-opacity: 0.50;
+    }
+  }
+  .hero-stage-photo-adaptive .hero-media {
+    background: var(--stage-3);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -3684,7 +3747,7 @@ html[data-width="18"] {
   .matte-stage .text-flow, .photo-stage .text-flow, .glass-surface .text-flow, .glass-card .text-flow, .hero-stage-photo .text-flow {
     color: var(--paper);
   }
-  .photo-stage-adaptive .text-flow, .panel-adaptive .text-flow {
+  .photo-stage-adaptive .text-flow, .hero-stage-photo-adaptive .text-flow, .panel-adaptive .text-flow {
     color: var(--panel-adaptive-fg-strong);
   }
 }
@@ -3692,7 +3755,7 @@ html[data-width="18"] {
   .matte-stage .text-flow, .photo-stage .text-flow, .glass-surface .text-flow, .glass-card .text-flow, .hero-stage-photo .text-flow {
     color: var(--paper);
   }
-  .photo-stage-adaptive .text-flow, .panel-adaptive .text-flow {
+  .photo-stage-adaptive .text-flow, .hero-stage-photo-adaptive .text-flow, .panel-adaptive .text-flow {
     color: var(--panel-adaptive-fg-strong);
   }
 }

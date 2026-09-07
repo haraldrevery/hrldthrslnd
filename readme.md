@@ -226,9 +226,21 @@ assembled in section 6 from the three `--stage-1/2/3` stops each scheme
 declares: a pale stage in light mode, the old matte in dark. Its type comes
 from `--hero-fg` / `--hero-fg-muted`, which default to `--fg` / `--fg-muted`.
 Adding `.hero-stage-photo` pins both back to light-on-dark and swaps the ground
-for `--hero-scrim`, because over a photograph legibility is not a matter of
-preference. Retune the light stage by editing the three `--stage-*` values in
+for `--hero-scrim`, because over a photograph legibility is not always a matter
+of preference. Retune the light stage by editing the three `--stage-*` values in
 section 4 and nothing else.
+
+`.hero-stage-photo-adaptive` is the other half of that pair: the same
+photographic hero, but washed towards the scheme's own ground rather than always
+towards black, with the type in ink or paper to match. It is what
+`block_test_page_b.html` uses. Use one modifier or the other, never both — the
+fixed variant pins several colours to `--paper`, including the two `.text-flow`
+fallbacks, and a hero carrying both classes comes out paper on paper in light
+mode. The two do not share an image opacity (0.50 dark, 0.72 light), for the
+same reason the cinematic stage below does not: mixing a picture towards white
+mostly flattens it, while mixing towards black darkens it fast. Reach for the
+adaptive one whenever the photograph is quiet enough in its top third for ink to
+hold over it, and for the fixed one when it is not.
 
 A `.hero-stage` that is the first thing in `<main>` runs the full viewport
 height and starts at the top of the document, with the sticky nav floating over
@@ -249,7 +261,9 @@ that size drift apart the first time one of them is tuned.
 
 It is not a `.hero-stage` and does not inherit from one. It declares the three
 `--hero-*` tokens itself, which is the whole of what `.hero-scroll-cue` needs to
-work over it. `nav_reveal.js` names it alongside `.hero-stage`, so a leading one
+work over it — and because this card is centred rather than set left, the cue on
+it carries `.hero-scroll-cue-center`, which pins both edges to the content column
+and centres the label between them instead of parking it in the lower right. `nav_reveal.js` names it alongside `.hero-stage`, so a leading one
 gets the same disappearing bar.
 
 **It answers to the system colour scheme**, which is a departure from

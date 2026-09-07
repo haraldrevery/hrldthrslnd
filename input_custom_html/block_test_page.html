@@ -459,13 +459,26 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
         </a>
       </div>
 
-      <div class="glass-card glass-card-solid" style="padding:clamp(1.75rem,4vw,3rem);">
-        <p class="eyebrow" style="color:rgba(244,244,242,0.6);">Featured — 01</p>
-        <h2 class="display-md" style="margin-top:1rem; color:var(--paper);">One image,<br>one argument</h2>
-        <p style="margin-top:1.5rem; color:rgba(244,244,242,0.82); max-width:46ch;">
+      <!-- .panel-adaptive: the panel and its type follow the colour scheme —
+           near-white with ink on it in light mode, the near-black it has always
+           been in the dark. The panel stands on the PAGE here, not on a
+           photograph, so it has no reason to ignore the visitor's setting; the
+           block below is the one that overlaps a picture, and it carries the
+           same modifier for the same reason.
+
+           Nothing names a colour. The three inline `color:` rules this block
+           used to carry are gone with the modifier, which is the point of it:
+           .panel-adaptive owns the type inside, so a block pasted in here comes
+           out the right colour instead of arriving as ink on near-black. See
+           section L of css/input.css. -->
+      <div class="glass-card glass-card-solid panel-adaptive" style="padding:clamp(1.75rem,4vw,3rem);">
+        <p class="eyebrow">Featured — 01</p>
+        <h2 class="display-md" style="margin-top:1rem;">One image,<br>one argument</h2>
+        <p style="margin-top:1.5rem; max-width:46ch;">
           Use this when a run of text-and-image columns needs breaking up. The
-          panel carries its own dark ground in both themes, so the contrast is
-          fixed and predictable rather than depending on the page or the photo.
+          panel is the heavier of the two glass values and it follows the colour
+          scheme, so it reads as a solid card on the page in either one rather
+          than as a dark hole in a light layout.
         </p>
         <p style="margin-top:1.75rem;">
           <a class="btn btn-ghost" href="#galleries">Read on</a>
@@ -520,24 +533,54 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
 
 
 <!-- ===== COPY FROM HERE: Video block =====
-     A plain <video> element with controls and a poster frame. No player
-     library, so it degrades to the browser's own controls. Uncomment the
-     <source> line and point it at your file in /video/. -->
+     The audio block's frame with a <video> in it. The controls are the
+     browser's own — no player library, so it degrades to whatever the browser
+     ships and keeps working with scripting off — and .video-block does the same
+     thing .audio-block does around them: names the clip in the site's type,
+     gives the picture the full width, and puts the numbers you want before
+     pressing play underneath.
+
+     The head is a title and a description and nothing more. Anything longer
+     belongs beside the video in .block-media (the next block down), not stacked
+     above it — a paragraph over a 16:9 picture pushes the picture off the
+     screen on a phone.
+
+     It is a <figure>, so the caption is tied to the player rather than being a
+     loose paragraph beneath it. Drop the <figcaption> if you have nothing to
+     say, and drop the meta row if you have no numbers worth printing.
+
+     preload="none" means the poster frame is the only thing the page fetches;
+     the file itself is not touched until someone presses play. The block's own
+     aspect-ratio is what reserves the box in the meantime — see .video-block in
+     input.css for why that cannot be left to the file. -->
 <section class="shell" style="padding-bottom:clamp(3rem,8vh,4.5rem);">
   <h2 class="display-md">Video</h2>
-  <div style="margin-top:2rem;">
-    <video controls preload="none"
+
+  <figure class="video-block" style="margin-top:2rem;">
+    <div class="video-head">
+      <p class="eyebrow">Clip 01 — MP4</p>
+      <p class="display-sm">Brännäs</p>
+    </div>
+
+    <video controls preload="none" playsinline
            poster="/image_min/2016nicemountains_min.jpg"
-           style="width:100%; background:#111217;">
-      <!-- Point this at your own file -->:
+           width="426" height="240">
       <source src="/video/branas_snowboarding.mp4" type="video/mp4">
-      -
-      <p class="prose">Your browser cannot play this video.</p>
+      <p>Your browser cannot play this video. <a href="/video/branas_snowboarding.mp4">Download it.</a></p>
     </video>
-    <p class="micro" style="margin-top:0.75rem; color:var(--fg-muted);">
-      Poster frame shown — no sample video ships with this repository.
+
+    <p class="video-meta">
+      <span>14:41</span>
+      <span>426 &times; 240 &middot; H.264</span>
+      <a class="link-underline" href="/video/branas_snowboarding.mp4" download>Download</a>
     </p>
-  </div>
+
+    <figcaption class="micro" style="letter-spacing:0.08em; text-transform:none; color:var(--fg-muted);">
+      A long, low-resolution run kept here as something for the player to load
+      that is heavier than a poster frame — the block is the point, not the
+      footage.
+    </figcaption>
+  </figure>
 </section>
 <!-- ===== COPY TO HERE ===== -->
 
@@ -566,25 +609,39 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
         beside a video makes the row taller than the video is tall.
       </p>
       <p>
-        The video keeps its own aspect ratio in an <code>.art-plate</code>, and
-        loads nothing until it is played — <code>preload="none"</code> means the
-        poster frame is the only bytes the page fetches.
+        The video sits in the same <code>.video-block</code> frame as the one
+        above, and loads nothing until it is played —
+        <code>preload="none"</code> means the poster frame is the only bytes the
+        page fetches.
       </p>
     </div>
 
-    <!-- aspect-ratio on the plate, not the video: with preload="none" the file
-         is never touched, so the browser has no intrinsic size to reserve and
-         the page would reflow the moment a viewer pressed play. -->
-    <figure class="art-plate fill" style="aspect-ratio:16/9;">
+    <!-- The same .video-block as the standalone block above, so both videos on
+         this page sit in one container rather than two. No .video-head here:
+         the prose column on the left IS the title and the description, and
+         repeating them inside the frame would say everything twice.
+
+         The frame carries the aspect-ratio, not the video: with preload="none"
+         the file is never touched, so the browser has no intrinsic size to
+         reserve and the page would reflow the moment a viewer pressed play.
+         The padding comes down to 0.75rem in this position — see
+         .block-media > .video-block in input.css. -->
+    <figure class="video-block">
       <video controls preload="none" playsinline
              poster="/video/thumbnail/mirth_thumbnail.jpg"
-             width="1280" height="720">
+             width="854" height="480">
         <source src="/video/under_25_mb/harald_revery_-_mirth.mp4" type="video/mp4">
-        <p class="prose">
+        <p>
           Your browser cannot play this video.
           <a href="/video/under_25_mb/harald_revery_-_mirth.mp4">Download it.</a>
         </p>
       </video>
+
+      <p class="video-meta">
+        <span>3:47</span>
+        <span>854 &times; 480 &middot; VP9</span>
+        <a class="link-underline" href="/video/under_25_mb/harald_revery_-_mirth.mp4" download>Download</a>
+      </p>
     </figure>
 
   </div>

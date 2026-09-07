@@ -3,7 +3,7 @@ title: Hero variant B — full-bleed photograph
 date: 2026-09-03
 image: /image/2018augusti10stranden.jpg
 tags: [test, reference]
-description: The second hero treatment — a full-viewport photograph under a fixed scrim.
+description: The second hero treatment — a full-viewport photograph under a scrim that follows the colour scheme.
 draft: false
 ---
 
@@ -11,12 +11,27 @@ draft: false
   HERO VARIANT B — full-bleed photograph.
 
   The same .hero-stage as variant A: one screenful tall, running behind the nav
-  at the top and dissolving into the page at the bottom. The difference is
-  .hero-stage-photo, which pins the type light-on-dark (variant A follows the
-  colour scheme; over a photograph that is not an option) and swaps the
-  matte ground for --hero-scrim, and a .hero-media layer holding the picture.
+  at the top and dissolving into the page at the bottom. The difference is a
+  .hero-media layer holding the picture, and a modifier that says how the type
+  is kept legible over it.
 
-  Three things are load bearing, and all three are the reasons the earlier
+  There are two such modifiers and this block uses the second one:
+
+    .hero-stage-photo           pins the type light-on-dark and lays a fixed
+                                dark scrim over the picture, in both schemes.
+
+    .hero-stage-photo-adaptive  washes the picture towards the scheme's own
+                                ground and sets the type in ink or paper to
+                                match — the same move the index page's title
+                                card makes with its photograph.
+
+  This page carries the adaptive one, because the whole point of a reference
+  page is to be looked at in both schemes and the fixed variant has nothing to
+  show in the light one. Swapping between them is swapping the class; nothing
+  else in this block changes, and neither the copy nor the buttons name a
+  colour, so both come out right either way.
+
+  Four things are load bearing, and the first three are the reasons the earlier
   version of this block looked wrong:
 
   1. The FULL-SIZE file from image/, not the thumbnail from image_min/. This is
@@ -24,26 +39,31 @@ draft: false
      a 2560px display is the blur. The _min files are for cards and galleries,
      where they are never asked to be more than about a third of the viewport.
 
-  2. The scrim is fixed dark in BOTH colour schemes, like the matte ground. The
-     type over it is --paper either way, so a scrim that followed the scheme
-     would make the headline's contrast depend on the visitor's OS setting. It
-     is darkest at the top and bottom, where the type and the buttons are, and
-     thinnest across the middle, which is the part of the picture worth seeing.
-     Too bright a photograph? The picture already sits a little off full
-     strength (the opacity on .hero-media img in input.css); past a small drop
-     that reads as flat rather than quiet, so raise --hero-scrim's alphas in
-     theme.css instead.
+  2. The scrim is darkest at the top and bottom, where the type and the buttons
+     are, and thinnest across the middle, which is the part of the picture worth
+     seeing — and under the adaptive modifier it is a wash rather than a dim in
+     light mode, the same four stops inverted. Too bright a photograph? The
+     picture already sits a little off full strength (the opacity on
+     .hero-media img in input.css); past a small drop that reads as flat rather
+     than quiet, so raise --hero-scrim and --hero-scrim-pale in theme.css
+     instead. Both, not one — the two halves of the scheme want to stay in step.
 
   3. The picture is a wide panorama (4350x1820). object-fit: cover crops to the
      viewport, so a portrait file would be cropped to a narrow vertical strip of
      itself on a desktop screen. Lead with a landscape frame.
+
+  4. The adaptive modifier is a judgement about THIS photograph, not a default.
+     It works here because the frame is an overcast beach — even, mid-toned,
+     nothing bright behind the headline. Over a picture with a hot, busy top
+     third, ink on a wash is the wrong answer and .hero-stage-photo's fixed dim
+     is the right one. Check the light scheme before swapping a new file in.
 
   There is no lightbox link here on purpose: .hero-media is pointer-events:none
   so the buttons above it stay clickable, and a hero that swallows clicks is
   worse than one that does not open.
 
   The entrance is variant A's, plus one move this variant alone gets: the
-  picture fades up over the near-black backdrop and settles out of
+  picture fades up over the stage's own backdrop and settles out of
   --entrance-settle over about two and a half seconds, so the frame comes to
   rest rather than appearing at its final size. It is the only theatrical
   gesture in the family and it is a transform, which costs the compositor
@@ -52,7 +72,7 @@ draft: false
 -->
 
 <!-- ===== COPY FROM HERE: Hero B — full-bleed photograph ===== -->
-<section class="hero-stage hero-stage-photo">
+<section class="hero-stage hero-stage-photo-adaptive">
   <div class="hero-media">
     <img src="/image/2018augusti10stranden.jpg" width="4350" height="1820"
          alt="Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind"
@@ -67,9 +87,10 @@ draft: false
     </h1>
 
     <p class="lede">
-      The photograph is the ground, not an inset beside the headline. A fixed
-      scrim sits between the two so the type holds whatever the picture does,
-      and the whole thing dissolves into the page at the bottom edge.
+      The photograph is the ground, not an inset beside the headline. A scrim
+      sits between the two so the type holds whatever the picture does — a wash
+      on a pale scheme, a dim on a dark one — and the whole thing dissolves into
+      the page at the bottom edge.
     </p>
 
     <div class="hero-actions">
@@ -99,16 +120,29 @@ draft: false
     </p>
     <p>
       Both are the same block underneath. Swapping one for the other is adding
-      or removing <code>.hero-stage-photo</code> and the
-      <code>.hero-media</code> layer; the height, the bottom fade, the padding
-      that keeps the copy clear of that fade, and the type colours are all in
-      <code>.hero-stage</code> and do not change.
+      or removing the photographic modifier and the <code>.hero-media</code>
+      layer; the height, the bottom fade, and the padding that keeps the copy
+      clear of that fade are all in <code>.hero-stage</code> and do not change.
+    </p>
+    <p>
+      The modifier comes in two forms. This page uses
+      <code>.hero-stage-photo-adaptive</code>, which washes the picture towards
+      the page's own ground and sets the type to match, so the hero answers to
+      the visitor's colour-scheme setting like the rest of the site.
+      <code>.hero-stage-photo</code> is the other one: a fixed dark scrim and
+      light type in both schemes, for a photograph too bright or too busy under
+      the headline for ink to hold. Use one or the other, never both — the fixed
+      variant pins several colours to <code>--paper</code>, and a hero carrying
+      both classes comes out paper on paper in light mode.
     </p>
     <h3>What to check before shipping one</h3>
     <p>
       Look at it in both colour schemes, on a phone in landscape, and with the
       picture replaced by a much brighter one. The first two are where the
-      layout gives, the third is where the scrim does.
+      layout gives, the third is where the scrim does — and with the adaptive
+      modifier the light scheme is the half to check first, because near-black
+      type needs more of the photograph taken out from under it than near-white
+      type does.
     </p>
   </div>
 </section>

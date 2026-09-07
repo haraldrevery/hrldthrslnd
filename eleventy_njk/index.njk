@@ -73,18 +73,26 @@ title: false
     {# No .cine-actions here, deliberately. The title card is the front door and
        nothing else; the nav bar above it already carries Journal and About, so
        a pair of buttons repeating them is a second navigation over the first.
-       The scroll cue in the corner is the only thing asking for a click, and
+       The scroll cue below is the only thing asking for a click, and
        what it asks for is to keep reading. The component still ships
        .cine-actions and .cine-btn — block_test_page_e.html uses them. #}
     <p class="cine-tagline">{{ settings.description }}</p>
   </div>
 
-  {# Lower-right scroll cue — the site's own component, .hero-scroll-cue, which
-     works over this stage because .cine-stage declares the three --hero-*
-     tokens it reads. The travel is the site's own smooth scrolling, so there is
-     no script behind it. The sentinel below is its landing point and belongs to
-     this block — keep the two together. #}
-  <a class="hero-scroll-cue" href="#hero-end">Scroll to enter <span class="arrow" aria-hidden="true">&#8595;</span></a>
+  {# The scroll cue — the site's own component, .hero-scroll-cue, which works
+     over this stage because .cine-stage declares the three --hero-* tokens it
+     reads. The travel is the site's own smooth scrolling, so there is no script
+     behind it. The sentinel below is its landing point and belongs to this
+     block — keep the two together.
+
+     .hero-scroll-cue-center is the one departure from the way the other stages
+     use it. Everywhere else the cue sits in the lower RIGHT corner, which is
+     right for a hero whose copy is set left: the mark is out of the type's way
+     and the corner is where the eye finishes. This card is centred — logo,
+     name, rule and tagline all on one axis — and a corner mark was the only
+     thing on the screen off it. It keeps the same bottom line; only the
+     horizontal placement changes, and only here. #}
+  <a class="hero-scroll-cue hero-scroll-cue-center" href="#hero-end">Scroll to enter <span class="arrow" aria-hidden="true">&#8595;</span></a>
 </section>
 <div class="hero-end" id="hero-end"></div>
 
