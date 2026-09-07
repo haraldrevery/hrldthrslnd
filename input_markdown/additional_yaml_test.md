@@ -9,7 +9,7 @@ author: Joe
 category: [category_1, category_2, another category]
 ---
 
-What happens now with this post, it has two more yaml?
+Any additional YAML data should be ignored?
 
 # Markdown + KaTeX Stress Test
 
