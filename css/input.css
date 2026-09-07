@@ -1836,10 +1836,23 @@
     to   { opacity: 1; transform: none; }
   }
 
+  /* The fill is the ink at a tenth, over a small backdrop blur: enough to lift
+     the label off a busy photograph without becoming a solid chip, and the blur
+     softens whatever detail runs under the button so the tracking stays
+     readable wherever on the frame it lands. Both are written against
+     --cine-ink, so they invert with the rest of the block in the dark scheme
+     rather than needing a second declaration.
+
+     `background` rather than `background-color` on hover already replaces this
+     with the solid fill, and a blur behind an opaque ground costs nothing to
+     leave in place, so there is no hover state to write here. */
   .cine-btn {
     display: inline-block;
     padding: 0.7rem 1.6rem;
     border: 1px solid rgba(var(--cine-ink), 0.5);
+    background-color: rgba(var(--cine-ink), 0.1);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     color: rgb(var(--cine-ink));
     text-decoration: none;
     font-size: 0.78rem;

@@ -81,7 +81,10 @@ title: false
 <section class="shell" style="padding-block:clamp(3rem,8vh,5.5rem);">
   <header style="display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:1rem;">
     <h2 class="display-md">Latest</h2>
-    <a class="nav-link link-underline" href="/blog.html">All entries →</a>
+    {# The site's own button component, same as the way out at the foot of every
+       post — the rule draws in under the label and the arrow steps along on
+       hover. The arrow is .btn's own ::after, so it is not typed here. #}
+    <a class="btn btn-ghost" href="/blog.html">All entries</a>
   </header>
 
   <hr class="rule-grad" style="margin-block:1.75rem 2.5rem;">
