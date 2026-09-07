@@ -421,6 +421,28 @@
   .btn-ghost { opacity: 0.68; }
   .btn-ghost:hover, .btn-ghost:focus-visible { opacity: 1; }
 
+  /* -- Accent modifiers ------------------------------------------------------
+     .btn already exposes --btn-accent as its lever: whatever it holds is the
+     colour the label takes on hover and the colour the rule sweeps in
+     underneath. It defaults to --link-underline, so a button left alone
+     answers to the same hue as an inline link. These classes retune that one
+     property for a single button and touch nothing else.
+
+     Two hues per class, not one, because the palette's own dark values are
+     lifted versions of the SAME hue — --c-ultra is indigo in both schemes —
+     and what is wanted here is a different hue per scheme. So the name carries
+     both halves, light first: .btn-accent-<light>-<dark>. Adding another pair
+     is two lines in the same shape, and nothing else on the site moves.
+
+     Light first with the dark block overriding, matching how every other
+     scheme-aware rule in this file is written. Both halves resolve through
+     --c-* tokens rather than hex, so retuning the palette retunes these too. */
+  .btn-accent-ultra-crimson { --btn-accent: var(--c-ultra); }
+
+  @media (prefers-color-scheme: dark) {
+    .btn-accent-ultra-crimson { --btn-accent: var(--c-crimson); }
+  }
+
   /* The one pill left on the site. A download is not navigation — it commits
      you to a file transfer — and a solid target says so in a way a line of text
      does not. Self-contained rather than a modifier on .btn: .btn is a text
@@ -1836,12 +1858,16 @@
     to   { opacity: 1; transform: none; }
   }
 
-  /* The fill is the ink at a tenth, over a small backdrop blur: enough to lift
-     the label off a busy photograph without becoming a solid chip, and the blur
-     softens whatever detail runs under the button so the tracking stays
-     readable wherever on the frame it lands. Both are written against
-     --cine-ink, so they invert with the rest of the block in the dark scheme
-     rather than needing a second declaration.
+  /* The fill is --cine-ground at a tenth, over a small backdrop blur: the ground
+     is the label's opposite by construction — the two triples are the whole
+     dark/light switch for this block — so the fill pushes AWAY from the type
+     instead of washing towards it. On paper that is a faint dark tint under
+     dark letters; in the dark scheme the same declaration is a faint light
+     tint under light ones, with no second rule to write.
+
+     Enough to lift the label off a busy photograph without becoming a solid
+     chip, and the blur softens whatever detail runs under the button so the
+     tracking stays readable wherever on the frame it lands.
 
      `background` rather than `background-color` on hover already replaces this
      with the solid fill, and a blur behind an opaque ground costs nothing to
@@ -1850,7 +1876,7 @@
     display: inline-block;
     padding: 0.7rem 1.6rem;
     border: 1px solid rgba(var(--cine-ink), 0.5);
-    background-color: rgba(var(--cine-ink), 0.1);
+    background-color: rgba(var(--cine-ground), 0.1);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     color: rgb(var(--cine-ink));

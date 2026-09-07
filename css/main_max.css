@@ -654,6 +654,14 @@
   .btn-ghost:hover, .btn-ghost:focus-visible {
     opacity: 1;
   }
+  .btn-accent-ultra-crimson {
+    --btn-accent: var(--c-ultra);
+  }
+  @media (prefers-color-scheme: dark) {
+    .btn-accent-ultra-crimson {
+      --btn-accent: var(--c-crimson);
+    }
+  }
   .btn-slim {
     position: relative;
     display: inline-flex;
@@ -1349,7 +1357,7 @@
     display: inline-block;
     padding: 0.7rem 1.6rem;
     border: 1px solid rgba(var(--cine-ink), 0.5);
-    background-color: rgba(var(--cine-ink), 0.1);
+    background-color: rgba(var(--cine-ground), 0.1);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     color: rgb(var(--cine-ink));
