@@ -1,8 +1,8 @@
 ---
-title: Gallery test
-date: 2026-03-01
+title: More markdown
+date: 2026-08-07
 tags: [test, gallery]
-image: /image/2016mountains_and_clouds.jpg
+image: /card_thumbnail/some_text_just_works.jpg
 description: Every shape a run of images can take, and what the layout does with it.
 draft: false
 author: Joe
