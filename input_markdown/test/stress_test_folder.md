@@ -26,9 +26,6 @@ A line with a footnote reference[^1].
 ## 2. Headings
 
 # H1 Heading 
-
-Don't use H1 since YAML generates the H1 for the post.
-
 ## H2 Heading
 ### H3 Heading
 #### H4 Heading
