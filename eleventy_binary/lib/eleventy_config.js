@@ -13,10 +13,10 @@ import path from "node:path";
 
 import log from "./log.js";
 import { loadSettings } from "./settings.js";
-import { getRegistry } from "./slugs.js";
+import { getRegistry, normaliseKey } from "./slugs.js";
 import { createMarkdownLibrary, outlineFor } from "./markdown.js";
 import { headingSlug, escapeHtml } from "./paths.js";
-import { imageSize, resolveThumbnail, THUMBNAIL_ROOTS } from "./imagesize.js";
+import { imageSize, resolveThumbnail } from "./imagesize.js";
 import { injectAssets } from "./assets.js";
 import { rfc822Date, toDate } from "./format.js";
 import { stripFrontMatter } from "./front_matter.js";
@@ -210,6 +210,13 @@ export function createConfig({
     for (const dir of settings.asset_folders ?? PASSTHROUGH_DIRS) {
       eleventyConfig.ignores.add(`${dir}/**`);
     }
+    // input_markdown/ publishes markdown and nothing else. Now that it is walked
+    // recursively, whatever a note folder happens to contain is inside Eleventy's
+    // input: a saved web page, a template fragment. Neither is a post, and a .njk
+    // in particular would be handed to Nunjucks and could fail the build over a
+    // file nobody meant to publish. They are copied as ordinary assets instead.
+    eleventyConfig.ignores.add("input_markdown/**/*.njk");
+    eleventyConfig.ignores.add("input_markdown/**/*.html");
 
     /* ---------------------------------------------------------------- assets */
     const assetFolders = settings.asset_folders ?? PASSTHROUGH_DIRS;
@@ -251,10 +258,16 @@ export function createConfig({
       const table = {};
       for (const record of registry.all) {
         const value = { slug: record.slug, permalink: record.permalink };
-        // Eleventy reports inputPath with a leading "./"; the registry stores it
-        // without. Both spellings are keyed so a lookup cannot miss on that.
-        table[record.inputPath] = value;
-        table[`./${record.inputPath}`] = value;
+        // Eleventy reports inputPath with a leading "./" and forward slashes on
+        // every platform; the registry builds its own with path.join, which is
+        // backslash-separated on Windows. Both spellings are keyed, and both are
+        // normalised first — keying the raw join meant that on Windows no lookup
+        // here ever matched, and a permalink that misses is not an error but
+        // `false`, which publishes nothing. Every markdown and custom-html page
+        // silently disappeared from the build.
+        const key = normaliseKey(record.inputPath);
+        table[key] = value;
+        table[`./${key}`] = value;
       }
       return table;
     })());
@@ -281,7 +294,7 @@ export function createConfig({
       thumbnail: (data) => {
         if (data.thumbnail) return data.thumbnail;
         const source = data.image || settings.default_image;
-        return source ? resolveThumbnail(source, root, THUMBNAIL_ROOTS) : "";
+        return source ? resolveThumbnail(source, root) : "";
       },
     });
     /**
@@ -423,10 +436,7 @@ export function createConfig({
     });
 
     /* --------------------------------------------------------- collections */
-    const isPost = (item) => {
-      const key = item.inputPath.replace(/^\.\//, "");
-      return registry.byInputPath.has(key);
-    };
+    const isPost = (item) => registry.byInputPath.has(normaliseKey(item.inputPath));
 
     const publishable = (item) => {
       if (!isPost(item)) return false;

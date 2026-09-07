@@ -13,8 +13,11 @@ import deflistPlugin from "markdown-it-deflist";
 import attrsPlugin from "markdown-it-attrs";
 import katexPluginModule from "@vscode/markdown-it-katex";
 
+import path from "node:path";
+
 import { headingSlug, escapeHtml, mediaKind, mediaType } from "./paths.js";
-import { imageSize, resolveThumbnail, THUMBNAIL_ROOTS } from "./imagesize.js";
+import { imageSize, resolveThumbnail } from "./imagesize.js";
+import { publishedPathForSource, normaliseKey } from "./slugs.js";
 
 const katexPlugin = katexPluginModule.default?.default ?? katexPluginModule.default ?? katexPluginModule;
 const anchor = anchorPlugin.default ?? anchorPlugin;
@@ -135,7 +138,9 @@ function imageFigures(md, root) {
       if (!images.every((child) => child.type === "image")) continue;
 
       const html =
-        images.length === 1 ? renderFigure(images[0], md, root) : renderGroup(images, md, root);
+        images.length === 1
+          ? renderFigure(images[0], md, root, state.env)
+          : renderGroup(images, md, root, state.env);
 
       const replacement = new state.Token("html_block", "", 0);
       replacement.content = `${html}\n`;
@@ -180,12 +185,56 @@ function meaningfulChildren(inline) {
  * own. That is still an improvement on what a mixed run used to render as: a
  * paragraph of bare <img> tags and a download link.
  */
-function renderGroup(tokens, md, root) {
+function renderGroup(tokens, md, root, env) {
   const allStills = tokens.every((token) => mediaKind(token.attrGet("src") ?? "") === "image");
-  if (!allStills) return tokens.map((token) => renderFigure(token, md, root)).join("");
+  if (!allStills) return tokens.map((token) => renderFigure(token, md, root, env)).join("");
 
-  const cells = tokens.map((token) => renderCell(token, md, root)).join("");
+  const cells = tokens.map((token) => renderCell(token, md, root, env)).join("");
   return `<div class="gallery gallery-justified gallery-auto">${cells}</div>`;
+}
+
+
+/**
+ * A markdown `src` as the site-absolute URL it will actually be served from.
+ *
+ * `![](/image/x.jpg)` is already absolute and is returned untouched — that is
+ * how every post in this repository is written and nothing about it changes.
+ * `![](photo.jpg)` beside a note in a subfolder is the case this exists for: it
+ * is resolved against the note's folder ON DISK and then translated to where
+ * that folder publishes, because the two are not the same string once slugify()
+ * has renamed a folder for the URL. Left as written it would be resolved by the
+ * browser against the page's URL, which is right only by coincidence.
+ *
+ * Returned unchanged when there is no page to resolve against. The outline pass
+ * renders a post with no env to collect its headings, and a relative path has no
+ * meaning without a page — but the outline does not look at images, so guessing
+ * would only invent a wrong answer for something nobody reads.
+ *
+ * A path that climbs out of the input folder resolves to nothing and is also
+ * returned as written, which leaves it for the status check to report as the
+ * broken link it is.
+ */
+function resolveSrc(src, env, root) {
+  if (typeof src !== "string" || !src) return src;
+  if (src.startsWith("/") || src.startsWith("#")) return src;
+  // A scheme, or a protocol-relative URL: not ours to resolve.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith("//")) return src;
+
+  const inputPath = env?.page?.inputPath;
+  if (!inputPath) return src;
+
+  // Decoded for the filesystem lookup: the file beside the note is called
+  // "My Photo.jpg", not "My%20Photo.jpg".
+  let decoded = src;
+  try {
+    decoded = decodeURIComponent(src);
+  } catch {
+    // A stray % is not an escape; use the path as typed.
+  }
+
+  const noteDir = path.posix.dirname(normaliseKey(inputPath));
+  const onDisk = path.posix.join(noteDir, decoded.split(/[?#]/)[0]);
+  return publishedPathForSource(onDisk, root) ?? src;
 }
 
 /**
@@ -233,8 +282,8 @@ function lightboxLink(src, alt, title, inner) {
   );
 }
 
-function renderFigure(token, md, root) {
-  const src = token.attrGet("src") ?? "";
+function renderFigure(token, md, root, env) {
+  const src = resolveSrc(token.attrGet("src") ?? "", env, root);
   const title = token.attrGet("title") ?? "";
   const alt = altText(token, md);
 
@@ -245,7 +294,7 @@ function renderFigure(token, md, root) {
   if (kind !== "image") return renderPlayer(kind, src, alt, title, root);
 
   // Only swap in a counterpart that was actually generated.
-  const thumb = resolveThumbnail(src, root, THUMBNAIL_ROOTS);
+  const thumb = resolveThumbnail(src, root);
   const img = imageTag(thumb, alt, title, imageSize(thumb, root));
 
   // Only link out to a full-resolution file when there actually is a separate
@@ -268,12 +317,12 @@ function renderFigure(token, md, root) {
  * shape .gallery-justified lays out and the same markup the hand-written
  * gallery blocks in input_custom_html/ use.
  */
-function renderCell(token, md, root) {
-  const src = token.attrGet("src") ?? "";
+function renderCell(token, md, root, env) {
+  const src = resolveSrc(token.attrGet("src") ?? "", env, root);
   const title = token.attrGet("title") ?? "";
   const alt = altText(token, md);
 
-  const thumb = resolveThumbnail(src, root, THUMBNAIL_ROOTS);
+  const thumb = resolveThumbnail(src, root);
   const size = imageSize(thumb, root);
   const img = imageTag(thumb, alt, title, size);
   const media = thumb !== src ? lightboxLink(src, alt, title, img) : img;
@@ -344,7 +393,8 @@ function inlineImageRule(md, root) {
   const fallback = md.renderer.rules.image;
   md.renderer.rules.image = function (tokens, idx, options, env, self) {
     const token = tokens[idx];
-    const src = token.attrGet("src");
+    const src = resolveSrc(token.attrGet("src"), env, root);
+    if (src) token.attrSet("src", src);
     // An inline (mid-sentence) media link cannot become a player without
     // breaking the paragraph, so it degrades to a plain download link.
     if (src && mediaKind(src) !== "image") {
@@ -352,7 +402,7 @@ function inlineImageRule(md, root) {
       return `<a href="${escapeHtml(src)}" class="link-underline">${label}</a>`;
     }
     if (src) {
-      const thumb = resolveThumbnail(src, root, THUMBNAIL_ROOTS);
+      const thumb = resolveThumbnail(src, root);
       token.attrSet("src", thumb);
       const size = imageSize(thumb, root);
       if (size && !token.attrGet("width")) {

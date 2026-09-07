@@ -13,7 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { minVariant, extensionOf } from "./paths.js";
-import { postFolderFor } from "./slugs.js";
+import { sourcePathForPublished } from "./slugs.js";
 
 /**
  * Header reads, keyed by root and URL together. The URL alone is not a key:
@@ -108,11 +108,30 @@ export function imageSize(url, root = process.cwd()) {
   const key = cacheKey(path.resolve(root), url);
   if (cache.has(key)) return cache.get(key);
 
-  const filePath = path.join(root, decodeURIComponent(url.split(/[?#]/)[0]));
-  const size = readImageHeader(filePath);
+  const size = readImageHeader(publishedFilePath(url, root));
 
   cache.set(key, size);
   return size;
+}
+
+/**
+ * The file on disk behind a site-absolute URL.
+ *
+ * Two places to look, and the order matters. A passthrough folder (image/,
+ * card_thumbnail/, svg/) sits at the same path under the project root that it
+ * will have in the output, so it is found directly. An asset that lives beside
+ * a page does not: at the moment this runs it is still in input_markdown/ or
+ * input_custom_post/ and nothing has copied it yet, so the published path it
+ * will have is a path to nothing. Falling through to the registry is what lets
+ * a picture next to a note be measured at all — without it every co-located
+ * image shipped with no width and height, which is a layout shift on load and,
+ * for a lazy image, often no load at all.
+ */
+function publishedFilePath(url, root) {
+  const relative = decodeURIComponent(url.split(/[?#]/)[0]);
+  const direct = path.join(root, relative);
+  if (fs.existsSync(direct)) return direct;
+  return sourcePathForPublished(relative, root) ?? direct;
 }
 
 export default imageSize;
@@ -128,40 +147,28 @@ export default imageSize;
  * counterpart at all — so rewriting those paths blindly would point cards and
  * Open Graph tags at files that were never generated.
  */
-export function resolveThumbnail(url, root = process.cwd(), extraRoots = []) {
+export function resolveThumbnail(url, root = process.cwd()) {
   if (typeof url !== "string" || !url.startsWith("/")) return url;
 
   const candidate = minVariant(url);
   if (candidate === url) return url;
 
-  const relative = decodeURIComponent(candidate.split(/[?#]/)[0]).replace(/^\//, "");
+  const relative = decodeURIComponent(candidate.split(/[?#]/)[0]);
 
   // Already where it will be served from: image_min/, card_thumbnail/ and every
   // other passthrough folder sits at this same path under the project root.
   if (fs.existsSync(path.join(root, relative))) return candidate;
 
-  // A post folder publishes to /<slug>/ but lives under input_custom_post/, so
-  // the published path does not exist on disk yet at the time this runs. The
-  // extra roots let the same lookup find it at its source location.
-  //
-  // The leading segment has to be translated from the slug back to the folder
-  // name rather than joined on as-is: the two differ whenever slugify() changed
-  // anything, so a folder called "My Post" was looked up at
-  // input_custom_post/my_post/, never found, and every card and og:image for
-  // that post silently shipped the full-resolution photograph.
-  const slash = relative.indexOf("/");
-  if (slash > 0) {
-    const folder = postFolderFor(relative.slice(0, slash), root);
-    if (folder) {
-      const rest = relative.slice(slash + 1);
-      for (const dir of extraRoots) {
-        if (fs.existsSync(path.join(root, dir, folder, rest))) return candidate;
-      }
-    }
-  }
+  // Anything published out of an input folder does not: a post folder publishes
+  // to /<slug>/ while its files stay in input_custom_post/<folder>/, and a note's
+  // pictures stay in input_markdown/<folder>/ until the asset pass copies them.
+  // The published path is a path to nothing until then, so the lookup has to go
+  // back through the registry. Doing it by joining the published name onto a
+  // source root instead was what broke "My Post": slugify() had renamed the
+  // folder, so every card and og:image for it silently shipped the
+  // full-resolution photograph.
+  const source = sourcePathForPublished(relative, root);
+  if (source && fs.existsSync(source)) return candidate;
 
   return url;
 }
-
-/** The source roots a published path might actually live under. */
-export const THUMBNAIL_ROOTS = ["input_custom_post"];

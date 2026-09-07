@@ -36,6 +36,26 @@ Three ways, all sharing one URL namespace. The slug comes from the filename, so
 `input_markdown/mountains.md` publishes as `/mountains.html`. If two inputs want
 the same name the build warns and adds a suffix.
 
+**Subfolders are allowed, and the folders become part of the URL.**
+`input_markdown/travel/iceland.md` publishes as `/travel/iceland.html`, as deep
+as you like. Folder names are normalised the same way filenames are, so
+`input_markdown/My Travel/iceland.md` is `/my_travel/iceland.html`. This is what
+makes a large collection of notes safe to publish: two notes can both be called
+`index.md` as long as they are in different folders, and neither can take the
+other's URL. `input_custom_html/` nests the same way. A post folder in
+`input_custom_post/` does not — there, a folder *is* one page.
+
+Everything in these folders publishes. There is no allow-list: every `.md` under
+`input_markdown/` becomes a page, and every other file in a folder that holds one
+is copied to the site beside it. The two exceptions are `draft: true` in the
+front matter, which holds a page back along with the files beside it, and names
+beginning with a dot — `.obsidian/`, `.trash/`, `.DS_Store` — which are skipped
+so a note vault can be pointed at the folder without its machinery going public.
+A symlinked folder is followed, so the vault can live outside the repository, and
+a link that loops back on itself is reported rather than followed. Anything the
+build declines to publish is named in the status check, so nothing disappears
+quietly.
+
 Every input starts with the same YAML front matter:
 
 ```yaml
@@ -73,6 +93,13 @@ The usual way. Markdown plus KaTeX, rendered to static HTML at build time.
 - **Video and audio use the same syntax.** `![Caption](/video/clip.mp4)` renders
   a `<video controls>` — markdown has no media syntax of its own, and without
   this it produced an `<img>` pointing at an `.mp4`, which is a blank box.
+- **A note can keep its pictures in the folder beside it.** Write the path
+  relative to the note — `![Caption](photo.jpg)`, or `![Caption](img/photo.jpg)`
+  for a subfolder — and the file is copied to the site next to the page, gets a
+  `_min` counterpart generated beside it like anything in `image/`, and reaches
+  the reader with the same thumbnail, dimensions and lightbox an absolute path
+  gets. Absolute paths into `/image/` keep working exactly as before; this is an
+  addition, not a replacement.
   `.mp3`, `.wav` and friends become `<audio controls>`. A video picks up
   `clip_min.jpg` as its poster frame if that file exists. Both use native
   controls and `preload="none"`, so they cost nothing until played and work
@@ -666,7 +693,7 @@ directly in a browser after a build. It is not linked from anywhere and carries
 ## Layout
 
 ```
-input_markdown/       markdown posts
+input_markdown/       markdown posts; subfolders become URL folders
 input_custom_html/    hand-written pages, incl. the block test pages
 input_custom_post/    page folders (page builder format)
 css/                  theme.css + input.css  ->  main.css, main_max.css

@@ -16,6 +16,7 @@ import log from "./log.js";
 import { initCodecs, decodeJpeg, encodeJpeg, decodePng, resize } from "./codecs.js";
 import { isRaster, isMinName, minFileName } from "./paths.js";
 import { readImageHeader } from "./imagesize.js";
+import { walkFiles } from "./slugs.js";
 
 /**
  * Edge ladder. A thumbnail never needs more than the first value; the smaller
@@ -87,16 +88,6 @@ function staleness(sourcePath, targetPath, targetMtimeMs) {
   }
 
   return null;
-}
-
-function walk(dir, base = dir, out = []) {
-  if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(full, base, out);
-    else if (entry.isFile()) out.push(path.relative(base, full));
-  }
-  return out;
 }
 
 async function decodeAny(buffer, file) {
@@ -180,7 +171,12 @@ export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
   const report = { generated: [], skipped: [], oversized: [], stale: [], existing: 0 };
   if (!fs.existsSync(sourceDir)) return report;
 
-  const files = walk(sourceDir).filter((file) => !isMinName(file));
+  // The same walk the asset copier uses, so the two passes see exactly the same
+  // files. They did not have to agree while this only ever looked at image/ and
+  // a post folder; now that a photograph can sit beside a note in a symlinked
+  // vault, a walk that skipped links here and followed them there would generate
+  // no counterpart for a file that then shipped at full resolution.
+  const files = walkFiles(sourceDir).filter((file) => !isMinName(file));
   if (files.length === 0) return report;
 
   let codecsReady = false;
@@ -300,6 +296,19 @@ export async function generateMissingThumbnails(root = process.cwd()) {
       label: "image_min",
     })),
   });
+
+  // Pictures kept beside a note or a hand-written page, mirrored in place the
+  // same way a post folder's are: there is no separate _min tree for these, the
+  // counterpart sits next to the file it was made from and is copied to the
+  // site alongside it.
+  for (const source of ["input_markdown", "input_custom_html"]) {
+    const dir = path.join(root, source);
+    if (!fs.existsSync(dir)) continue;
+    reports.push({
+      scope: source,
+      ...(await mirrorDirectory(dir, dir, { label: source })),
+    });
+  }
 
   const postsDir = path.join(root, "input_custom_post");
   if (fs.existsSync(postsDir)) {

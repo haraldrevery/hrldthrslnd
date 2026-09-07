@@ -4,7 +4,7 @@
  *   1. thumbnails   generate any missing image_min/*_min.jpg
  *   2. css          run the Tailwind binary over the templates
  *   3. eleventy     render every page
- *   4. assets       copy post-folder assets that Eleventy does not own
+ *   4. assets       copy the files beside a page that Eleventy does not own
  *   5. status check inspect the output and write _site/status_check.html
  *
  * CSS runs before Eleventy so the freshly built stylesheet is the one Eleventy
@@ -23,7 +23,7 @@ import Eleventy from "@11ty/eleventy";
 
 import log from "./lib/log.js";
 import { loadSettings } from "./lib/settings.js";
-import { getRegistry } from "./lib/slugs.js";
+import { getRegistry, walkFiles, normaliseKey, publishedPathForSource } from "./lib/slugs.js";
 import { createConfig } from "./lib/eleventy_config.js";
 import { generateMissingThumbnails } from "./lib/images.js";
 import { runStatusCheck, writeStatusPage } from "./lib/status_check.js";
@@ -200,6 +200,112 @@ function copyPostAssets(root, outputDir, includeDrafts) {
 }
 
 /**
+ * Copy the files that sit beside a page in input_markdown/ or
+ * input_custom_html/ to wherever that folder publishes.
+ *
+ * Eleventy owns the pages themselves and copies nothing else out of these
+ * folders — they are not passthrough directories, because a passthrough copy
+ * would also publish the .md sources. So a note that keeps its photographs in
+ * the folder beside it needs this pass, or the page ships with every picture
+ * missing.
+ *
+ * Where a file lands is decided by publishedPathForSource() rather than worked
+ * out here, because the markdown pipeline has to reach exactly the same answer
+ * when it rewrites `![](photo.jpg)` into a URL. Two passes computing the same
+ * mapping separately is how you get a page whose images are all 404 while both
+ * halves look correct on their own.
+ *
+ * A file already written by Eleventy is never overwritten. An asset cannot be
+ * allowed to replace a rendered page: the folders share one namespace, so a
+ * stray `index.html` dropped in a note folder would otherwise silently take the
+ * place of a real one.
+ *
+ * A draft's neighbours stay unpublished along with it, on the same reasoning
+ * copyPostAssets() gives — this pass does not go through Eleventy, so the drafts
+ * preprocessor never sees these files. The unit is the folder: a folder whose
+ * pages are ALL drafts publishes none of its files, and one that has a published
+ * page in it publishes them all, because a picture in a mixed folder cannot be
+ * attributed to one page rather than the other.
+ */
+function copyPageAssets(root, outputDir, includeDrafts) {
+  const registry = getRegistry(root);
+
+  // Folders whose every page is a draft; nothing in them is published.
+  const pages = new Map();
+  for (const record of registry.all) {
+    if (record.kind === "custom_post") continue;
+    const entry = pages.get(record.sourceDir) ?? { total: 0, drafts: 0 };
+    entry.total += 1;
+    if (record.draft) entry.drafts += 1;
+    pages.set(record.sourceDir, entry);
+  }
+  const draftOnly = new Set(
+    [...pages].filter(([, e]) => e.total > 0 && e.total === e.drafts).map(([dir]) => dir),
+  );
+
+  let copied = 0;
+  let skippedDrafts = 0;
+  const writtenBy = new Map();
+
+  for (const source of ["input_markdown", "input_custom_html"]) {
+    const dir = path.join(root, source);
+    if (!fs.existsSync(dir)) continue;
+
+    for (const relative of walkFiles(dir)) {
+      const sourceRelative = `${source}/${relative}`;
+
+      // The pages themselves are Eleventy's, and the directory data files are
+      // build configuration rather than content.
+      if (registry.byInputPath.has(normaliseKey(sourceRelative))) continue;
+      if (/\.11tydata\.(js|json|cjs|mjs)$/i.test(relative)) continue;
+
+      const cut = sourceRelative.lastIndexOf("/");
+      if (!includeDrafts && draftOnly.has(sourceRelative.slice(0, cut))) {
+        skippedDrafts += 1;
+        continue;
+      }
+
+      const url = publishedPathForSource(sourceRelative, root);
+      if (!url) continue;
+
+      const target = path.join(outputDir, ...url.replace(/^\//, "").split("/"));
+
+      const owner = writtenBy.get(target);
+      if (owner) {
+        log.warn(
+          "assets",
+          `two files publish to the same place, "${url}"`,
+          `${owner} and ${sourceRelative} — the first one is the one that shipped`,
+        );
+        continue;
+      }
+      if (fs.existsSync(target)) {
+        log.warn(
+          "assets",
+          `not copied, a rendered page already occupies "${url}"`,
+          `${sourceRelative} — rename it, or the page it collides with`,
+        );
+        continue;
+      }
+
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(path.join(root, ...sourceRelative.split("/")), target);
+      writtenBy.set(target, sourceRelative);
+      copied += 1;
+    }
+  }
+
+  if (copied > 0) log.info(`  ${copied} page asset(s) copied`);
+  if (skippedDrafts > 0) {
+    log.note(
+      "assets",
+      `${skippedDrafts} file(s) beside a draft skipped`,
+      "they stay out of _site along with the page they belong to",
+    );
+  }
+}
+
+/**
  * Replace `outputDir` with `stagingDir`, keeping the old copy until the new one
  * is in place.
  *
@@ -337,12 +443,19 @@ async function main() {
 
   console.log("\n[4/5] assets");
   copyPostAssets(root, stagingDir, options.includeDrafts);
+  copyPageAssets(root, stagingDir, options.includeDrafts);
   // Checksums are computed from the shipped bytes, so this has to come after
   // every asset is in place.
   fillDownloadHashes(stagingDir);
 
   console.log("\n[5/5] status check");
-  const status = await runStatusCheck({ root, outputDir: stagingDir, settings, images });
+  const status = await runStatusCheck({
+    root,
+    outputDir: stagingDir,
+    settings,
+    images,
+    includeDrafts: options.includeDrafts,
+  });
   const reportWritten = writeStatusPage({ outputDir: stagingDir, settings, status, images });
 
   // Everything succeeded, so the staged build becomes the site.

@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import log from "./log.js";
-import { getRegistry } from "./slugs.js";
+import { getRegistry, SOURCES } from "./slugs.js";
 import { escapeHtml } from "./paths.js";
 import { frontMatterBlock, firstToken, hasKey, hasValue } from "./front_matter.js";
 import { humanBytes } from "./format.js";
@@ -381,7 +381,87 @@ function checkSlugs(root, findings) {
   }
 }
 
-export async function runStatusCheck({ root, outputDir, settings, images }) {
+/**
+ * Source files that were registered but never became a page, and pages the
+ * registry has never heard of.
+ *
+ * The check that exists because its absence hid a whole class of failure. A
+ * permalink is not required to succeed: the data files resolve it out of the
+ * slug registry and fall back to `false`, and Eleventy writes nothing at all for
+ * `permalink: false`. So a source file the registry missed was not an error, it
+ * was a page that quietly did not exist — not in the output, not in
+ * collections.posts, not in the sitemap or the feed or the search index, and not
+ * in any check here either, because every other check reads the registry or the
+ * output and it was in neither. Three posts sat in a subfolder of
+ * input_markdown/ doing exactly that while the build reported "All clear".
+ *
+ * Both halves are needed. The first catches a file the registry knows about that
+ * produced no page; the second catches a file the registry never saw, which is
+ * the shape the original failure took.
+ */
+function checkUnpublished(root, outputDir, includeDrafts, findings) {
+  const registry = getRegistry(root);
+
+  for (const record of registry.all) {
+    if (record.draft && !includeDrafts) continue;
+    const target = path.join(outputDir, ...record.permalink.replace(/^\//, "").split("/"));
+    if (fs.existsSync(target)) continue;
+    findings.push({
+      level: "error",
+      scope: "not published",
+      page: record.inputPath,
+      message: `no page was written at ${record.permalink}`,
+      detail:
+        "the source was registered but produced no output — usually a permalink " +
+        "that resolved to false, which Eleventy writes nothing for",
+    });
+  }
+
+  // Deliberately its own walk, with none of the registry's filtering, so that
+  // anything the registry declined to enumerate shows up here rather than
+  // vanishing. Hidden folders are the one exception that is reported quietly:
+  // a vault's .obsidian/ and .trash/ are skipped on purpose and saying so once
+  // is information, while an error on each would be noise.
+  const seen = (relative) => registry.byInputPath.has(relative);
+  let hidden = 0;
+
+  for (const source of SOURCES) {
+    if (!source.match) continue; // input_custom_post is enumerated by folder
+    const dir = path.join(root, source.dir);
+    if (!fs.existsSync(dir)) continue;
+
+    for (const relative of walk(dir)) {
+      const posix = relative.split(path.sep).join("/");
+      const name = posix.slice(posix.lastIndexOf("/") + 1);
+      if (!source.match(name)) continue;
+      if (/\.11tydata\.(js|json|cjs|mjs)$/i.test(name)) continue;
+      if (seen(`${source.dir}/${posix}`)) continue;
+
+      if (posix.split("/").some((segment) => segment.startsWith("."))) {
+        hidden += 1;
+        continue;
+      }
+
+      findings.push({
+        level: "error",
+        scope: "not published",
+        page: `${source.dir}/${posix}`,
+        message: "on disk but not registered, so no page was written",
+        detail: "nothing links to it and nothing serves it — it is not on the site at all",
+      });
+    }
+  }
+
+  if (hidden > 0) {
+    log.note(
+      "status",
+      `${hidden} file(s) in hidden folders were not published`,
+      "names beginning with a dot (.obsidian, .trash) are skipped on purpose",
+    );
+  }
+}
+
+export async function runStatusCheck({ root, outputDir, settings, images, includeDrafts = false }) {
   const findings = [];
   const stats = {
     pageCount: 0,
@@ -399,6 +479,7 @@ export async function runStatusCheck({ root, outputDir, settings, images }) {
   checkHtml(outputDir, findings, stats);
   checkAssets(outputDir, settings, findings, stats);
   checkSlugs(root, findings);
+  checkUnpublished(root, outputDir, includeDrafts, findings);
 
   // Assets fetched from another origin break the no-third-party promise, so
   // these are worth flagging. Outbound <a> links are not, and are not counted.
