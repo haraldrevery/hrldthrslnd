@@ -15,6 +15,7 @@ import path from "node:path";
 import log from "./log.js";
 import { initCodecs, decodeJpeg, encodeJpeg, decodePng, resize } from "./codecs.js";
 import { isRaster, isMinName, minFileName } from "./paths.js";
+import { readImageHeader } from "./imagesize.js";
 
 /**
  * Edge ladder. A thumbnail never needs more than the first value; the smaller
@@ -26,6 +27,67 @@ const EDGE_STEPS = [1600, 1280, 1024, 800];
 const MAX_BYTES = 80_000;
 /** Quality ladder, walked down at each edge size. */
 const QUALITY_STEPS = [72, 62, 54, 46, 38];
+/**
+ * How much newer a source has to be before its counterpart is worth mentioning.
+ *
+ * A fresh clone writes every file at about the same moment and in no
+ * particular order, so an exact comparison reports half the tree as stale on
+ * every new machine — which is the sort of permanent false positive that
+ * teaches you to stop reading the report.
+ */
+const STALE_TOLERANCE_MS = 2000;
+/** How far two aspect ratios may differ and still be the same picture. */
+const ASPECT_TOLERANCE = 0.01;
+
+/**
+ * Whether an existing counterpart looks out of date, and how sure we are.
+ *
+ * Two signals, because neither is enough on its own. A counterpart whose
+ * aspect ratio no longer matches its source cannot be a scaled copy of it —
+ * that is proof the photograph was replaced. mtime catches the rest, including
+ * a replacement of the same shape, but it also fires on a file that was merely
+ * restored or touched, so it is reported as a question rather than a verdict.
+ *
+ * Returns null when there is nothing to say.
+ */
+function staleness(sourcePath, targetPath, targetMtimeMs) {
+  const source = readImageHeader(sourcePath);
+  const target = readImageHeader(targetPath);
+
+  if (source && target && source.height > 0 && target.height > 0) {
+    const sourceRatio = source.width / source.height;
+    const targetRatio = target.width / target.height;
+    if (Math.abs(sourceRatio - targetRatio) / sourceRatio > ASPECT_TOLERANCE) {
+      return {
+        certain: true,
+        message: "counterpart is a different shape from the image it was made from",
+        detail:
+          `${target.width}×${target.height} against a ${source.width}×${source.height} ` +
+          "source — cards, galleries and the social card are showing the previous " +
+          "picture; delete the counterpart to have a fresh one generated",
+      };
+    }
+  }
+
+  let sourceMtimeMs = 0;
+  try {
+    sourceMtimeMs = fs.statSync(sourcePath).mtimeMs;
+  } catch {
+    return null; // an unreadable source is Eleventy's to report, not this pass's
+  }
+
+  if (sourceMtimeMs > targetMtimeMs + STALE_TOLERANCE_MS) {
+    return {
+      certain: false,
+      message: "source is newer than its counterpart, though the shape still matches",
+      detail:
+        "harmless if the file was only restored or re-saved; if you replaced the " +
+        "picture, delete the counterpart to have a fresh one generated",
+    };
+  }
+
+  return null;
+}
 
 function walk(dir, base = dir, out = []) {
   if (!fs.existsSync(dir)) return out;
@@ -115,7 +177,7 @@ async function encodeThumbnail(image) {
  * `targetDir`. Returns a report the status page can render.
  */
 export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
-  const report = { generated: [], skipped: [], oversized: [], existing: 0 };
+  const report = { generated: [], skipped: [], oversized: [], stale: [], existing: 0 };
   if (!fs.existsSync(sourceDir)) return report;
 
   const files = walk(sourceDir).filter((file) => !isMinName(file));
@@ -129,11 +191,41 @@ export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
     const targetRelative = path.join(path.dirname(relative), minFileName(path.basename(relative)));
     const targetPath = path.join(targetDir, targetRelative);
 
+    const sourcePath = path.join(sourceDir, relative);
+
     if (fs.existsSync(targetPath)) {
       report.existing += 1;
-      const size = fs.statSync(targetPath).size;
-      if (size > MAX_BYTES) {
-        report.oversized.push({ file: path.join(targetDir, targetRelative), size });
+      const target = fs.statSync(targetPath);
+      if (target.size > MAX_BYTES) {
+        report.oversized.push({ file: path.join(targetDir, targetRelative), size: target.size });
+      }
+
+      // A counterpart older than the image it was made from is stale: the
+      // photograph was replaced and the thumbnail was not. Everything that
+      // shows a thumbnail — cards, gallery cells, the Open Graph image — then
+      // goes on showing the OLD picture while the lightbox opens the new one,
+      // and the baked width/height and --ar are wrong too if the shape changed.
+      //
+      // Reported rather than regenerated, on purpose. A counterpart the author
+      // compressed by hand is theirs, and this pass promises at the top of the
+      // file to leave it completely alone; silently re-encoding it the moment
+      // someone touched the source would break that promise in the direction
+      // that loses work. Deleting the _min file is how you ask for a new one.
+      // Named the way the rest of the report names things — by the folder the
+      // author knows it as, not by its absolute path. status_check.html is a
+      // published page linked from the site footer, so an absolute path here
+      // would put the build machine's directory layout on the web.
+      const shown = path.posix.join(label ?? "", targetRelative.split(path.sep).join("/"));
+      const stale = staleness(sourcePath, targetPath, target.mtimeMs);
+      if (stale) {
+        report.stale.push({ file: shown, ...stale });
+        // Certain and merely suspected are reported at different volumes on
+        // purpose. mtime alone is a weak signal: `git checkout` and `git stash
+        // pop` both rewrite a file's timestamp without changing a pixel, so
+        // warning on that would tell an author to delete a counterpart they
+        // had compressed by hand, over a change that never happened. A shape
+        // that no longer matches is proof, and only proof gets a warning.
+        log[stale.certain ? "warn" : "note"]("images", stale.message, `${shown} — ${stale.detail}`);
       }
       continue;
     }
@@ -143,7 +235,6 @@ export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
       codecsReady = true;
     }
 
-    const sourcePath = path.join(sourceDir, relative);
     try {
       const image = await decodeAny(fs.readFileSync(sourcePath), relative);
       if (!image) {
@@ -234,8 +325,9 @@ export async function generateMissingThumbnails(root = process.cwd()) {
       existing: acc.existing + r.existing,
       skipped: acc.skipped + r.skipped.length,
       oversized: acc.oversized + r.oversized.length,
+      stale: acc.stale + (r.stale?.length ?? 0),
     }),
-    { generated: 0, existing: 0, skipped: 0, oversized: 0 },
+    { generated: 0, existing: 0, skipped: 0, oversized: 0, stale: 0 },
   );
 
   if (totals.generated > 0) {

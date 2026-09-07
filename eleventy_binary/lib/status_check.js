@@ -426,6 +426,17 @@ export async function runStatusCheck({ root, outputDir, settings, images }) {
 const sevClass = { error: "sev-error", warn: "sev-warn" };
 
 /**
+ * The line that identifies a status page THIS build wrote.
+ *
+ * `status_check.html` is an ordinary name and an author may legitimately claim
+ * it, so the write below has to tell its own output apart from somebody else's
+ * page. Tested by content rather than by existence because --check-only runs
+ * against a finished _site where the previous run's report is already sitting
+ * at that path and must be replaced.
+ */
+const STATUS_MARKER = '<meta name="generator" content="site_generate/status_check">';
+
+/**
  * Write _site/status_check.html.
  *
  * A standalone document rather than an Eleventy template: it reports on the
@@ -460,6 +471,15 @@ export function writeStatusPage({ outputDir, settings, status, images }) {
   const generated = images.reports.flatMap((r) =>
     r.generated.map((g) => `${path.basename(g.file)} — ${humanBytes(g.bytes)} at q${g.quality}`),
   );
+  // `?? []` rather than a bare access: --check-only builds its own empty images
+  // object, and a field added here later must not take that path down with it.
+  const stale = images.reports.flatMap((r) =>
+    (r.stale ?? []).map((entry) => ({
+      file: entry.file,
+      certain: Boolean(entry.certain),
+      detail: entry.detail ?? "",
+    })),
+  );
 
   const html = `<!doctype html>
 <html lang="${escapeHtml(settings.language)}">
@@ -467,6 +487,7 @@ export function writeStatusPage({ outputDir, settings, status, images }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+${STATUS_MARKER}
 <title>Status — ${escapeHtml(settings.name)}</title>
 <link rel="stylesheet" href="/css/main.css">
 </head>
@@ -477,7 +498,8 @@ export function writeStatusPage({ outputDir, settings, status, images }) {
   <h1 class="display" style="margin-top:1rem;">Status</h1>
   <p class="lede" style="margin-top:1.5rem;">
     Generated ${escapeHtml(new Date().toISOString().replace("T", " ").slice(0, 19))} UTC.
-    This page is not linked from the site; open it directly after a build.
+    It reports on the build that produced the site around it, and is rewritten
+    from scratch every time that build runs.
   </p>
 
   <p style="margin-top:1.5rem;"><span class="sev ${verdict.klass}">${escapeHtml(verdict.text)}</span></p>
@@ -497,7 +519,34 @@ export function writeStatusPage({ outputDir, settings, status, images }) {
          <p class="display-sm" style="margin-top:0.5rem;">${warnings.length}</p></div>
     <div><p class="micro" style="color:var(--fg-muted);">Thumbnails made</p>
          <p class="display-sm" style="margin-top:0.5rem;">${images.totals.generated}</p></div>
+    <div><p class="micro" style="color:var(--fg-muted);">Stale thumbnails</p>
+         <p class="display-sm" style="margin-top:0.5rem;">${images.totals.stale ?? 0}</p></div>
   </div>
+
+  ${
+    stale.length
+      ? `<section style="margin-top:3rem;">
+    <h2 class="display-md">Stale thumbnails</h2>
+    <p class="lede" style="margin-top:1rem; font-size:var(--step--1);">
+      These <code>_min</code> files may no longer match the images they were
+      made from, so cards, galleries and social cards could be showing the
+      previous picture. They are never regenerated automatically, in case you
+      compressed them by hand — delete one to have a fresh counterpart made on
+      the next build.
+    </p>
+    <ul class="prose" style="margin-top:1rem;">
+      ${stale
+        .map(
+          (entry) =>
+            `<li><code>${escapeHtml(entry.file)}</code> — ` +
+            `${entry.certain ? "replaced" : "possibly replaced"}: ` +
+            `<span style="color:var(--fg-muted);">${escapeHtml(entry.detail)}</span></li>`,
+        )
+        .join("\n      ")}
+    </ul>
+  </section>`
+      : ""
+  }
 
   ${
     generated.length
@@ -537,8 +586,38 @@ export function writeStatusPage({ outputDir, settings, status, images }) {
 </html>
 `;
 
+  const target = path.join(outputDir, "status_check.html");
+
+  // Never overwrite a page somebody else wrote.
+  //
+  // Eleventy renders every page before this runs, so a post or hand-written
+  // page published at /status_check.html is already on disk by the time we get
+  // here. Eleventy's own duplicate-permalink check cannot catch that collision,
+  // because this write happens outside Eleventy — so the author's page was
+  // silently destroyed while the sitemap and the search index went on pointing
+  // at it, and the build reported no error at all. Refusing to write is the
+  // right way round: the author's content is what has to survive, and the
+  // report is the thing that can be regenerated.
+  if (fs.existsSync(target)) {
+    let existing = "";
+    try {
+      existing = fs.readFileSync(target, "utf8");
+    } catch {
+      existing = "";
+    }
+    if (existing && !existing.includes(STATUS_MARKER)) {
+      log.error(
+        "status",
+        "another page is already published at /status_check.html — the build report was not written",
+        "rename that page, or drop the Status entry from footer_nav in site_settings.json",
+      );
+      return false;
+    }
+  }
+
   fs.mkdirSync(outputDir, { recursive: true });
-  fs.writeFileSync(path.join(outputDir, "status_check.html"), html, "utf8");
+  fs.writeFileSync(target, html, "utf8");
+  return true;
 }
 
 export default runStatusCheck;

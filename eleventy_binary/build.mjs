@@ -121,6 +121,14 @@ function buildCss(root) {
  * inside a page-builder page keep resolving. The .json save file itself is not
  * published — it is a working file, not part of the site.
  *
+ * Subfolders are included. A post folder is a folder: media grouped under
+ * media/ or img/ is the obvious way for a page builder to organise a page's
+ * assets, and generateMissingThumbnails() already walks a post folder
+ * recursively. The two disagreed — a nested photograph got its _min
+ * counterpart generated in the source tree and then nothing copied either file
+ * into _site, so the page shipped with every nested asset missing and only the
+ * link check noticed.
+ *
  * A draft folder is skipped entirely. This pass does not go through Eleventy,
  * so the drafts preprocessor never sees it: the page itself was correctly held
  * back while its photographs were copied to /<slug>/ beside it and served to
@@ -130,6 +138,38 @@ function copyPostAssets(root, outputDir, includeDrafts) {
   const registry = getRegistry(root);
   let copied = 0;
   let skippedDrafts = 0;
+
+  /**
+   * Every file under a post folder that belongs in the published copy, as paths
+   * relative to that folder.
+   *
+   * `.html` and `.json` are skipped at the TOP level only, because that is
+   * where the two files the site does not publish live: the page itself, which
+   * Eleventy owns, and the builder's save file. Deeper down there is no such
+   * convention — a folder of assets is a folder of assets, and a page that
+   * ships a data file or an embedded fragment should get it.
+   *
+   * Symlinks are neither followed nor copied: `isDirectory()` and `isFile()`
+   * are both false for one, which is the behaviour this had before and also
+   * what keeps a link back up the tree from making this recurse forever.
+   */
+  const collect = (dir, prefix = "") => {
+    const found = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        found.push(...collect(path.join(dir, entry.name), relative));
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      if (prefix === "") {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (ext === ".html" || ext === ".json") continue;
+      }
+      found.push(relative);
+    }
+    return found;
+  };
 
   for (const record of registry.all) {
     if (record.kind !== "custom_post") continue;
@@ -141,13 +181,10 @@ function copyPostAssets(root, outputDir, includeDrafts) {
     const sourceDir = path.join(root, "input_custom_post", record.folder);
     const targetDir = path.join(outputDir, record.slug);
 
-    for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
-      if (!entry.isFile()) continue;
-      const ext = path.extname(entry.name).toLowerCase();
-      if (ext === ".html" || ext === ".json") continue;
-
-      fs.mkdirSync(targetDir, { recursive: true });
-      fs.copyFileSync(path.join(sourceDir, entry.name), path.join(targetDir, entry.name));
+    for (const relative of collect(sourceDir)) {
+      const target = path.join(targetDir, relative);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(path.join(sourceDir, relative), target);
       copied += 1;
     }
   }
@@ -175,11 +212,42 @@ function copyPostAssets(root, outputDir, includeDrafts) {
  * Renames rather than a recursive copy, so the swap is close to instantaneous
  * even for a site full of photographs, and both directories are siblings inside
  * the project root — the same filesystem, which is what makes rename atomic.
+ *
+ * The swap is two renames, and the gap between them is the one moment in the
+ * build where the site does not exist. If the second one fails — a disk that
+ * filled up, a virus scanner holding a handle open on Windows, a permission
+ * change — the first is undone before the error is allowed out, so the live
+ * site is back before anyone can look for it. Failing that, the error carries
+ * the instructions for putting it back by hand and asks the caller NOT to
+ * discard the staging directory, which at that point holds the only copy of
+ * the new build.
  */
 function swapIntoPlace(outputDir, stagingDir, previousDir) {
   if (fs.existsSync(previousDir)) fs.rmSync(previousDir, { recursive: true, force: true });
-  if (fs.existsSync(outputDir)) fs.renameSync(outputDir, previousDir);
-  fs.renameSync(stagingDir, outputDir);
+
+  const movedAside = fs.existsSync(outputDir);
+  if (movedAside) fs.renameSync(outputDir, previousDir);
+
+  try {
+    fs.renameSync(stagingDir, outputDir);
+  } catch (error) {
+    if (movedAside) {
+      try {
+        fs.renameSync(previousDir, outputDir);
+      } catch (restoreError) {
+        error.keepStaging = true;
+        error.recovery =
+          `The site is not in place and could not be put back automatically.\n` +
+          `  The previous build is in ${path.basename(previousDir)}\n` +
+          `  The new build is in ${path.basename(stagingDir)}\n` +
+          `Rename whichever you want published to ${path.basename(outputDir)}.\n` +
+          `Restore failed with: ${restoreError.message}`;
+        throw error;
+      }
+    }
+    throw error;
+  }
+
   fs.rmSync(previousDir, { recursive: true, force: true });
 }
 
@@ -217,15 +285,19 @@ async function main() {
       process.exit(1);
     }
     console.log(`\nsite_generate --check-only — ${settings.name}\n`);
-    const empty = { reports: [], totals: { generated: 0, existing: 0, skipped: 0, oversized: 0 } };
+    const empty = { reports: [], totals: { generated: 0, existing: 0, skipped: 0, oversized: 0, stale: 0 } };
     const report = await runStatusCheck({ root, outputDir, settings, images: empty });
-    writeStatusPage({ outputDir, settings, status: report, images: empty });
+    const written = writeStatusPage({ outputDir, settings, status: report, images: empty });
     const counts = log.summary();
     console.log(
       `\nChecked ${report.pageCount} page(s) — ` +
         `${counts.errors} error(s), ${counts.warnings} warning(s).`,
     );
-    console.log("Report: _site/status_check.html\n");
+    console.log(
+      written
+        ? "Report: _site/status_check.html\n"
+        : "Report NOT written — /status_check.html belongs to another page.\n",
+    );
     process.exit(counts.errors > 0 ? 1 : 0);
   }
 
@@ -271,7 +343,7 @@ async function main() {
 
   console.log("\n[5/5] status check");
   const status = await runStatusCheck({ root, outputDir: stagingDir, settings, images });
-  writeStatusPage({ outputDir: stagingDir, settings, status, images });
+  const reportWritten = writeStatusPage({ outputDir: stagingDir, settings, status, images });
 
   // Everything succeeded, so the staged build becomes the site.
   swapIntoPlace(outputDir, stagingDir, previousDir);
@@ -283,7 +355,11 @@ async function main() {
     `\nBuilt ${status.pageCount} page(s) in ${seconds}s — ` +
       `${summary.errors} error(s), ${summary.warnings} warning(s).`,
   );
-  console.log("Report: _site/status_check.html\n");
+  console.log(
+    reportWritten
+      ? "Report: _site/status_check.html\n"
+      : "Report NOT written — /status_check.html belongs to another page.\n",
+  );
 
   // A warning is information, not a failure; only a hard error fails the build,
   // so a CI job can treat a non-zero exit as "the site did not build".
@@ -292,7 +368,17 @@ async function main() {
 
 main().catch((error) => {
   console.error("\nBuild failed:\n", error);
-  discardStaging(path.join(process.cwd(), "_site.tmp"));
-  console.error("\n_site was left as it was — the previous build is still published.\n");
+
+  // Only discard the staging directory while it is still just a work area.
+  // If the swap got far enough to move the live site aside and could not put
+  // it back, staging holds the only copy of the new build and deleting it here
+  // would turn a recoverable failure into a lost one — while printing a
+  // reassurance that is no longer true.
+  if (error?.keepStaging) {
+    console.error(`\n${error.recovery}\n`);
+  } else {
+    discardStaging(path.join(process.cwd(), "_site.tmp"));
+    console.error("\n_site was left as it was — the previous build is still published.\n");
+  }
   process.exit(1);
 });

@@ -103,8 +103,8 @@ const humanDate = (value, locale = "en-GB") => {
  * @param {string}  options.outputDir      where pages are written, relative to
  *   root. Configurable because the binary renders into a staging directory and
  *   swaps it into place only once the build has succeeded; the dev server keeps
- *   the default. Every `_site*` name is already in IGNORED, so a staging
- *   directory can never be picked up as input.
+ *   the default. Whatever it is called, it is added to `ignores` below, so the
+ *   output of one build can never become the input of the next.
  */
 export function createConfig({
   includeDrafts = false,
@@ -181,6 +181,19 @@ export function createConfig({
 
     /* --------------------------------------------------------------- ignores */
     for (const pattern of IGNORED) eleventyConfig.ignores.add(pattern);
+
+    // The output directory, whatever it was called.
+    //
+    // IGNORED covers `_site*` because that is what build.mjs happens to choose,
+    // but outputDir is a parameter and the ignore was a literal — so any other
+    // name and the previous build's rendered HTML became input on the next one.
+    // It does not fail cleanly either: Eleventy hands an already-rendered page
+    // to Liquid, which reports a syntax error at a line inside an HTML comment.
+    // Deriving the pattern from the argument keeps the two from drifting.
+    const outputPattern = String(outputDir).replace(/^\.\//, "").replace(/\/+$/, "");
+    if (outputPattern && outputPattern !== ".") {
+      eleventyConfig.ignores.add(`${outputPattern}/**`);
+    }
 
     // Root-level markdown is project documentation, never site content. It is
     // enumerated from disk rather than matched with a "*.md" glob, because that

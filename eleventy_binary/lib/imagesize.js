@@ -73,6 +73,35 @@ function readSvg(buffer) {
  * the format is not one we can measure — callers then emit no attributes,
  * which is no worse than before.
  */
+/**
+ * Dimensions for a path on disk, uncached.
+ *
+ * Split out of imageSize() so a caller that already holds a filesystem path can
+ * measure a file without inventing a site-absolute URL for it — the thumbnail
+ * mirror works entirely in real paths. Kept as the one place these headers are
+ * parsed: a second copy of this in images.js is precisely the duplication that
+ * front_matter.js exists as a warning about.
+ */
+export function readImageHeader(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    // 64 kB is far more than any of these headers need.
+    const handle = fs.openSync(filePath, "r");
+    const buffer = Buffer.alloc(Math.min(65536, fs.statSync(filePath).size));
+    fs.readSync(handle, buffer, 0, buffer.length, 0);
+    fs.closeSync(handle);
+
+    const ext = extensionOf(filePath);
+    if (ext === ".jpg" || ext === ".jpeg") return readJpeg(buffer);
+    if (ext === ".png") return readPng(buffer);
+    if (ext === ".gif") return readGif(buffer);
+    if (ext === ".svg") return readSvg(buffer);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function imageSize(url, root = process.cwd()) {
   if (typeof url !== "string" || !url.startsWith("/")) return null;
 
@@ -80,25 +109,7 @@ export function imageSize(url, root = process.cwd()) {
   if (cache.has(key)) return cache.get(key);
 
   const filePath = path.join(root, decodeURIComponent(url.split(/[?#]/)[0]));
-  let size = null;
-
-  try {
-    if (fs.existsSync(filePath)) {
-      // 64 kB is far more than any of these headers need.
-      const handle = fs.openSync(filePath, "r");
-      const buffer = Buffer.alloc(Math.min(65536, fs.statSync(filePath).size));
-      fs.readSync(handle, buffer, 0, buffer.length, 0);
-      fs.closeSync(handle);
-
-      const ext = extensionOf(filePath);
-      if (ext === ".jpg" || ext === ".jpeg") size = readJpeg(buffer);
-      else if (ext === ".png") size = readPng(buffer);
-      else if (ext === ".gif") size = readGif(buffer);
-      else if (ext === ".svg") size = readSvg(buffer);
-    }
-  } catch {
-    size = null;
-  }
+  const size = readImageHeader(filePath);
 
   cache.set(key, size);
   return size;
