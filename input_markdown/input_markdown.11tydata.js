@@ -20,7 +20,12 @@ export default {
   templateEngineOverride: "md",
 
   eleventyComputed: {
-    // The slug comes from the filename, via the registry the config injects.
+    // The permalink comes from the slug registry, which resolves it before
+    // Eleventy starts: normally from the file's path, but from a `permalink:`
+    // in this page's own front matter when it declares one. Resolved there
+    // rather than read here on purpose — the unpublished check, the sitemap,
+    // the feed and the search index all read the same record, and a value
+    // taken here would be invisible to every one of them.
     permalink: (data) => data.slugRegistry?.[data.page.inputPath]?.permalink ?? false,
   },
 };

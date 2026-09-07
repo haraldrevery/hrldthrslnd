@@ -23,22 +23,69 @@ import { sourcePathForPublished } from "./slugs.js";
 const cache = new Map();
 const cacheKey = (root, url) => `${root}\u0000${url}`;
 
-function readJpeg(buffer) {
-  // Walk the marker segments looking for a Start Of Frame.
+/** SOF0-SOF15, less the markers in that range that are not frame headers. */
+const isStartOfFrame = (marker) =>
+  marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+
+/**
+ * A JPEG's dimensions, read by walking the file rather than a window of it.
+ *
+ * Seeks from segment to segment instead of buffering a fixed prefix, because
+ * the frame header is not at any fixed depth. An embedded ICC profile is the
+ * ordinary case that pushes it down: a Lightroom or Capture One export carries
+ * one of several hundred kilobytes, split across as many APP2 segments as it
+ * needs, and every one of those sits AHEAD of the Start Of Frame. Reading the
+ * first 64 kB and giving up measured nothing for exactly the files a
+ * photography site is made of — and a picture with no width and height is a
+ * layout shift on load and, being lazy, often no load at all.
+ *
+ * Each hop is a four-byte read at a computed offset, so a normal photograph
+ * costs a handful of them however large it is.
+ */
+function readJpeg(handle, size) {
+  const head = Buffer.alloc(2);
+  if (fs.readSync(handle, head, 0, 2, 0) < 2) return null;
+  if (head[0] !== 0xff || head[1] !== 0xd8) return null; // no SOI: not a JPEG
+
+  const segment = Buffer.alloc(4);
   let offset = 2;
-  while (offset < buffer.length - 9) {
-    if (buffer[offset] !== 0xff) {
+
+  while (offset + 4 <= size) {
+    if (fs.readSync(handle, segment, 0, 4, offset) < 4) return null;
+
+    // Every segment starts with 0xFF. Anything else means we are no longer on a
+    // boundary, so the file is malformed and guessing where the next one might
+    // be would only invent an answer.
+    if (segment[0] !== 0xff) return null;
+
+    const marker = segment[1];
+    // Legal padding before a marker.
+    if (marker === 0xff) {
       offset += 1;
       continue;
     }
-    const marker = buffer[offset + 1];
-    // SOF0–SOF15, excluding the non-frame markers DHT (c4), JPG (c8), DAC (cc).
-    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-      return { height: buffer.readUInt16BE(offset + 5), width: buffer.readUInt16BE(offset + 7) };
+    // Standalone markers: TEM, the restart markers, SOI and EOI carry no length.
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd9)) {
+      offset += 2;
+      continue;
     }
-    if (offset + 4 > buffer.length) break;
-    offset += 2 + buffer.readUInt16BE(offset + 2);
+
+    if (isStartOfFrame(marker)) {
+      // precision(1) height(2) width(2), immediately after the length field.
+      const frame = Buffer.alloc(5);
+      if (fs.readSync(handle, frame, 0, 5, offset + 4) < 5) return null;
+      return { height: frame.readUInt16BE(1), width: frame.readUInt16BE(3) };
+    }
+
+    // Start Of Scan: entropy-coded data from here on, and no frame header was
+    // found before it. Nothing further is worth walking.
+    if (marker === 0xda) return null;
+
+    const length = segment.readUInt16BE(2);
+    if (length < 2) return null; // a malformed length would not advance
+    offset += 2 + length;
   }
+
   return null;
 }
 
@@ -83,22 +130,38 @@ function readSvg(buffer) {
  * front_matter.js exists as a warning about.
  */
 export function readImageHeader(filePath) {
+  let handle;
   try {
-    if (!fs.existsSync(filePath)) return null;
-    // 64 kB is far more than any of these headers need.
-    const handle = fs.openSync(filePath, "r");
-    const buffer = Buffer.alloc(Math.min(65536, fs.statSync(filePath).size));
-    fs.readSync(handle, buffer, 0, buffer.length, 0);
-    fs.closeSync(handle);
+    // statSync doubles as the existence check, and rules out a directory, which
+    // opens perfectly well and then fails on the first read.
+    const stats = fs.statSync(filePath);
+    if (!stats.isFile() || stats.size === 0) return null;
 
+    handle = fs.openSync(filePath, "r");
     const ext = extensionOf(filePath);
-    if (ext === ".jpg" || ext === ".jpeg") return readJpeg(buffer);
+
+    // JPEG is walked, because its frame header has no fixed depth. Every other
+    // format here declares its size in a short, fixed prefix.
+    if (ext === ".jpg" || ext === ".jpeg") return readJpeg(handle, stats.size);
+
+    const buffer = Buffer.alloc(Math.min(2048, stats.size));
+    fs.readSync(handle, buffer, 0, buffer.length, 0);
     if (ext === ".png") return readPng(buffer);
     if (ext === ".gif") return readGif(buffer);
     if (ext === ".svg") return readSvg(buffer);
     return null;
   } catch {
     return null;
+  } finally {
+    // In a finally rather than after the reads: a throw between open and close
+    // used to leak the descriptor, and this runs for every image in every post.
+    if (handle !== undefined) {
+      try {
+        fs.closeSync(handle);
+      } catch {
+        /* already gone */
+      }
+    }
   }
 }
 

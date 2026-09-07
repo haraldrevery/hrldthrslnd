@@ -5,6 +5,23 @@
 
 /** Extensions that get a compressed *_min.jpg counterpart. */
 export const RASTER_EXT = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+
+/**
+ * Extensions the thumbnail mirror can actually decode, and so the only ones a
+ * MISSING counterpart can fairly be blamed on.
+ *
+ * Narrower than RASTER_EXT on purpose, and the gap between the two is the whole
+ * point. A .webp is a raster image: it takes a _min counterpart, and one made by
+ * hand is picked up like any other. But the mirror has no webp decoder, so it
+ * cannot produce one — and the status check used to demand it anyway, which
+ * made a single .webp in image/ a permanent hard error with no action the
+ * author could take to clear it. Three places carried their own copy of this
+ * list and only two agreed.
+ *
+ * ADDING A FORMAT HERE IS NOT ENOUGH: decodeAny() in images.js needs a matching
+ * branch, or the mirror will simply report it as undecodable again.
+ */
+export const DECODABLE_EXT = new Set([".jpg", ".jpeg", ".png"]);
 /** Extensions that are used as-is — vector and animated formats. */
 export const PASSTHROUGH_EXT = new Set([".svg", ".gif", ".avif", ".ico"]);
 
@@ -52,6 +69,11 @@ export function mediaType(file) {
 
 export function isRaster(file) {
   return RASTER_EXT.has(extensionOf(file));
+}
+
+/** Whether the mirror can generate a counterpart for this file itself. */
+export function isDecodable(file) {
+  return DECODABLE_EXT.has(extensionOf(file));
 }
 
 export function isMinName(file) {

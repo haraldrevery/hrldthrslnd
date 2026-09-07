@@ -13,7 +13,7 @@ import path from "node:path";
 
 import log from "./log.js";
 import { getRegistry, SOURCES } from "./slugs.js";
-import { escapeHtml } from "./paths.js";
+import { escapeHtml, isRaster, isDecodable, extensionOf } from "./paths.js";
 import { frontMatterBlock, firstToken, hasKey, hasValue } from "./front_matter.js";
 import { humanBytes } from "./format.js";
 
@@ -119,15 +119,27 @@ function checkFrontMatter(root, findings) {
     const file = path.join(root, record.inputPath);
     if (!fs.existsSync(file)) continue;
 
-    const block = frontMatterBlock(fs.readFileSync(file, "utf8"));
+    const source = fs.readFileSync(file, "utf8");
+    const block = frontMatterBlock(source);
 
     if (block === null) {
+      // A file that opens with `---` meant to have a block and did not get one,
+      // which is a different mistake from never writing one and needs a
+      // different instruction. Saying "no front matter" for an unterminated
+      // fence sends the author to add a block they can plainly see is already
+      // there.
+      const opensWithFence = /^\uFEFF?---/.test(source);
       findings.push({
         level: "error",
         scope: "front matter",
         page: record.inputPath,
-        message: "no YAML front matter block",
-        detail: "the page cannot get a title, date, tags or social image",
+        message: opensWithFence
+          ? "the front matter block is not closed"
+          : "no YAML front matter block",
+        detail: opensWithFence
+          ? "the opening `---` has no matching `---` line — a `...` terminator " +
+            "does not close one; the page cannot get a title, date, tags or social image"
+          : "the page cannot get a title, date, tags or social image",
       });
       continue;
     }
@@ -339,21 +351,30 @@ function checkAssets(outputDir, settings, findings, stats) {
   // Every image/ file should have its image_min/ counterpart in the output.
   const sources = walk(path.join(outputDir, "image"));
   for (const relative of sources) {
-    const ext = path.extname(relative);
-    if (!/\.(jpe?g|png|webp)$/i.test(ext)) continue;
+    if (!isRaster(relative)) continue;
+    const ext = extensionOf(relative);
     const counterpart = path.join(
       outputDir,
       "image_min",
       path.dirname(relative),
-      `${path.basename(relative, ext)}_min.jpg`,
+      `${path.basename(relative, path.extname(relative))}_min.jpg`,
     );
     if (fs.existsSync(counterpart)) continue;
+
+    // An error only where the build could have made one and did not. A format
+    // the mirror cannot decode is a warning: the page still works — it just
+    // ships the full-resolution file — and the only fix is the author's, so
+    // failing the build over it left no way to get back to a green run.
+    const makeable = isDecodable(relative);
     findings.push({
-      level: "error",
+      level: makeable ? "error" : "warn",
       scope: "image mirror",
       page: `/image/${relative.split(path.sep).join("/")}`,
       message: "no _min counterpart in the output",
-      detail: "galleries and cards will fall back to the full-resolution file",
+      detail: makeable
+        ? "galleries and cards will fall back to the full-resolution file"
+        : `the mirror cannot encode from ${ext} — supply the counterpart by hand, ` +
+          "or the full-resolution file is what cards and galleries load",
     });
   }
 }
@@ -561,6 +582,10 @@ export function writeStatusPage({ outputDir, settings, status, images }) {
       detail: entry.detail ?? "",
     })),
   );
+  // Two images that reduce to one counterpart. An error rather than a warning:
+  // one of the two is showing the other's photograph on every card and in every
+  // gallery, and no amount of rebuilding fixes it.
+  const collisions = images.reports.flatMap((r) => r.collisions ?? []);
 
   const html = `<!doctype html>
 <html lang="${escapeHtml(settings.language)}">
@@ -603,6 +628,29 @@ ${STATUS_MARKER}
     <div><p class="micro" style="color:var(--fg-muted);">Stale thumbnails</p>
          <p class="display-sm" style="margin-top:0.5rem;">${images.totals.stale ?? 0}</p></div>
   </div>
+
+  ${
+    collisions.length
+      ? `<section style="margin-top:3rem;">
+    <h2 class="display-md">Thumbnail name collisions</h2>
+    <p class="lede" style="margin-top:1rem; font-size:var(--step--1);">
+      A <code>_min</code> counterpart is always a JPEG, so two images whose names
+      differ only in extension want the same file. Only the first one has a
+      thumbnail; the second is showing it. Rename one of each pair.
+    </p>
+    <ul class="prose" style="margin-top:1rem;">
+      ${collisions
+        .map(
+          (entry) =>
+            `<li><code>${escapeHtml(entry.first)}</code> and ` +
+            `<code>${escapeHtml(entry.second)}</code> both reduce to ` +
+            `<code>${escapeHtml(entry.target)}</code></li>`,
+        )
+        .join("\n      ")}
+    </ul>
+  </section>`
+      : ""
+  }
 
   ${
     stale.length

@@ -1,0 +1,18 @@
+---
+permalink: /robots.txt
+eleventyExcludeFromCollections: true
+layout: false
+---
+{#- Written as a template rather than kept in a static folder so the sitemap
+    line follows `url` in site_settings.json. A robots.txt that names a sitemap
+    on the wrong domain is worse than none: it is the one file a crawler reads
+    first, and it would point every one of them somewhere else.
+
+    Nothing is disallowed. The build report is the only page that does not want
+    indexing and it carries its own `noindex` meta; naming it here as well would
+    be wrong the moment an author publishes a page of their own at that URL,
+    which writeStatusPage() deliberately allows. -#}
+User-agent: *
+Allow: /
+
+Sitemap: {{ '/sitemap.xml' | absolute }}

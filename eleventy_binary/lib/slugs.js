@@ -34,7 +34,7 @@ import path from "node:path";
 
 import log from "./log.js";
 import { slugify } from "./paths.js";
-import { frontMatterBlock, isDraft } from "./front_matter.js";
+import { frontMatterBlock, isDraft, firstToken } from "./front_matter.js";
 
 /** Folder priority: an earlier folder keeps the bare slug on a conflict. */
 export const SOURCES = [
@@ -57,6 +57,81 @@ const isDataFile = (name) => /\.11tydata\.(js|json|cjs|mjs)$/i.test(name);
  * input_markdown/ without its machinery being published.
  */
 const isHidden = (name) => name.startsWith(".");
+
+/**
+ * Built-in pages whose permalink is not written in their own front matter, and
+ * so cannot be discovered by reading it.
+ *
+ * `blog` is set in eleventy_njk/blog.11tydata.js, because the page size comes
+ * from site_settings.json and Eleventy resolves pagination before computed data.
+ *
+ * `status_check` is deliberately NOT here. That name is protected the other way
+ * round: writeStatusPage() refuses to overwrite a page it did not write, so an
+ * author who wants /status_check.html keeps it and loses the report. Reserving
+ * it would reverse that decision and rename a page that works today.
+ */
+const RESERVED_EXTRA = ["/blog.html"];
+
+/**
+ * Prefixes the build generates pages under, from data rather than from files:
+ * one page per subject, and one per page of the journal.
+ *
+ * Warned about rather than reserved. The set is open — it depends on which tags
+ * exist and how many entries there are — so reserving the prefix would rename
+ * files that do not actually collide with anything, and a rename is a URL
+ * change, which is the exact harm this module exists to prevent. A name that
+ * really does collide is caught by Eleventy's duplicate-permalink check; this
+ * warning is what gives the author notice before that happens.
+ */
+const GENERATED_PREFIXES = ["blog_tag_", "blog_page_"];
+
+/**
+ * The slugs the built-in pages in eleventy_njk/ already publish at.
+ *
+ * Read from those files rather than listed here, so adding a page to
+ * eleventy_njk/ protects its name automatically. A hardcoded list would drift,
+ * and the way it drifts is silent until someone drops a note called about.md
+ * into a vault and the whole build dies on a duplicate permalink.
+ *
+ * Only .html permalinks are collected. slugify() maps every non-alphanumeric to
+ * an underscore, so no input file can ever produce "feed.xml" or
+ * "search_index.json" — those cannot be collided with and do not need guarding.
+ */
+function builtInPages(root) {
+  const permalinks = new Set(RESERVED_EXTRA);
+  const dir = path.join(root, "eleventy_njk");
+
+  if (fs.existsSync(dir)) {
+    for (const name of fs.readdirSync(dir).sort()) {
+      if (!name.endsWith(".njk")) continue;
+      let block;
+      try {
+        block = frontMatterBlock(fs.readFileSync(path.join(dir, name), "utf8"));
+      } catch {
+        continue;
+      }
+      const value = firstToken(block, "permalink");
+      if (!value) continue;
+
+      const clean = value.replace(/^['"]|['"]$/g, "");
+      if (clean.startsWith("/")) permalinks.add(clean);
+    }
+  }
+
+  // Only the .html ones become reserved SLUGS. slugify() maps every
+  // non-alphanumeric to an underscore, so no input file can ever produce
+  // "feed.xml" or "search_index.json"; reserving those would cost a needless
+  // rename of a page called feed_xml.md and protect nothing. They stay in
+  // `permalinks` all the same, because a page can now ASK for one by name.
+  const slugs = new Set();
+  for (const permalink of permalinks) {
+    if (!/\.html$/i.test(permalink)) continue;
+    const slug = permalink.slice(1).replace(/\.html$/i, "");
+    if (slug) slugs.add(slug);
+  }
+
+  return { permalinks, slugs };
+}
 
 /**
  * Built registries, keyed by the root they were scanned from — see the same
@@ -242,6 +317,10 @@ function listPostFolders(root) {
 }
 
 export function buildRegistry(root = process.cwd()) {
+  // Resolved once: the same answer has to apply to every candidate below, and
+  // re-reading eleventy_njk/ per file would be nine stats per post.
+  const builtIn = builtInPages(root);
+
   const candidates = [
     ...listSourceFiles(root, SOURCES[0]),
     ...listSourceFiles(root, SOURCES[1]),
@@ -256,6 +335,8 @@ export function buildRegistry(root = process.cwd()) {
   const sourceDirs = new Map();
 
   for (const candidate of candidates) {
+    const meta = readSourceMeta(root, candidate.inputPath);
+
     const desired =
       candidate.kind === "custom_post"
         ? slugify(candidate.base)
@@ -271,16 +352,34 @@ export function buildRegistry(root = process.cwd()) {
     let slug = desired;
     let suffix = 1;
 
-    while (bySlug.has(slug)) {
+    // A built-in page's name is taken even though no candidate here holds it.
+    // Only bare names match: `reserved` holds "about", so /travel/about.html is
+    // untouched, which is right — it does not collide with anything.
+    while (bySlug.has(slug) || builtIn.slugs.has(slug)) {
       suffix += 1;
       slug = `${parent}${leaf}_${suffix}`;
     }
 
     if (slug !== desired) {
+      const owner = bySlug.get(desired);
       log.warn(
         "slugs",
-        `slug "${desired}" is already taken by ${bySlug.get(desired).inputPath}`,
+        owner
+          ? `slug "${desired}" is already taken by ${owner.inputPath}`
+          : `slug "${desired}" belongs to a built-in page in eleventy_njk/`,
         `${candidate.inputPath} published as "${slug}" instead`,
+      );
+    }
+
+    // Not renamed — see GENERATED_PREFIXES. Said once, before the day a new tag
+    // turns this into a build failure the author cannot place.
+    if (!parent && GENERATED_PREFIXES.some((prefix) => slug.startsWith(prefix))) {
+      log.warn(
+        "slugs",
+        `"${slug}" is in the range of names the build generates for itself`,
+        `${candidate.inputPath} — subject and journal pages are published as ` +
+          `/blog_tag_*.html and /blog_page_*.html; this page keeps its URL, but ` +
+          `will collide the moment one is generated under the same name`,
       );
     }
     if (desired !== candidate.base) {
@@ -298,7 +397,7 @@ export function buildRegistry(root = process.cwd()) {
       // A post folder's assets publish under the slug the page got, which is
       // only known now. Everything else already knows its own folder.
       publishedDir: candidate.kind === "custom_post" ? slug : candidate.publishedDir,
-      draft: readDraft(root, candidate.inputPath),
+      ...meta,
       permalink: `/${slug}.html`,
     };
     bySlug.set(slug, record);
@@ -315,7 +414,85 @@ export function buildRegistry(root = process.cwd()) {
     }
   }
 
-  return { bySlug, byInputPath, dirs, sourceDirs, all: [...bySlug.values()] };
+  const all = [...bySlug.values()];
+  applyDeclaredPermalinks(all, builtIn.permalinks);
+
+  return { bySlug, byInputPath, dirs, sourceDirs, all };
+}
+
+/**
+ * Let a page publish at a URL of its own choosing.
+ *
+ * The slug is the filename and always will be, because a folder of assets is
+ * named after it and because a URL has to come from somewhere when nobody says
+ * otherwise. But a filename is a bad thing for a URL to be permanently welded
+ * to: it cannot be corrected, a page cannot be moved between folders without
+ * changing where it is published, and content that arrives with URLs already in
+ * the world has nowhere to declare them. `permalink:` in front matter is the
+ * way out, and this is where it is honoured.
+ *
+ * It has to be HERE rather than in the .11tydata.js files, which is where it
+ * looks like it belongs. Those files feed Eleventy alone, and four other things
+ * read `record.permalink` afterwards — the unpublished check tests that a file
+ * exists at it, the search index and sitemap follow it, the feed links it. Take
+ * the value in the data file and every one of those is still looking at the
+ * slug-derived URL, so a page with a custom permalink is published correctly and
+ * then reported as missing by the very check that exists to find missing pages.
+ *
+ * A run in two passes, not one. Every slug-derived permalink has to be known
+ * before any declared one is granted, or whether a request is refused depends on
+ * enumeration order — the same file could take the URL on one machine and be
+ * refused it on another.
+ *
+ * `slug` is deliberately left alone. A post folder's media publishes to
+ * `/<slug>/` and its page refers to those files by that path, so moving the page
+ * must not move them out from under it: `input_custom_post/post_i/` declaring
+ * `permalink: /portfolio.html` publishes the page at /portfolio.html with its
+ * photographs still at /post_i/, and every reference inside it keeps working.
+ */
+function applyDeclaredPermalinks(records, builtInPermalinks) {
+  /** Every URL already spoken for, and what holds it. */
+  const taken = new Map();
+  for (const permalink of builtInPermalinks) taken.set(permalink, "a built-in page");
+  for (const record of records) taken.set(record.permalink, record.inputPath);
+
+  for (const record of records) {
+    if (record.declared == null) continue;
+
+    const value = record.declared.replace(/^['"]|['"]$/g, "");
+
+    // Anything that is not a site-absolute path is refused rather than guessed
+    // at. `permalink: false` is the case this really catches: Eleventy reads it
+    // as "write nothing", and quietly honouring that here would unpublish a page
+    // through a field that looks like it is only about naming.
+    if (!value.startsWith("/")) {
+      log.warn(
+        "slugs",
+        `permalink "${value}" is not a site-absolute path and was not used`,
+        `${record.inputPath} — it must begin with "/"; the page keeps ${record.permalink}`,
+      );
+      continue;
+    }
+
+    if (value === record.permalink) continue; // asked for what it already had
+
+    const owner = taken.get(value);
+    if (owner) {
+      log.warn(
+        "slugs",
+        `permalink "${value}" is already taken by ${owner}`,
+        `${record.inputPath} keeps ${record.permalink} instead`,
+      );
+      continue;
+    }
+
+    // The URL it is leaving becomes free: nothing else derives that name, and
+    // another page may legitimately ask for it.
+    taken.delete(record.permalink);
+    taken.set(value, record.inputPath);
+    record.permalink = value;
+    record.declaredPermalink = true;
+  }
 }
 
 /**
@@ -342,18 +519,25 @@ function registerDir(dirs, record) {
 }
 
 /**
- * Whether a source file is marked `draft: true`.
+ * The two front matter fields the registry itself has to know: whether the page
+ * is a draft, and whether it asks for a permalink of its own.
  *
- * An unreadable file is reported as not a draft: the registry is built before
- * Eleventy runs, and guessing "draft" for a file we simply failed to open would
- * silently unpublish a real page. Eleventy will raise its own error on it.
+ * Both are read here because this is the only pass that already opens every
+ * source file, and both are needed before Eleventy exists — the permalink is
+ * handed to Eleventy, so it cannot be computed from anything Eleventy produces.
+ *
+ * An unreadable file is reported as not a draft: guessing "draft" for a file we
+ * simply failed to open would silently unpublish a real page. Eleventy will
+ * raise its own error on it.
  */
-function readDraft(root, inputPath) {
+function readSourceMeta(root, inputPath) {
+  let block = null;
   try {
-    return isDraft(frontMatterBlock(fs.readFileSync(path.join(root, inputPath), "utf8")));
+    block = frontMatterBlock(fs.readFileSync(path.join(root, inputPath), "utf8"));
   } catch {
-    return false;
+    return { draft: false, declared: null };
   }
+  return { draft: isDraft(block), declared: firstToken(block, "permalink") };
 }
 
 /**

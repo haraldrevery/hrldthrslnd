@@ -15,13 +15,15 @@
     "markdown-it-deflist": "^3.0.0",
     "markdown-it-footnote": "^4.0.0"
   },
-  "//dependencies": "katex and glightbox are not imported by any code here — eleventy_binary/vendor_assets.sh copies their stylesheets, fonts and bundle out of node_modules into the repository, because the generator never touches node_modules and the site must load every asset from its own domain.",
+  "//dependencies": "katex and glightbox are not imported by any code here \u2014 eleventy_binary/vendor_assets.sh copies their stylesheets, fonts and bundle out of node_modules into the repository, because the generator never touches node_modules and the site must load every asset from its own domain.",
   "description": "Static site generator + theme. npm is a development-time convenience only; site generation runs from the compiled site_generate binary.",
   "private": true,
   "scripts": {
     "build": "bun run eleventy_binary/build.mjs",
     "build:drafts": "bun run eleventy_binary/build.mjs --drafts",
+    "dev": "bun run eleventy_binary/build.mjs --drafts && python3 -m http.server 8080 --directory _site",
     "check": "bun run eleventy_binary/build.mjs --check-only",
+    "test": "bun test",
     "css": "./update_css.sh",
     "css:watch": "./update_css.sh --watch",
     "vendor": "./eleventy_binary/vendor_assets.sh",

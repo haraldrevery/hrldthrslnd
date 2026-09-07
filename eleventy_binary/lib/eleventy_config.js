@@ -64,6 +64,9 @@ const IGNORED = [
   "card_thumbnail/**",
   "javascript/**",
   "pagebuilder_app/**",
+  // The test suite builds throwaway project trees; a fixture that happened to
+  // be a .md or .html file must never be mistaken for site content.
+  "tests/**",
 ];
 
 const isoDate = (value) => {

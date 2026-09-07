@@ -14,7 +14,7 @@ import path from "node:path";
 
 import log from "./log.js";
 import { initCodecs, decodeJpeg, encodeJpeg, decodePng, resize } from "./codecs.js";
-import { isRaster, isMinName, minFileName } from "./paths.js";
+import { isRaster, isDecodable, isMinName, minFileName, extensionOf } from "./paths.js";
 import { readImageHeader } from "./imagesize.js";
 import { walkFiles } from "./slugs.js";
 
@@ -91,7 +91,12 @@ function staleness(sourcePath, targetPath, targetMtimeMs) {
 }
 
 async function decodeAny(buffer, file) {
-  const ext = path.extname(file).toLowerCase();
+  // Guarded by the shared list rather than by the branches below, so the set of
+  // formats this claims to handle and the set the status check expects a
+  // counterpart for cannot drift apart again.
+  if (!isDecodable(file)) return null;
+
+  const ext = extensionOf(file);
   const arrayBuffer = buffer.buffer.slice(
     buffer.byteOffset,
     buffer.byteOffset + buffer.byteLength,
@@ -167,8 +172,8 @@ async function encodeThumbnail(image) {
  * Ensure every raster file under `sourceDir` has a `_min` counterpart in
  * `targetDir`. Returns a report the status page can render.
  */
-export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
-  const report = { generated: [], skipped: [], oversized: [], stale: [], existing: 0 };
+export async function mirrorDirectory(sourceDir, targetDir, { label, sourceLabel } = {}) {
+  const report = { generated: [], skipped: [], oversized: [], stale: [], collisions: [], existing: 0 };
   if (!fs.existsSync(sourceDir)) return report;
 
   // The same walk the asset copier uses, so the two passes see exactly the same
@@ -179,7 +184,33 @@ export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
   const files = walkFiles(sourceDir).filter((file) => !isMinName(file));
   if (files.length === 0) return report;
 
+  // Two names, because for the site-wide mirror the source and the target are
+  // different folders: a file in image/ gets its counterpart in image_min/, and
+  // naming the source after the target reported image/photo.webp as living in
+  // image_min/. Everywhere else the counterpart sits beside its source and the
+  // two labels are the same.
+  const from = sourceLabel ?? label ?? sourceDir;
+
   let codecsReady = false;
+
+  /**
+   * Counterpart path -> the image that claimed it.
+   *
+   * minFileName() answers "a_min.jpg" for a.jpg, a.png AND a.webp, because the
+   * counterpart is always a JPEG. Two images sharing a basename therefore want
+   * one file, and nothing used to notice: the first was generated, the second
+   * found it already on disk, counted it as "existing" and moved on. Every
+   * card, gallery cell and og:image for the second image then showed the first
+   * image's photograph.
+   *
+   * The shape check in staleness() catches this only when the two happen to
+   * differ in aspect ratio, and when it does it gives the wrong instruction —
+   * deleting the counterpart just regenerates it from whichever file the walk
+   * reaches first, so the author is sent round a loop. Two pictures cannot
+   * share one thumbnail, so this is reported rather than resolved: renaming one
+   * of them is a decision about URLs, and the build does not get to make it.
+   */
+  const claimedBy = new Map();
 
   for (const relative of files) {
     if (!isRaster(relative)) continue;
@@ -188,6 +219,24 @@ export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
     const targetPath = path.join(targetDir, targetRelative);
 
     const sourcePath = path.join(sourceDir, relative);
+
+    // Named by the folder the author knows, never by an absolute path: the
+    // status page is published and linked from the site footer.
+    const shownTarget = path.posix.join(label ?? "", targetRelative.split(path.sep).join("/"));
+
+    const claimant = claimedBy.get(targetPath);
+    if (claimant) {
+      report.collisions.push({ target: shownTarget, first: claimant, second: relative });
+      log.error(
+        "images",
+        "two images want the same _min counterpart",
+        `${claimant} and ${relative} both reduce to ${shownTarget} — ` +
+          "they differ only in extension; rename one, or the second will keep " +
+          "showing the first one's thumbnail everywhere a thumbnail is used",
+      );
+      continue;
+    }
+    claimedBy.set(targetPath, relative);
 
     if (fs.existsSync(targetPath)) {
       report.existing += 1;
@@ -211,17 +260,16 @@ export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
       // author knows it as, not by its absolute path. status_check.html is a
       // published page linked from the site footer, so an absolute path here
       // would put the build machine's directory layout on the web.
-      const shown = path.posix.join(label ?? "", targetRelative.split(path.sep).join("/"));
       const stale = staleness(sourcePath, targetPath, target.mtimeMs);
       if (stale) {
-        report.stale.push({ file: shown, ...stale });
+        report.stale.push({ file: shownTarget, ...stale });
         // Certain and merely suspected are reported at different volumes on
         // purpose. mtime alone is a weak signal: `git checkout` and `git stash
         // pop` both rewrite a file's timestamp without changing a pixel, so
         // warning on that would tell an author to delete a counterpart they
         // had compressed by hand, over a change that never happened. A shape
         // that no longer matches is proof, and only proof gets a warning.
-        log[stale.certain ? "warn" : "note"]("images", stale.message, `${shown} — ${stale.detail}`);
+        log[stale.certain ? "warn" : "note"]("images", stale.message, `${shownTarget} — ${stale.detail}`);
       }
       continue;
     }
@@ -235,10 +283,15 @@ export async function mirrorDirectory(sourceDir, targetDir, { label } = {}) {
       const image = await decodeAny(fs.readFileSync(sourcePath), relative);
       if (!image) {
         report.skipped.push(sourcePath);
-        log.warn(
+        // A note, not a warning. This is not a fault in the file — the format
+        // is simply one the mirror cannot encode from — and the status check
+        // raises the visible finding for anything under image/. Warning in both
+        // places reported one missing thumbnail as two problems.
+        log.note(
           "images",
           "no decoder for this format, cannot generate a _min counterpart",
-          `${sourcePath} — add ${targetRelative} by hand`,
+          `${from}/${relative} — add ${targetRelative} by hand ` +
+            "if you want a thumbnail; the full-resolution file ships otherwise",
         );
         continue;
       }
@@ -294,6 +347,7 @@ export async function generateMissingThumbnails(root = process.cwd()) {
     scope: "image_min",
     ...(await mirrorDirectory(path.join(root, "image"), path.join(root, "image_min"), {
       label: "image_min",
+      sourceLabel: "image",
     })),
   });
 
@@ -335,8 +389,9 @@ export async function generateMissingThumbnails(root = process.cwd()) {
       skipped: acc.skipped + r.skipped.length,
       oversized: acc.oversized + r.oversized.length,
       stale: acc.stale + (r.stale?.length ?? 0),
+      collisions: acc.collisions + (r.collisions?.length ?? 0),
     }),
-    { generated: 0, existing: 0, skipped: 0, oversized: 0, stale: 0 },
+    { generated: 0, existing: 0, skipped: 0, oversized: 0, stale: 0, collisions: 0 },
   );
 
   if (totals.generated > 0) {

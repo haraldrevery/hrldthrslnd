@@ -15,8 +15,24 @@
  * decide which files to enumerate before Eleventy has parsed anything.
  */
 
-/** The leading `---` block: group 1 is its body, without the fences. */
-const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
+/**
+ * The leading `---` block: group 1 is its body, without the fences.
+ *
+ * Horizontal whitespace is allowed after either fence, because gray-matter
+ * allows it and this parser has to reach the same answer Eleventy does. It did
+ * not, and the failure was invisible in both senses: the offending character is
+ * a space nobody can see in an editor, and the consequence showed up somewhere
+ * else entirely. A single trailing space after the opening `---` made this
+ * report "no front matter at all", so readDraft() answered "not a draft" for a
+ * page whose block said `draft: true`. Eleventy read the block correctly and
+ * held the page back — while the asset copier, trusting the registry, published
+ * that draft's co-located files beside the page that was never written. The
+ * status check then reported two errors that both named the wrong cause.
+ *
+ * `[^\S\r\n]` rather than `\s`: spaces and tabs only, never the line break
+ * itself, which the pattern still has to match explicitly.
+ */
+const FRONT_MATTER = /^---[^\S\r\n]*\r?\n([\s\S]*?)\r?\n---[^\S\r\n]*(?:\r?\n|$)/;
 
 /**
  * The source with any UTF-8 byte order mark removed.

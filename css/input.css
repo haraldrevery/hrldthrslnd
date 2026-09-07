@@ -59,11 +59,31 @@
      I. Progressive enhancement gates + reduced motion
    ========================================================================== */
 
-/* --- A. SOURCES ----------------------------------------------------------- */
+/* --- A. SOURCES -----------------------------------------------------------
+   The complete list of places a class name can appear, because source(none)
+   above switches off Tailwind's own detection.
+
+   input_markdown is scanned for .md only. Posts DO carry class names: the
+   markdown pipeline enables markdown-it-attrs with `class` in its allowed
+   list, and raw HTML is permitted in a post, so `{.grid}` and
+   `<div class="...">` are both supported ways to write one. Left off this list
+   they produced no CSS at all, silently — the class reached the page and
+   nothing styled it.
+
+   Narrowed to *.md on purpose. A note folder can hold anything, and pointing
+   Tailwind at the whole tree means it reads every image and video beside a
+   post looking for class names on every build.
+
+   The cost is a few bytes of dead CSS: Tailwind extracts candidates from any
+   text, so a post containing the word "italic" emits `.italic{}` whether or not
+   anything uses it as a class. The colliding words are a small fixed set —
+   italic, hidden, block, grid, table, fixed, visible — so this does not grow
+   with the number of posts. Measured across the whole corpus it was 26 bytes. */
 @source "../eleventy_njk";
 @source "../eleventy_settings";
 @source "../input_custom_html";
 @source "../input_custom_post";
+@source "../input_markdown/**/*.md";
 @source "../javascript";
 
 /* --- B. BREAKPOINTS -------------------------------------------------------
