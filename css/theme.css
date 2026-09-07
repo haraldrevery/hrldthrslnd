@@ -358,6 +358,52 @@
   --grad-flow: linear-gradient(115deg,
     var(--c-amber) 0%, var(--c-orange) 18%, var(--c-crimson) 35%,
     var(--c-magenta) 52%, var(--c-violet) 68%, var(--c-azure) 84%, var(--c-teal) 100%);
+
+  /* The four accent arcs, for the edge on a grid of cards where one gradient
+     repeated down the page reads as a template.
+
+     Each is a FOUR-STOP SLICE of the same hue wheel the ten --c-* constants
+     describe — amber, orange, crimson, magenta, violet, azure, teal, mint and
+     round to amber again — and each starts two hues further along than the one
+     before it. Four stops, not seven: --grad-flow's full sweep is the site's
+     signature and it earns the busyness at the width it is usually drawn, but
+     the same seven hues crammed into a card's top edge read as a rainbow strip
+     rather than as a colour. Four is also what this edge in fact showed before
+     these existed, when a stray background-size was cropping --grad-flow to
+     its first four stops — -a is very nearly that bar.
+
+     WHERE EACH ARC STARTS IS NOT ARBITRARY. This palette's yellow-green side
+     is light and its red-blue side is dark: amber, lemon and mint sit at 1.6
+     to 1.8 contrast against the white card of the light scheme, while ultra
+     manages 2.3 against the dark one. So a short arc taken wholly from either
+     side disappears into one of the two grounds at the 3px this is drawn at —
+     a mint-to-amber arc is invisible on white. Each of the four below is cut
+     to straddle both sides, and so carries at least one stop above 4.0 against
+     BOTH --bg-raised values. Re-cut them and that is the property to re-check;
+     nothing in the build will catch it.
+
+     Deliberately NOT a family of distinct colours. A reader who can tell four
+     card colours apart at a glance will go looking for the rule behind them,
+     and there is none — the variation is here so a scrolled page does not look
+     stamped, not to classify anything. If cards ever need to signal something,
+     that is a job for tags, and these should collapse back to one gradient. */
+  --grad-flow-a: linear-gradient(115deg,
+    var(--c-orange) 0%, var(--c-crimson) 33%, var(--c-magenta) 67%, var(--c-violet) 100%);
+  --grad-flow-b: linear-gradient(115deg,
+    var(--c-magenta) 0%, var(--c-violet) 33%, var(--c-azure) 67%, var(--c-teal) 100%);
+  --grad-flow-c: linear-gradient(115deg,
+    var(--c-azure) 0%, var(--c-teal) 33%, var(--c-mint) 67%, var(--c-amber) 100%);
+  --grad-flow-d: linear-gradient(115deg,
+    var(--c-mint) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
+
+  /* The accent edge, as one token. Every rule and marker that identifies a
+     block — the card's top edge, the slice's left edge, the index row's hover
+     marker, the feature panel's rule — paints with this rather than naming a
+     gradient itself, so a block can carry a different one by setting a single
+     custom property on itself and nothing else has to know. Cards are the only
+     thing that does, in input.css; everything else takes the default, which is
+     the full seven-stop signature. */
+  --accent-grad: var(--grad-flow);
   --grad-heat: linear-gradient(90deg, var(--c-lemon), var(--c-orange), var(--c-crimson));
   --grad-cool: linear-gradient(90deg, var(--c-mint), var(--c-teal), var(--c-ultra));
   --grad-marble: conic-gradient(from 210deg at 40% 60%,

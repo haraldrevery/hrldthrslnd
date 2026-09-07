@@ -417,6 +417,15 @@
   --grad-flow: linear-gradient(115deg,
     var(--c-amber) 0%, var(--c-orange) 18%, var(--c-crimson) 35%,
     var(--c-magenta) 52%, var(--c-violet) 68%, var(--c-azure) 84%, var(--c-teal) 100%);
+  --grad-flow-a: linear-gradient(115deg,
+    var(--c-orange) 0%, var(--c-crimson) 33%, var(--c-magenta) 67%, var(--c-violet) 100%);
+  --grad-flow-b: linear-gradient(115deg,
+    var(--c-magenta) 0%, var(--c-violet) 33%, var(--c-azure) 67%, var(--c-teal) 100%);
+  --grad-flow-c: linear-gradient(115deg,
+    var(--c-azure) 0%, var(--c-teal) 33%, var(--c-mint) 67%, var(--c-amber) 100%);
+  --grad-flow-d: linear-gradient(115deg,
+    var(--c-mint) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
+  --accent-grad: var(--grad-flow);
   --grad-heat: linear-gradient(90deg, var(--c-lemon), var(--c-orange), var(--c-crimson));
   --grad-cool: linear-gradient(90deg, var(--c-mint), var(--c-teal), var(--c-ultra));
   --grad-marble: conic-gradient(from 210deg at 40% 60%,
@@ -1552,7 +1561,7 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: var(--grad-flow);
+    background: var(--accent-grad);
     background-size: 200% 100%;
     animation: flow 14s var(--ease-liquid) infinite alternate;
   }
@@ -1709,8 +1718,7 @@
     right: 0;
     top: 0;
     height: 0;
-    background: var(--grad-flow);
-    background-size: 200% 100%;
+    background: var(--accent-grad);
     transition: height var(--dur-mid) var(--ease-liquid);
     z-index: 2;
   }
@@ -1719,6 +1727,27 @@
   }
   .card:hover::before, .card:focus-within::before {
     height: 3px;
+  }
+  .card:nth-child(7n + 1) {
+    --accent-grad: var(--grad-flow-a);
+  }
+  .card:nth-child(7n + 2) {
+    --accent-grad: var(--grad-flow-b);
+  }
+  .card:nth-child(7n + 3) {
+    --accent-grad: var(--grad-flow-c);
+  }
+  .card:nth-child(7n + 4) {
+    --accent-grad: var(--grad-flow-c);
+  }
+  .card:nth-child(7n + 5) {
+    --accent-grad: var(--grad-flow-d);
+  }
+  .card:nth-child(7n + 6) {
+    --accent-grad: var(--grad-flow-d);
+  }
+  .card:nth-child(7n + 7) {
+    --accent-grad: var(--grad-flow-b);
   }
   .card-media {
     aspect-ratio: 16 / 10;
@@ -1880,7 +1909,7 @@
     left: 0;
     width: 0;
     z-index: 1;
-    background: var(--grad-flow);
+    background: var(--accent-grad);
     transition: width var(--dur-mid) var(--ease-liquid);
   }
   .index-row:hover::before, .index-row:focus-within::before {
@@ -2846,7 +2875,7 @@
     inset-block: 0;
     left: 0;
     width: 3px;
-    background: var(--grad-flow);
+    background: var(--accent-grad);
   }
   @media (min-width: 48rem) {
     .slice {

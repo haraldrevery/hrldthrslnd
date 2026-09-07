@@ -2271,7 +2271,7 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: var(--grad-flow);
+    background: var(--accent-grad);
     background-size: 200% 100%;
     animation: flow 14s var(--ease-liquid) infinite alternate;
   }
@@ -2464,6 +2464,13 @@
     transition: background var(--dur-mid) var(--ease-liquid),
                 transform var(--dur-mid) var(--ease-liquid);
   }
+  /* The accent edge, drawn only on hover. No background-size here: the 200%
+     that used to sit on this rule is the pairing that lets `animation: flow`
+     pan a gradient along a bar, and this bar has no animation — all it did was
+     stretch the gradient to twice the card's width so the bar showed the left
+     half of it and the last stops never appeared. The rotations below are
+     distinguished by which colours land at which end, so the bar has to show
+     the whole gradient for them to differ at all. */
   .card::before {
     content: "";
     position: absolute;
@@ -2471,13 +2478,55 @@
     right: 0;
     top: 0;
     height: 0;
-    background: var(--grad-flow);
-    background-size: 200% 100%;
+    background: var(--accent-grad);
     transition: height var(--dur-mid) var(--ease-liquid);
     z-index: 2;
   }
   .card:hover, .card:focus-within { background: var(--bg-raised); }
   .card:hover::before, .card:focus-within::before { height: 3px; }
+
+  /* Which rotation each card gets. Four gradients over a cycle of SEVEN, and
+     the seven is the load-bearing number: .card-grid steps 1 / 2 / 3 / 4 / 5
+     columns up the ladder above, and a cycle whose length shares a factor with
+     the column count puts the same gradient down a whole column as a solid
+     vertical stripe — which is exactly the "these colours mean something"
+     reading the gradients are chosen to avoid. Seven is coprime with 2, 3, 4
+     and 5, so at every step of the ladder the pattern runs diagonally and no
+     column is ever uniform. That much is guaranteed by the 7 alone, whatever
+     order the values go in.
+
+     What is NOT achievable is a cycle where no two neighbouring cards ever
+     share a gradient: four values in seven slots means some pair must coincide
+     at some offset, and offsets 1 to 6 cover every pair in the cycle. So the
+     order below is chosen for where a coincidence costs least — none among
+     cards that are vertical neighbours at three or four columns, which is what
+     a desktop grid actually is; the two that remain are side-by-side pairs.
+     Barely a cost either way, because this edge is drawn on hover only: the
+     visitor is looking at one of them at a time, never a page of them.
+
+     Two consequences worth knowing before editing this:
+
+     - The cycle counts POSITION IN THE GRID, not the post. A post sitting
+       third on the journal's page 2 and first on a tag page gets a different
+       gradient in each place. That is consistent with the gradients meaning
+       nothing; it is the first thing that breaks if they ever come to mean
+       something, and at that point this belongs in card.njk keyed to the post
+       rather than here keyed to the position.
+     - :nth-child counts every child, including the cards .card-grid--fill has
+       hidden with display:none, so the cycle does not shift at a breakpoint.
+       It also counts NON-card children, so keep .card-grid holding cards only.
+
+     -b, -c and -d each appear twice and -a once. Cards use the four short arcs
+     only, never --grad-flow itself: the seven-stop signature stays with the
+     slice, the index row and the feature panel, which are drawn wide enough
+     to carry it.                                                            */
+  .card:nth-child(7n + 1) { --accent-grad: var(--grad-flow-a); }
+  .card:nth-child(7n + 2) { --accent-grad: var(--grad-flow-b); }
+  .card:nth-child(7n + 3) { --accent-grad: var(--grad-flow-c); }
+  .card:nth-child(7n + 4) { --accent-grad: var(--grad-flow-c); }
+  .card:nth-child(7n + 5) { --accent-grad: var(--grad-flow-d); }
+  .card:nth-child(7n + 6) { --accent-grad: var(--grad-flow-d); }
+  .card:nth-child(7n + 7) { --accent-grad: var(--grad-flow-b); }
   .card-media { aspect-ratio: 16 / 10; margin-bottom: 1.1rem; }
   .card-media img { height: 100%; object-fit: cover; }
   .card-title {
@@ -2650,7 +2699,7 @@
     left: 0;
     width: 0;
     z-index: 1;
-    background: var(--grad-flow);
+    background: var(--accent-grad);
     transition: width var(--dur-mid) var(--ease-liquid);
   }
   .index-row:hover::before, .index-row:focus-within::before { width: 3px; }
@@ -4319,7 +4368,7 @@
     inset-block: 0;
     left: 0;
     width: 3px;
-    background: var(--grad-flow);
+    background: var(--accent-grad);
   }
   @media (min-width: 48rem) {
     .slice {
