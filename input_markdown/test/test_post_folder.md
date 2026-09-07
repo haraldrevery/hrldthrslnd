@@ -15,13 +15,16 @@ This document is designed to test **every** major Markdown feature. It's a compr
 
 ## 1. Headings (All Levels)
 
-# Heading 1
+# Media nesting test
 
-The title of YAML should be the 1, so the "# heading 1" should be demoted to h2.
+Here the audio should be playable:
 
-## Heading 2
+![Audio thing text.](/test/timer_alarm_2.mp3)
 
-test text.
+
+## Video
+
+![Video description here.](video/under_25_mb/harald_revery_-_phrases.mp4)
 
 ### Heading 3
 #### Heading 4
