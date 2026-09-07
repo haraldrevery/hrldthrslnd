@@ -12,8 +12,13 @@ layout: false
 {%- for entry in collections.sitemap %}
   <url>
     <loc>{{ entry.url | absolute }}</loc>
-    {%- if entry.date %}
-    <lastmod>{{ entry.date | isoDate }}</lastmod>
+    {#- lastmod is the last MODIFIED date, and a page's `date` is when it was
+        published. The two are the same until an entry is edited, so `updated:`
+        in the front matter is what separates them; without one the publish date
+        is still the best answer available and is what gets sent. -#}
+    {%- set changed = entry.data.updated or entry.date %}
+    {%- if changed %}
+    <lastmod>{{ changed | isoDate }}</lastmod>
     {%- endif %}
   </url>
 {%- endfor %}

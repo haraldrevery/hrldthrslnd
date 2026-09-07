@@ -35,8 +35,14 @@ title: false
 
 <section class="cine-stage">
   <div class="cine-media" aria-hidden="true">
+    {#- An empty src is not a blank image: the browser re-requests the current
+        page and paints the HTML as one. `default_image` defaults to "" in
+        settings.js, so a project that has not set one hit exactly that on its
+        homepage. Same guard card.njk already carries. -#}
+    {%- if settings.default_image %}
     <img src="{{ settings.default_image }}" alt=""{{ settings.default_image | sizeAttrs | safe }}
          loading="eager" decoding="async">
+    {%- endif %}
     <div class="cine-scrim"></div>
   </div>
   <div class="cine-grain" aria-hidden="true"></div>

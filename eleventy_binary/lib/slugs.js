@@ -34,7 +34,7 @@ import path from "node:path";
 
 import log from "./log.js";
 import { slugify } from "./paths.js";
-import { frontMatterBlock, isDraft, firstToken } from "./front_matter.js";
+import { frontMatterBlock, isDraft, wholeValue } from "./front_matter.js";
 
 /** Folder priority: an earlier folder keeps the bare slug on a conflict. */
 export const SOURCES = [
@@ -86,6 +86,47 @@ const RESERVED_EXTRA = ["/blog.html"];
 const GENERATED_PREFIXES = ["blog_tag_", "blog_page_"];
 
 /**
+ * Whether a value is usable as a permalink exactly as written.
+ *
+ * A permalink is the one field where an author hands this module a URL instead
+ * of having one derived, so it is also the one field that can carry something a
+ * URL cannot hold. Nothing here is encoded or repaired on the author's behalf:
+ * slugify() spends its whole existence making URLs deterministic, and inventing
+ * a `%20` for a space would put a URL on the site that appears nowhere in the
+ * source. A malformed value is refused and reported instead, and the page keeps
+ * the name its filename earned.
+ *
+ * The allowlist is the unreserved set from RFC 3986 plus the separator. It is
+ * deliberately narrower than "what a browser tolerates":
+ *
+ *   "/my page.html"   a raw space; browsers re-encode it, nothing else does
+ *   "/a#b.html"       everything from the # is a fragment, not a path
+ *   "/a?b.html"       everything from the ? is a query
+ *   "/100%_x.html"    a bare % is a malformed escape; decodeURIComponent throws
+ *   "/../secret"      climbs out of the output directory
+ *   "/a//b.html"      an empty segment, which no walker agrees on
+ *
+ * Reject the whole value rather than the first bad character, because a partial
+ * accept is how "/my page.html" became the published URL "/my" in the first
+ * place — silently, and identically in every check that then looked for it.
+ */
+const PERMALINK_SAFE = /^\/[A-Za-z0-9._~/-]*$/;
+
+function permalinkFault(value) {
+  if (!value.startsWith("/")) return "it must begin with \"/\"";
+  if (/\s/.test(value)) return "it contains whitespace, which a URL cannot hold";
+  if (!PERMALINK_SAFE.test(value)) {
+    return "it contains characters that would need percent-encoding — use only " +
+      "letters, digits, and - _ . ~ /";
+  }
+  if (value.includes("//")) return "it has an empty path segment";
+  if (value.split("/").some((segment) => segment === "." || segment === "..")) {
+    return "a \".\" or \"..\" segment climbs outside the output directory";
+  }
+  return null;
+}
+
+/**
  * The slugs the built-in pages in eleventy_njk/ already publish at.
  *
  * Read from those files rather than listed here, so adding a page to
@@ -110,11 +151,17 @@ function builtInPages(root) {
       } catch {
         continue;
       }
-      const value = firstToken(block, "permalink");
+      const value = wholeValue(block, "permalink");
       if (!value) continue;
 
+      // A computed permalink — blog-tag.njk writes its under `eleventyComputed:`
+      // and blog.njk's lives in blog.11tydata.js — is not readable here at all,
+      // and must not be half-read either: a template expression is not a name
+      // worth reserving, and reserving a garbled one would rename a page that
+      // does not actually collide with anything. Those two are covered by
+      // RESERVED_EXTRA and GENERATED_PREFIXES above.
       const clean = value.replace(/^['"]|['"]$/g, "");
-      if (clean.startsWith("/")) permalinks.add(clean);
+      if (permalinkFault(clean) === null) permalinks.add(clean);
     }
   }
 
@@ -158,8 +205,21 @@ const reportedCycles = new Set();
  * set of already-visited real paths is what keeps a link pointing back up the
  * tree from recursing forever; a cycle is reported rather than ignored, since a
  * silently truncated walk is a silently missing page.
+ *
+ * `includeHidden` is for the one caller that has to see what the others skip.
+ * The status check walks these same folders to report a file that is on disk
+ * and in no page, and it counts the hidden ones so it can say "N files in
+ * hidden folders were not published" — a walk that dropped them would report
+ * zero and read as though a vault had none.
+ *
+ * This is the ONLY tree walker in the build. There were four, and they
+ * disagreed: two of them decided a directory with `entry.isDirectory()`, which
+ * is false for a symlink, so a linked-in vault folder was invisible to exactly
+ * the check meant to catch a page nobody published. One of them also had no
+ * hidden-file rule at all, and published `.obsidian/` and `.DS_Store` out of
+ * every post folder.
  */
-export function walkFiles(dir, { prefix = "", seen = null, out = [] } = {}) {
+export function walkFiles(dir, { prefix = "", seen = null, out = [], includeHidden = false } = {}) {
   const visited = seen ?? new Set();
 
   let real;
@@ -193,7 +253,7 @@ export function walkFiles(dir, { prefix = "", seen = null, out = [] } = {}) {
   }
 
   for (const entry of entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
-    if (isHidden(entry.name)) continue;
+    if (!includeHidden && isHidden(entry.name)) continue;
     const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
     const full = path.join(dir, entry.name);
 
@@ -207,7 +267,7 @@ export function walkFiles(dir, { prefix = "", seen = null, out = [] } = {}) {
     }
 
     if (stats.isDirectory()) {
-      walkFiles(full, { prefix: relative, seen: visited, out });
+      walkFiles(full, { prefix: relative, seen: visited, out, includeHidden });
     } else if (stats.isFile()) {
       out.push(relative);
     }
@@ -461,15 +521,17 @@ function applyDeclaredPermalinks(records, builtInPermalinks) {
 
     const value = record.declared.replace(/^['"]|['"]$/g, "");
 
-    // Anything that is not a site-absolute path is refused rather than guessed
-    // at. `permalink: false` is the case this really catches: Eleventy reads it
-    // as "write nothing", and quietly honouring that here would unpublish a page
-    // through a field that looks like it is only about naming.
-    if (!value.startsWith("/")) {
+    // Anything that is not a well-formed site-absolute path is refused rather
+    // than guessed at. `permalink: false` is the case this really catches:
+    // Eleventy reads it as "write nothing", and quietly honouring that here
+    // would unpublish a page through a field that looks like it is only about
+    // naming. See permalinkFault() for what else is refused and why.
+    const fault = permalinkFault(value);
+    if (fault !== null) {
       log.warn(
         "slugs",
-        `permalink "${value}" is not a site-absolute path and was not used`,
-        `${record.inputPath} — it must begin with "/"; the page keeps ${record.permalink}`,
+        `permalink "${value}" is not a usable URL and was not used`,
+        `${record.inputPath} — ${fault}; the page keeps ${record.permalink}`,
       );
       continue;
     }
@@ -537,7 +599,10 @@ function readSourceMeta(root, inputPath) {
   } catch {
     return { draft: false, declared: null };
   }
-  return { draft: isDraft(block), declared: firstToken(block, "permalink") };
+  // The WHOLE value, not the first token: a permalink is checked for being
+  // well formed below, and a token has already thrown away the part that
+  // would have failed the check.
+  return { draft: isDraft(block), declared: wholeValue(block, "permalink") };
 }
 
 /**

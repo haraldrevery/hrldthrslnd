@@ -34,8 +34,12 @@ site_generate — build the static site.
 
   site_generate [options]
 
-  --drafts      include pages marked "draft: true" (for local preview only)
+  --drafts      include pages marked "draft: true" (for local preview only).
+                The output is marked _site/.draft-build so a deploy script can
+                refuse to publish it.
   --no-css      skip the Tailwind step and reuse the existing css/main.css
+  --strict      do not publish a build the status check found errors in. The
+                staged build is kept, report included, so it can be inspected.
   --check-only  do not build; just inspect the existing _site and rewrite
                 _site/status_check.html. This is what status_check.sh runs.
   --quiet       suppress notes; warnings and errors are always shown
@@ -54,6 +58,7 @@ function parseArgs(argv) {
     includeDrafts: flags.has("--drafts"),
     css: !flags.has("--no-css"),
     checkOnly: flags.has("--check-only"),
+    strict: flags.has("--strict"),
     quiet: flags.has("--quiet"),
   };
 }
@@ -75,11 +80,24 @@ function tailwindBinary(root) {
 function buildCss(root) {
   const binary = tailwindBinary(root);
   if (!binary) {
-    log.warn(
-      "css",
-      "no Tailwind binary found — reusing the existing css/main.css",
-      "expected tailwindcss-linux-x64 or tailwindcss-windows-x64.exe in the project root",
-    );
+    // With a sheet already on disk this is a warning: the build reuses it, and
+    // the site renders — just possibly without a class a template added since.
+    // With no sheet at all it is an error, because the site then ships with no
+    // stylesheet whatsoever and "reusing the existing css/main.css" would be a
+    // reassurance about a file that is not there.
+    const sheet = path.join(root, "css/main.css");
+    const detail =
+      "expected tailwindcss-linux-x64 or tailwindcss-windows-x64.exe in the project root";
+
+    if (fs.existsSync(sheet)) {
+      log.warn(
+        "css",
+        "no Tailwind binary found — reusing the existing css/main.css, which may be stale",
+        detail,
+      );
+    } else {
+      log.error("css", "no Tailwind binary found and no css/main.css to fall back on", detail);
+    }
     return false;
   }
 
@@ -149,27 +167,20 @@ function copyPostAssets(root, outputDir, includeDrafts) {
    * convention — a folder of assets is a folder of assets, and a page that
    * ships a data file or an embedded fragment should get it.
    *
-   * Symlinks are neither followed nor copied: `isDirectory()` and `isFile()`
-   * are both false for one, which is the behaviour this had before and also
-   * what keeps a link back up the tree from making this recurse forever.
+   * walkFiles() rather than a local walk, which is what this used to be. The
+   * local one decided a directory with `entry.isDirectory()` — false for a
+   * symlink, so a linked-in folder of photographs was silently not copied — and
+   * had no hidden-file rule at all, so a post folder carrying `.DS_Store` or an
+   * `.obsidian/` published both to /<slug>/. Every other pass in the build
+   * already skipped those; this was the one that did not, and the readme sells
+   * that rule as a safety property.
    */
-  const collect = (dir, prefix = "") => {
-    const found = [];
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) {
-        found.push(...collect(path.join(dir, entry.name), relative));
-        continue;
-      }
-      if (!entry.isFile()) continue;
-      if (prefix === "") {
-        const ext = path.extname(entry.name).toLowerCase();
-        if (ext === ".html" || ext === ".json") continue;
-      }
-      found.push(relative);
-    }
-    return found;
-  };
+  const collect = (dir) =>
+    walkFiles(dir).filter((relative) => {
+      if (relative.includes("/")) return true; // below the top level: keep
+      const ext = path.extname(relative).toLowerCase();
+      return ext !== ".html" && ext !== ".json";
+    });
 
   for (const record of registry.all) {
     if (record.kind !== "custom_post") continue;
@@ -357,6 +368,28 @@ function swapIntoPlace(outputDir, stagingDir, previousDir) {
   fs.rmSync(previousDir, { recursive: true, force: true });
 }
 
+/**
+ * Mark an output directory as a preview build that must not be deployed.
+ *
+ * `--drafts` builds into the same _site as a production run and replaces it, so
+ * afterwards nothing on disk distinguished a site with unpublished pages in it
+ * from the real one. `bun run dev` is exactly that command, which makes it the
+ * everyday case rather than a corner one: build a preview, rsync _site later,
+ * and the drafts are public with nothing having said a word.
+ *
+ * A dot-file, so the walkers skip it and it never becomes a published page. It
+ * cannot stop a deploy on its own — it gives a deploy script something to test
+ * for, and a person something to find.
+ */
+function markAsDraftBuild(outputDir) {
+  fs.writeFileSync(
+    path.join(outputDir, ".draft-build"),
+    "This output was built with --drafts and contains pages marked `draft: true`.\n" +
+      `Built ${new Date().toISOString()}\n` +
+      "Do not deploy it. Run site_generate with no flags for a publishable build.\n",
+  );
+}
+
 /** Remove a staging directory left behind by a failed or interrupted build. */
 function discardStaging(stagingDir) {
   try {
@@ -447,6 +480,7 @@ async function main() {
   // Checksums are computed from the shipped bytes, so this has to come after
   // every asset is in place.
   fillDownloadHashes(stagingDir);
+  if (options.includeDrafts) markAsDraftBuild(stagingDir);
 
   console.log("\n[5/5] status check");
   const status = await runStatusCheck({
@@ -458,16 +492,52 @@ async function main() {
   });
   const reportWritten = writeStatusPage({ outputDir: stagingDir, settings, status, images });
 
-  // Everything succeeded, so the staged build becomes the site.
-  swapIntoPlace(outputDir, stagingDir, previousDir);
-
   const seconds = ((Date.now() - started) / 1000).toFixed(2);
   const summary = log.summary();
+
+  /*
+   * Whether the staged build replaces the live one.
+   *
+   * Without --strict it always does, which is what a local build wants: you
+   * asked for the site, and looking at what actually came out is how you fix
+   * what the report is complaining about. The exit code still says the build
+   * had errors.
+   *
+   * --strict is for the deploy. Note what it CANNOT do: the report explaining
+   * the errors is written into the staging directory, so refusing the swap also
+   * withholds the diagnosis — _site would keep the report from the last good
+   * build, which describes a different site. So the staging directory is kept
+   * rather than discarded, and the path to the report inside it is printed.
+   * Refusing to publish and refusing to explain are not the same thing.
+   */
+  const publish = !(options.strict && summary.errors > 0);
+  if (publish) swapIntoPlace(outputDir, stagingDir, previousDir);
 
   console.log(
     `\nBuilt ${status.pageCount} page(s) in ${seconds}s — ` +
       `${summary.errors} error(s), ${summary.warnings} warning(s).`,
   );
+
+  if (!publish) {
+    console.log(
+      `\nNOT PUBLISHED — --strict, and the status check found ${summary.errors} error(s).\n` +
+        `  _site still holds the previous build.\n` +
+        (reportWritten
+          ? `  The build that was refused is in ${path.basename(stagingDir)}/, report at ` +
+            `${path.basename(stagingDir)}/status_check.html\n`
+          : `  The build that was refused is in ${path.basename(stagingDir)}/\n`) +
+        `  Delete it once you have read it; the next build will not reuse it.\n`,
+    );
+    process.exit(1);
+  }
+
+  if (options.includeDrafts) {
+    console.log(
+      "\nDRAFT BUILD — _site contains pages marked `draft: true`.\n" +
+        "  Marked with _site/.draft-build. Do not deploy this output.\n",
+    );
+  }
+
   console.log(
     reportWritten
       ? "Report: _site/status_check.html\n"

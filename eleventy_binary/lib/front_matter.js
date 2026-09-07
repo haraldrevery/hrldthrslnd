@@ -47,6 +47,30 @@ const FRONT_MATTER = /^---[^\S\r\n]*\r?\n([\s\S]*?)\r?\n---[^\S\r\n]*(?:\r?\n|$)
  */
 const withoutBom = (source) => String(source ?? "").replace(/^﻿/, "");
 
+/**
+ * A fence that names a language: `---json`, `---js`, `---toml`.
+ *
+ * gray-matter reads all of these, and Eleventy therefore does too, but the
+ * pattern above matches only a bare `---` — so a file written with one looked
+ * to this pre-pass like a file with no front matter at all, and the divergence
+ * ran in the damaging direction. `{"draft": true}` behind a `---json` fence is
+ * a draft to Eleventy, which holds the page back, and NOT a draft here, so the
+ * registry published the page's co-located assets beside a page that was never
+ * written. A declared permalink in one was invisible in the same way.
+ *
+ * Detected rather than parsed. Teaching this module a second syntax would make
+ * it the YAML parser its own header says it must not become, and the divergence
+ * would simply move to whatever gray-matter supports next. Naming the file and
+ * refusing it is the honest answer: the author gets one clear error instead of
+ * a page that half-exists.
+ */
+const LANGUAGE_FENCE = /^---[ \t]*([A-Za-z][A-Za-z0-9]*)[ \t]*\r?\n/;
+
+/** Whether a source opens with a front matter fence this module cannot read. */
+export function hasUnsupportedFence(source) {
+  return LANGUAGE_FENCE.test(withoutBom(source));
+}
+
 /** The raw front matter body, or null when the file has no block at all. */
 export function frontMatterBlock(source) {
   const match = withoutBom(source).match(FRONT_MATTER);
@@ -144,6 +168,26 @@ export function firstToken(block, key) {
 
   const token = withoutComment(line).trim().split(/\s+/)[0];
   return token ? token : null;
+}
+
+/**
+ * The WHOLE value a top-level key carries, trimmed, or null when absent.
+ *
+ * The counterpart to firstToken() above, for the one caller that must not
+ * silently discard what follows the first token. `permalink: /my page.html`
+ * read as a token is "/my" — which begins with a slash, so every check the
+ * registry ran on it passed, and the page published at an extensionless URL
+ * nobody asked for. Worse, the registry is the sole authority on permalinks
+ * (each input folder's .11tydata.js computes `permalink` from it), so the
+ * unpublished check looked for "/my", found it, and reported all clear.
+ *
+ * A caller deciding whether a value is WELL FORMED needs the whole thing; one
+ * that only wants a boolean or a date is better served by the token.
+ */
+export function wholeValue(block, key) {
+  const line = valueLine(block, key);
+  if (line == null) return null;
+  return withoutComment(line).trim();
 }
 
 /**

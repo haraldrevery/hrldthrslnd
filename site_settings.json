@@ -6,7 +6,7 @@
   "language": "en",
   "date_locale": "en-GB",
   "author": "SITE_NAME",
-  "posts_per_page": 40,
+  "posts_per_page": 10,
   "default_image": "/image/2016mountains_and_clouds.jpg",
   "nav": [
     {
@@ -68,6 +68,7 @@
     "max_image_bytes": 900000,
     "max_image_min_bytes": 80000,
     "max_gif_bytes": 3000000,
-    "max_video_bytes": 40000000
+    "max_video_bytes": 40000000,
+    "max_audio_bytes": 20000000
   }
 }

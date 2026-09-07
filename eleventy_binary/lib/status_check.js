@@ -12,9 +12,15 @@ import fs from "node:fs";
 import path from "node:path";
 
 import log from "./log.js";
-import { getRegistry, SOURCES } from "./slugs.js";
-import { escapeHtml, isRaster, isDecodable, extensionOf } from "./paths.js";
-import { frontMatterBlock, firstToken, hasKey, hasValue } from "./front_matter.js";
+import { getRegistry, SOURCES, walkFiles } from "./slugs.js";
+import { DEFAULTS } from "./settings.js";
+import {
+  escapeHtml, isRaster, isDecodable, isMinName, extensionOf,
+  RASTER_EXT, VIDEO_EXT, AUDIO_EXT,
+} from "./paths.js";
+import {
+  frontMatterBlock, firstToken, hasKey, hasValue, hasUnsupportedFence,
+} from "./front_matter.js";
 import { humanBytes } from "./format.js";
 
 const REQUIRED_FRONT_MATTER = ["title", "date", "description", "tags"];
@@ -85,6 +91,21 @@ function safeDecode(value) {
   }
 }
 
+/**
+ * Every target an in-page link can land on: `id` anywhere, plus `name` on an
+ * anchor, which is how pages written before HTML5 name their sections and which
+ * browsers still honour.
+ */
+const FRAGMENT_TARGET = /\bid\s*=\s*(?:"([^"]*)"|'([^']*)')|<a\b[^>]*?\bname\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+
+/**
+ * Fragments that resolve without any element carrying them.
+ *
+ * An empty fragment and "#top" both mean the top of the document per the HTML
+ * spec's "indicated part" rules, so neither is broken.
+ */
+const ALWAYS_RESOLVES = new Set(["", "top"]);
+
 /** The candidate URLs in one attribute value. Only srcset holds more than one. */
 function attributeRefs(attr, value) {
   if (attr !== "srcset") return [value];
@@ -97,27 +118,32 @@ function attributeRefs(attr, value) {
     .filter(Boolean);
 }
 
-function walk(dir, base = dir, out = []) {
-  if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(full, base, out);
-    else if (entry.isFile()) out.push(path.relative(base, full));
-  }
-  return out;
-}
 
 
 /**
  * Front matter checks run against the SOURCE files, because that is where the
  * author would fix them. Everything else runs against the output.
+ *
+ * A draft is still checked, but every finding on one is a warning and says so.
+ * The two obvious alternatives are both wrong: skipping drafts hides a missing
+ * title until the day you publish, which is the worst moment to find out, while
+ * treating them as errors fails a production build over a page that is not in
+ * it — this pass reads the sources, so it sees drafts that no other check does.
+ * Reporting them as warnings keeps the information and stops it blocking a
+ * build of a site the page is not part of.
  */
-function checkFrontMatter(root, findings) {
+function checkFrontMatter(root, findings, includeDrafts) {
   const registry = getRegistry(root);
 
   for (const record of registry.all) {
     const file = path.join(root, record.inputPath);
     if (!fs.existsSync(file)) continue;
+
+    // A draft being built with --drafts IS on the site, so it is held to the
+    // same standard as everything else around it.
+    const unpublished = record.draft && !includeDrafts;
+    const level = (want) => (unpublished ? "warn" : want);
+    const page = unpublished ? `${record.inputPath} (draft)` : record.inputPath;
 
     const source = fs.readFileSync(file, "utf8");
     const block = frontMatterBlock(source);
@@ -128,18 +154,34 @@ function checkFrontMatter(root, findings) {
       // different instruction. Saying "no front matter" for an unterminated
       // fence sends the author to add a block they can plainly see is already
       // there.
-      const opensWithFence = /^\uFEFF?---/.test(source);
+      // Three different mistakes that all arrive here as "no block", and each
+      // needs its own instruction — "no front matter" sent an author to add a
+      // block they could plainly see was already there.
+      const unsupportedFence = hasUnsupportedFence(source);
+      const opensWithFence = !unsupportedFence && /^\uFEFF?---/.test(source);
+
       findings.push({
-        level: "error",
+        // An unsupported fence is an error even on a draft. Eleventy DOES read
+        // it, so the two disagree about whether the page is a draft at all —
+        // and the registry, not knowing, publishes its co-located assets beside
+        // a page Eleventy never wrote. Downgrading that to a warning would be
+        // quiet about the one case where quiet is the actual damage.
+        level: unsupportedFence ? "error" : level("error"),
         scope: "front matter",
-        page: record.inputPath,
-        message: opensWithFence
-          ? "the front matter block is not closed"
-          : "no YAML front matter block",
-        detail: opensWithFence
-          ? "the opening `---` has no matching `---` line — a `...` terminator " +
-            "does not close one; the page cannot get a title, date, tags or social image"
-          : "the page cannot get a title, date, tags or social image",
+        page,
+        message: unsupportedFence
+          ? "the front matter fence names a language this build cannot read"
+          : opensWithFence
+            ? "the front matter block is not closed"
+            : "no YAML front matter block",
+        detail: unsupportedFence
+          ? "`---json`, `---js` and the like are read by Eleventy but not by the " +
+            "registry, so the two disagree about whether this page is a draft and " +
+            "where it publishes — rewrite the block as plain YAML behind a bare `---`"
+          : opensWithFence
+            ? "the opening `---` has no matching `---` line — a `...` terminator " +
+              "does not close one; the page cannot get a title, date, tags or social image"
+            : "the page cannot get a title, date, tags or social image",
       });
       continue;
     }
@@ -147,9 +189,9 @@ function checkFrontMatter(root, findings) {
     for (const key of REQUIRED_FRONT_MATTER) {
       if (!hasValue(block, key)) {
         findings.push({
-          level: key === "title" || key === "date" ? "error" : "warn",
+          level: level(key === "title" || key === "date" ? "error" : "warn"),
           scope: "front matter",
-          page: record.inputPath,
+          page,
           // A key written with no value is its own mistake and reads nothing
           // like a forgotten line, so it is worth naming separately.
           message: hasKey(block, key) ? `"${key}" has no value` : `missing "${key}"`,
@@ -167,7 +209,7 @@ function checkFrontMatter(root, findings) {
       findings.push({
         level: "warn",
         scope: "front matter",
-        page: record.inputPath,
+        page,
         message: hasKey(block, "image") ? '"image" has no value' : 'missing "image"',
         detail: "falls back to the site default for the card and Open Graph image",
       });
@@ -178,7 +220,7 @@ function checkFrontMatter(root, findings) {
       findings.push({
         level: "warn",
         scope: "front matter",
-        page: record.inputPath,
+        page,
         message: `"draft: ${draftValue}" is not true or false`,
         detail: "anything other than true is treated as published",
       });
@@ -188,13 +230,16 @@ function checkFrontMatter(root, findings) {
     // is a perfectly good date — Eleventy parses the quoted string into the same
     // day as the bare one — so warning about it was crying wolf. The draft check
     // above deliberately does NOT do this: there, quoting changes the meaning.
-    const dateValue = firstToken(block, "date")?.replace(/^['"]|['"]$/g, "");
-    if (dateValue && !/^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+    // `updated` is optional and holds the same shape as `date`; it is what the
+    // sitemap's <lastmod> and the JSON-LD dateModified use when it is there.
+    for (const key of ["date", "updated"]) {
+      const value = firstToken(block, key)?.replace(/^['"]|['"]$/g, "");
+      if (!value || /^\d{4}-\d{2}-\d{2}/.test(value)) continue;
       findings.push({
         level: "warn",
         scope: "front matter",
-        page: record.inputPath,
-        message: `date "${dateValue}" is not YYYY-MM-DD`,
+        page,
+        message: `${key} "${value}" is not YYYY-MM-DD`,
         detail: "sort order and the sitemap may be wrong",
       });
     }
@@ -203,17 +248,47 @@ function checkFrontMatter(root, findings) {
 
 /** Broken local links, missing media, images without alt text. */
 function checkHtml(outputDir, findings, stats) {
-  const htmlFiles = walk(outputDir).filter((f) => f.endsWith(".html"));
+  const htmlFiles = walkFiles(outputDir).filter((f) => f.endsWith(".html"));
   stats.pageCount = htmlFiles.length;
 
   for (const relative of htmlFiles) {
     const rawHtml = fs.readFileSync(path.join(outputDir, relative), "utf8");
-    const pageUrl = `/${relative.split(path.sep).join("/")}`;
+    const pageUrl = `/${relative}`;
 
     // Commented-out markup is not a reference. The block test pages carry
     // example <source> and <img> tags inside comments on purpose, and flagging
     // those as broken links would train the author to ignore this report.
     const html = rawHtml.replace(/<!--[\s\S]*?-->/g, "");
+
+    // --- in-page links land on something -----------------------------------
+    /**
+     * Checked here and not in the loop below, which skips a bare "#…" because
+     * it resolves to no FILE. That skip was the whole check: a link to a
+     * section that was renamed, or never given an id, resolved to nothing and
+     * was reported by nobody, so four pages shipped with dead contents links.
+     *
+     * Same-page only. A fragment on ANOTHER page needs every page's ids in hand
+     * before any page can be judged, which is a second pass over the output;
+     * the cross-page form is rarer and the same-page form is where the rot is.
+     */
+    const targets = new Set();
+    for (const found of html.matchAll(FRAGMENT_TARGET)) {
+      const value = found[1] ?? found[2] ?? found[3] ?? found[4];
+      if (value) targets.add(value);
+    }
+
+    for (const found of html.matchAll(/<a\b[^>]*?\bhref\s*=\s*(?:"(#[^"]*)"|'(#[^']*)')/gi)) {
+      const fragment = safeDecode(quotedValue(found).slice(1));
+      if (ALWAYS_RESOLVES.has(fragment) || targets.has(fragment)) continue;
+
+      findings.push({
+        level: "error",
+        scope: "broken link",
+        page: pageUrl,
+        message: `#${fragment}`,
+        detail: "no element on this page has that id",
+      });
+    }
 
     // --- local references resolve to a real file ---------------------------
     const pageDir = path.dirname(path.join(outputDir, relative));
@@ -320,36 +395,102 @@ function checkHtml(outputDir, findings, stats) {
   }
 }
 
+/**
+ * Settings the template shipped with and nobody changed.
+ *
+ * Compared against settings.js's own DEFAULTS rather than against literals, so
+ * this cannot drift from them. Only the fields a stranger sees are checked: the
+ * site URL is baked into every canonical, og:url, JSON-LD publisher, sitemap
+ * <loc> and the Sitemap: line of robots.txt, and the name is the title suffix
+ * on every page. A build that publishes "https://example.com" is not a broken
+ * build — it just is not this site's — so these are warnings.
+ */
+function checkSettings(settings, findings) {
+  const placeholders = [
+    { key: "url", detail: "every canonical, og:url, sitemap <loc> and robots.txt Sitemap: line points at it" },
+    { key: "name", detail: "it is the title suffix on every page and the og:site_name" },
+  ];
+
+  for (const { key, detail } of placeholders) {
+    if (String(settings[key]) !== String(DEFAULTS[key])) continue;
+    findings.push({
+      level: "warn",
+      scope: "settings",
+      page: "site_settings.json",
+      message: `"${key}" is still the template default, "${DEFAULTS[key]}"`,
+      detail,
+    });
+  }
+
+  // Not a placeholder, but the same class of thing: an unusable value that
+  // nothing else reports. `absolute` builds every outward-facing URL from this.
+  if (settings.url && !/^https?:\/\/[^/]+$/i.test(settings.url)) {
+    findings.push({
+      level: "warn",
+      scope: "settings",
+      page: "site_settings.json",
+      message: `"url" is not a bare origin: "${settings.url}"`,
+      detail: "it should look like https://example.org, with no path and no trailing slash",
+    });
+  }
+}
+
+/**
+ * The budget a file is held to, by what the file IS rather than where it sits.
+ *
+ * This used to be a list of four folders — image/, image_min/, gif/, video/ —
+ * which is the legacy layout and no longer where most media lives. A photograph
+ * beside a note publishes to /<note-folder>/, a post folder's media publishes to
+ * /<slug>/, and audio/ never had a budget at all: all of it was exempt from the
+ * limits site_settings.json declares, and none of it counted toward the asset
+ * weight the report prints. Keying on the extension covers every layout at once
+ * and cannot fall behind a new one.
+ *
+ * A `_min` name is the compressed counterpart and is held to the thumbnail
+ * budget wherever it lives, which is the whole point of generating one.
+ */
+function budgetFor(relative, limits) {
+  const ext = extensionOf(relative);
+  if (ext === ".gif") return { limit: limits.max_gif_bytes, label: "gif" };
+  if (VIDEO_EXT.has(ext)) return { limit: limits.max_video_bytes, label: "video" };
+  if (AUDIO_EXT.has(ext)) return { limit: limits.max_audio_bytes, label: "audio" };
+  if (RASTER_EXT.has(ext)) {
+    return isMinName(relative)
+      ? { limit: limits.max_image_min_bytes, label: "thumbnail" }
+      : { limit: limits.max_image_bytes, label: "photograph" };
+  }
+  return null; // svg, fonts, css, js: counted below, but no budget is declared
+}
+
 /** Oversized assets, and _min counterparts that blew the budget. */
 function checkAssets(outputDir, settings, findings, stats) {
   const limits = settings.status_check;
-  const checks = [
-    { dir: "image", limit: limits.max_image_bytes, label: "photograph" },
-    { dir: "image_min", limit: limits.max_image_min_bytes, label: "thumbnail" },
-    { dir: "gif", limit: limits.max_gif_bytes, label: "gif" },
-    { dir: "video", limit: limits.max_video_bytes, label: "video" },
-  ];
 
-  for (const check of checks) {
-    const dir = path.join(outputDir, check.dir);
-    for (const relative of walk(dir)) {
-      const size = fs.statSync(path.join(dir, relative)).size;
-      stats.totalAssetBytes += size;
-      stats.assetCount += 1;
-      if (size <= check.limit) continue;
+  // One walk of the whole output. "Asset" is everything that is not a page,
+  // which is the only definition that stays true as the layout changes — an
+  // allowlist of folders is what let the weight figure drift from the site's
+  // real weight in the first place.
+  for (const relative of walkFiles(outputDir)) {
+    if (extensionOf(relative) === ".html") continue;
 
-      findings.push({
-        level: "warn",
-        scope: "asset size",
-        page: `/${check.dir}/${relative.split(path.sep).join("/")}`,
-        message: `${check.label} is ${humanBytes(size)}`,
-        detail: `over the ${humanBytes(check.limit)} budget in site_settings.json`,
-      });
-    }
+    const size = fs.statSync(path.join(outputDir, relative)).size;
+    stats.totalAssetBytes += size;
+    stats.assetCount += 1;
+
+    const budget = budgetFor(relative, limits);
+    if (!budget || !Number.isFinite(budget.limit) || size <= budget.limit) continue;
+
+    findings.push({
+      level: "warn",
+      scope: "asset size",
+      page: `/${relative}`,
+      message: `${budget.label} is ${humanBytes(size)}`,
+      detail: `over the ${humanBytes(budget.limit)} budget in site_settings.json`,
+    });
   }
 
   // Every image/ file should have its image_min/ counterpart in the output.
-  const sources = walk(path.join(outputDir, "image"));
+  const sources = walkFiles(path.join(outputDir, "image"));
   for (const relative of sources) {
     if (!isRaster(relative)) continue;
     const ext = extensionOf(relative);
@@ -369,7 +510,7 @@ function checkAssets(outputDir, settings, findings, stats) {
     findings.push({
       level: makeable ? "error" : "warn",
       scope: "image mirror",
-      page: `/image/${relative.split(path.sep).join("/")}`,
+      page: `/image/${relative}`,
       message: "no _min counterpart in the output",
       detail: makeable
         ? "galleries and cards will fall back to the full-resolution file"
@@ -451,8 +592,9 @@ function checkUnpublished(root, outputDir, includeDrafts, findings) {
     const dir = path.join(root, source.dir);
     if (!fs.existsSync(dir)) continue;
 
-    for (const relative of walk(dir)) {
-      const posix = relative.split(path.sep).join("/");
+    // includeHidden, because this walk exists to see what the others skip: the
+    // hidden ones are counted and reported once below rather than dropped.
+    for (const posix of walkFiles(dir, { includeHidden: true })) {
       const name = posix.slice(posix.lastIndexOf("/") + 1);
       if (!source.match(name)) continue;
       if (/\.11tydata\.(js|json|cjs|mjs)$/i.test(name)) continue;
@@ -496,7 +638,8 @@ export async function runStatusCheck({ root, outputDir, settings, images, includ
     return { findings, ...stats };
   }
 
-  checkFrontMatter(root, findings);
+  checkSettings(settings, findings);
+  checkFrontMatter(root, findings, includeDrafts);
   checkHtml(outputDir, findings, stats);
   checkAssets(outputDir, settings, findings, stats);
   checkSlugs(root, findings);

@@ -113,7 +113,26 @@ export function minFileName(file) {
   return `${base}_min.jpg`;
 }
 
-/** Normalise a slug: lowercase, non-alphanumerics collapsed to underscores. */
+/**
+ * Normalise a slug: lowercase, non-alphanumerics collapsed to underscores.
+ *
+ * KNOWN LIMITATION, and deliberately not fixed: the output alphabet is ASCII
+ * a-z0-9 only, so this is Latin-centric. NFKD plus the combining-marks strip
+ * folds the accented Latin letters onto their bases — "Café" is "cafe",
+ * "naïve résumé" is "naive_resume" — but a name written in Hebrew, Arabic,
+ * Greek or any CJK script has no ASCII base to fold onto: every character is
+ * removed by the `[^a-z0-9]` collapse and the whole name becomes "untitled".
+ * A folder of such notes therefore collides on one slug and is separated only
+ * by the `_2`, `_3` suffixes the registry assigns. `ß` becomes `stra_e` rather
+ * than `strasse` for the same reason — NFKD does not decompose it.
+ *
+ * Widening the combining-marks range would change nothing: it is not the marks
+ * that are lost, it is the base letters. A real fix is transliteration, and it
+ * cannot be applied to a site that already exists — every slug it improved
+ * would be a URL that moved, which is the single harm slugs.js is built to
+ * prevent. An author with non-Latin filenames should set `permalink:` per page,
+ * which is checked and honoured; see permalinkFault() in slugs.js.
+ */
 export function slugify(value) {
   return String(value)
     .normalize("NFKD")

@@ -17,6 +17,7 @@ import {
   hasKey,
   hasValue,
   firstToken,
+  wholeValue,
   isDraft,
 } from "../eleventy_binary/lib/front_matter.js";
 
@@ -127,6 +128,25 @@ describe("firstToken", () => {
   test("a # that does not follow whitespace is part of the value", () => {
     const b = frontMatterBlock("---\ntitle:#1\n---\n");
     expect(firstToken(b, "title")).toBe("#1");
+  });
+});
+
+describe("wholeValue", () => {
+  test("keeps everything after the colon, where firstToken keeps one token", () => {
+    const b = frontMatterBlock("---\npermalink: /my page.html\n---\n");
+    expect(firstToken(b, "permalink")).toBe("/my");
+    expect(wholeValue(b, "permalink")).toBe("/my page.html");
+  });
+
+  test("a trailing comment is still discounted", () => {
+    const b = frontMatterBlock("---\npermalink: /a.html # for now\n---\n");
+    expect(wholeValue(b, "permalink")).toBe("/a.html");
+  });
+
+  test("an absent key is null; a key with no value is the empty string", () => {
+    const b = frontMatterBlock("---\npermalink:\ntitle: t\n---\n");
+    expect(wholeValue(b, "nothing")).toBeNull();
+    expect(wholeValue(b, "permalink")).toBe("");
   });
 });
 

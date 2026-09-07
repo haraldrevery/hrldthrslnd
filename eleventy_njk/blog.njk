@@ -9,7 +9,8 @@ description: Every entry, newest first.
 {% import "card.njk" as cards %}
 
 <section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
-  <h1 class="display">Journal</h1>
+  {# `title` carries the page number from page 2 onward — see blog.11tydata.js #}
+  <h1 class="display">{{ title }}</h1>
 
   {% include "tag_filter.njk" %}
 

@@ -188,7 +188,7 @@ https://www.example.com
 [ref1]: https://example.com "Reference Link Title"
 
 ### Relative Link
-[Go to Section 10](#10-horizontal-rules)
+[Go to Section 9](#9-horizontal-rules)
 
 ---
 

@@ -15,6 +15,7 @@ import crypto from "node:crypto";
 
 import log from "./log.js";
 import { humanBytes } from "./format.js";
+import { walkFiles } from "./slugs.js";
 
 const DOWNLOAD_ATTR = /\bdata-download\s*=\s*"([^"]+)"/gi;
 
@@ -39,16 +40,6 @@ function digests(filePath) {
     sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
     sha512: crypto.createHash("sha512").update(bytes).digest("hex"),
   };
-}
-
-function walkHtml(dir, base = dir, out = []) {
-  if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkHtml(full, base, out);
-    else if (entry.isFile() && entry.name.endsWith(".html")) out.push(path.relative(base, full));
-  }
-  return out;
 }
 
 /**
@@ -80,23 +71,57 @@ function outerRange(html, attrIndex) {
     depth += match[1] === "/" ? -1 : 1;
     if (depth === 0) {
       const close = html.indexOf(">", match.index);
-      return { start: open, end: close === -1 ? html.length : close + 1 };
+      return {
+        start: open,
+        end: close === -1 ? html.length : close + 1,
+        // The element's CONTENT, between the two tags. fill() below rewrites
+        // exactly this span.
+        innerStart: openEnd + 1,
+        innerEnd: match.index,
+      };
     }
   }
   return null;
 }
 
-/** Replace the text content of the first element carrying `attr` in `inner`. */
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Replace the text content of the first element carrying `attr` in `inner`.
+ * Returns null when there is no such element to fill.
+ *
+ * Uses outerRange()'s depth counting rather than matching the next closing tag.
+ * The old pattern here ended at `[\s\S]*?(</\2>)` — the first `</span>` after
+ * the opening one — which is the exact mistake outerRange() exists to document
+ * and avoid twenty lines above: an element carrying data-filesize that happens
+ * to wrap a same-tag element got its digest written into the middle of the
+ * block instead of into the element that asked for it. It also matched nothing
+ * at all for a void element and returned the input unchanged, so a download
+ * block that never received its checksum said so nowhere.
+ *
+ * The search runs over the comment-masked copy for the same reason the caller's
+ * does: `<!-- put the hash in a [data-filesize] element -->` is documentation,
+ * and the documentation in these blocks names the very attributes being looked
+ * for. Masking preserves offsets, so the slice indices are still good against
+ * the original.
+ */
 function fill(inner, attr, value) {
-  const pattern = new RegExp(`(<([a-z]+)\\b[^>]*\\b${attr}[^>]*>)[\\s\\S]*?(</\\2>)`, "i");
-  return inner.replace(pattern, `$1${value}$3`);
+  const locator = new RegExp(`<[a-zA-Z][a-zA-Z0-9]*\\b[^>]*?(\\b${escapeRegExp(attr)})`, "i");
+  const found = locator.exec(maskComments(inner));
+  if (!found) return null;
+
+  const attrIndex = found.index + found[0].length - found[1].length;
+  const range = outerRange(maskComments(inner), attrIndex);
+  if (!range) return null;
+
+  return inner.slice(0, range.innerStart) + value + inner.slice(range.innerEnd);
 }
 
 export function fillDownloadHashes(outputDir) {
   let filled = 0;
   const cache = new Map();
 
-  for (const relative of walkHtml(outputDir)) {
+  for (const relative of walkFiles(outputDir).filter((f) => f.endsWith(".html"))) {
     const file = path.join(outputDir, relative);
     const html = fs.readFileSync(file, "utf8");
     if (!html.includes("data-download")) continue;
@@ -132,10 +157,29 @@ export function fillDownloadHashes(outputDir) {
         if (!cache.has(assetPath)) cache.set(assetPath, digests(assetPath));
         const { size, sha256, sha512 } = cache.get(assetPath);
 
+        // A block need not carry all three, so a missing slot is not a fault;
+        // one that is present and could not be written into is. fill() answers
+        // null for both, so the two are told apart by asking whether the
+        // attribute is in the block at all.
         let updated = block;
-        updated = fill(updated, "data-filesize", humanBytes(size));
-        updated = fill(updated, 'data-sha="256"', sha256);
-        updated = fill(updated, 'data-sha="512"', sha512);
+        const missed = [];
+        for (const [attr, value] of [
+          ["data-filesize", humanBytes(size)],
+          ['data-sha="256"', sha256],
+          ['data-sha="512"', sha512],
+        ]) {
+          const next = fill(updated, attr, value);
+          if (next !== null) updated = next;
+          else if (maskComments(updated).includes(attr)) missed.push(attr);
+        }
+
+        if (missed.length > 0) {
+          log.warn(
+            "downloads",
+            `checksum element could not be filled: ${missed.join(", ")}`,
+            `${relative} — the element carrying it has no closing tag`,
+          );
+        }
 
         out += updated;
         filled += 1;

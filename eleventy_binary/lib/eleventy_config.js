@@ -234,7 +234,13 @@ export function createConfig({
     // that differs from its published location.
     // Stylesheets are copied by name rather than by copying css/ wholesale,
     // because input.css and theme.css are build inputs and must not ship.
-    for (const sheet of ["main.css", "main_max.css", "katex.css", "glightbox.min.css"]) {
+    //
+    // css/main_max.css is deliberately NOT here. update_css.sh writes it beside
+    // main.css and its own header calls it "for troubleshooting only, never
+    // linked" — but it was in this list, so 98 kB of expanded CSS shipped on
+    // every build, larger than the 76 kB minified sheet it shadows and linked
+    // by nothing. It is still generated; it just stays a local working file.
+    for (const sheet of ["main.css", "katex.css", "glightbox.min.css"]) {
       if (fs.existsSync(path.join(root, "css", sheet))) {
         eleventyConfig.addPassthroughCopy({ [`css/${sheet}`]: `css/${sheet}` });
       }

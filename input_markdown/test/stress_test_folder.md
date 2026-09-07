@@ -109,7 +109,7 @@ console.log(stress([1, 2, 3, 4, 5]));
 
 [A link to Anthropic](https://www.haraldrevery.com)
 
-![Alt text for an image](/photos/2025/2025djupvatnet_dalsnibba_lake_1.jpg "Optional title")
+![Alt text for an image](/image/2016mountains_and_clouds.jpg "Optional title")
 
 Autolink: <https://haraldrevery.com>
 

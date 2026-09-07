@@ -9,7 +9,14 @@ import fs from "node:fs";
 import path from "node:path";
 import log from "./log.js";
 
-const DEFAULTS = {
+/**
+ * Exported so the status check can tell "the author chose this" from "the
+ * template shipped with this". `url` and `name` in particular reach a crawler
+ * before they reach a reader — canonical, og:url, every <loc> in the sitemap,
+ * the publisher block in the JSON-LD and the Sitemap: line in robots.txt — and
+ * nothing anywhere reported that they had never been changed.
+ */
+export const DEFAULTS = {
   name: "SITE_NAME",
   short_name: "SITE",
   description: "",
@@ -41,6 +48,9 @@ const DEFAULTS = {
     max_image_min_bytes: 80000,
     max_gif_bytes: 3000000,
     max_video_bytes: 40000000,
+    // Audio had no limit at all while audio/ was a published asset folder, so
+    // nothing ever reported an oversized one.
+    max_audio_bytes: 20000000,
   },
 };
 

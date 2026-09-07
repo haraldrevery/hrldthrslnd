@@ -3,7 +3,11 @@ layout: base.njk
 permalink: /404.html
 title: Not found
 description: That page does not exist.
+# Kept out of collections, which is also what keeps it out of the sitemap —
+# collections.sitemap is built from getAll(), which excluded pages never enter.
 eleventyExcludeFromCollections: true
+# Belt and braces for a host that serves this file with a 200 rather than a 404.
+robots: noindex
 ---
 <section class="matte-stage" style="position:relative; overflow:hidden; min-height:60vh; display:grid; place-items:center;">
   <div class="editorial-grid" aria-hidden="true"></div>

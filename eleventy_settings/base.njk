@@ -8,6 +8,13 @@
 <meta name="generator" content="site_generate">
 {% if author or settings.author %}<meta name="author" content="{{ author or settings.author }}">{% endif %}
 <link rel="canonical" href="{{ page.url | absolute }}">
+{# Opt-in only. A page sets `robots:` in its front matter when it should not be
+   indexed — the 404 page is the one that ships with it, because a server that
+   answers it with 200 instead of 404 would otherwise get it indexed as a real
+   page. Nothing else needs the tag, so nothing else emits it. #}
+{%- if robots %}
+<meta name="robots" content="{{ robots }}">
+{%- endif %}
 
 {# Open Graph / social. The thumbnail is the compressed counterpart, which is
    what every social scraper wants anyway.
@@ -85,7 +92,9 @@
   "description": {{ (description or settings.description) | jsonify | safe }},
   "image": {{ socialImage | jsonify | safe }},
   "datePublished": {{ (date | isoDate) | jsonify | safe }},
-  "dateModified": {{ (date | isoDate) | jsonify | safe }},
+  {#- `updated:` in the front matter when an entry has been edited since; the
+      publish date otherwise, which is true until the first edit. -#}
+  "dateModified": {{ ((updated or date) | isoDate) | jsonify | safe }},
   "inLanguage": {{ settings.language | jsonify | safe }},
   "keywords": {{ (tags or []) | jsonify | safe }},
   "mainEntityOfPage": { "@type": "WebPage", "@id": {{ page.url | absolute | jsonify | safe }} },

@@ -257,6 +257,37 @@ describe("buildRegistry — declared permalinks", () => {
     expect(registry.bySlug.get("b").permalink).toBe("/b.html");
   });
 
+  test("a value a URL cannot hold is refused whole, not truncated", () => {
+    // The value used to be read as its first whitespace-delimited token, so
+    // "/my page.html" became "/my" — which begins with a slash, passed every
+    // check, and published the page at an extensionless URL nobody asked for.
+    // The registry is the sole authority on permalinks (each input folder's
+    // .11tydata.js computes `permalink` from it), so the unpublished check
+    // looked for "/my", found it, and reported all clear.
+    const root = project({
+      "input_markdown/a.md": withPermalink("/my page.html"),
+      "input_markdown/b.md": withPermalink('"/quoted space.html"'),
+      "input_markdown/c.md": withPermalink("/a?b.html"),
+      "input_markdown/d.md": withPermalink("/a#b.html"),
+      "input_markdown/e.md": withPermalink("/100%_guide.html"),
+      "input_markdown/f.md": withPermalink("/../escape.html"),
+      "input_markdown/g.md": withPermalink("/a//b.html"),
+    });
+    const registry = quietly(() => buildRegistry(root));
+    for (const name of ["a", "b", "c", "d", "e", "f", "g"]) {
+      expect(registry.bySlug.get(name).permalink).toBe(`/${name}.html`);
+      expect(registry.bySlug.get(name).declaredPermalink).toBeUndefined();
+    }
+  });
+
+  test("the unreserved characters a URL can hold are still accepted", () => {
+    const root = project({
+      "input_markdown/a.md": withPermalink("/notes/2026-06.my_page~1.html"),
+    });
+    const registry = quietly(() => buildRegistry(root));
+    expect(registry.bySlug.get("a").permalink).toBe("/notes/2026-06.my_page~1.html");
+  });
+
   test("two pages cannot claim one URL; the loser keeps its slug", () => {
     const root = project({
       "input_markdown/a.md": withPermalink("/shared.html"),
