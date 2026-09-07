@@ -71,3 +71,101 @@ x^2 \sin\left(\frac{1}{x}\right), & \text{if } x \neq 0, \\
 \end{cases} $$
 
 This function is differentiable everywhere, but its derivative is not continuous at the origin, serving as an important counterexample in real analysis. Finally, the natural logarithm and its relation to the harmonic series appear in the asymptotic expansion $ H_n = \sum_{k=1}^{n} \frac{1}{k} \sim \ln n + \gamma $, where $\gamma$ is the Euler-Mascheroni constant. This elegantly illustrates how discrete sums often approximate continuous integrals.
+
+The most common and powerful way to create plots in Python is by using the **Matplotlib** library, often alongside **Seaborn** (which is built on top of Matplotlib and makes things look a bit prettier by default).
+
+If you don't have them installed yet, you'll need to run this in your terminal first:
+
+```bash
+pip install matplotlib seaborn numpy
+
+```
+
+Here are three snippets for the most common types of plots.
+
+### 1. Basic Line Plot
+
+Great for showing trends over time or continuous data.
+
+```python
+import matplotlib.pyplot as plt
+
+# Your data
+x = [1, 2, 3, 4, 5]
+y = [10, 14, 8, 25, 18]
+
+# Create the line plot
+plt.plot(x, y, color='blue', marker='o', linestyle='-', linewidth=2)
+
+# Add labels and a title
+plt.title("My First Line Plot")
+plt.xlabel("Days")
+plt.ylabel("Sales")
+
+# Add a grid for easier reading
+plt.grid(True, linestyle='--', alpha=0.6)
+
+# Display the plot on your screen
+plt.show()
+
+```
+
+---
+
+### 2. Scatter Plot
+
+Perfect for showing the relationship or distribution between two different variables. This snippet uses `numpy` to generate some random data.
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Generate 50 random data points
+x = np.random.rand(50)
+y = np.random.rand(50)
+
+# Generate random colors and sizes for each point
+colors = np.random.rand(50)
+sizes = 1000 * np.random.rand(50)
+
+# Create the scatter plot
+plt.scatter(x, y, c=colors, s=sizes, alpha=0.5, cmap='viridis')
+
+plt.title("Randomized Scatter Plot")
+plt.xlabel("X-Axis Value")
+plt.ylabel("Y-Axis Value")
+
+# Show a color scale legend
+plt.colorbar(label="Color Intensity")
+
+plt.show()
+
+```
+
+---
+
+### 3. Bar Chart (using Seaborn)
+
+Seaborn makes categorical plots like bar charts incredibly easy and visually appealing right out of the box.
+
+```python
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Your data
+categories = ['Apples', 'Bananas', 'Cherries', 'Dates']
+values = [25, 40, 15, 30]
+
+# Set a nice visual theme
+sns.set_theme(style="whitegrid")
+
+# Create the bar plot
+sns.barplot(x=categories, y=values, palette="pastel")
+
+plt.title("Fruit Inventory")
+plt.xlabel("Fruit Type")
+plt.ylabel("Quantity in Stock")
+
+plt.show()
+
+```
