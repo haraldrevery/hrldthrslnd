@@ -389,8 +389,8 @@
 
      Tune by eye. 1.54em / 2.13em are simply where the old fixed 2.05rem and
      3.4rem landed, kept so the change of unit moved nothing on screen. */
-  --logo-nav-size:    1.01em;
-  --logo-footer-size: 2.13em;
+  --logo-nav-size:    1.00em;
+  --logo-footer-size: 1.04em;
 
   /* Width divided by height of the artwork. A mask is painted onto a plain
      element, and an element has no intrinsic size to take a ratio from — unlike
@@ -411,7 +411,7 @@
      Tune by eye — that is what they are here for; the optical-shift tokens in
      section 1 are the same kind of knob for type. */
   --logo-nudge-x: 0%;
-  --logo-nudge-y: -6%;
+  --logo-nudge-y: -14%;
 
   /* Reading width cycle (see javascript/reading_width.js). The default is 100%;
      the other five steps only ever apply when JavaScript has set data-width. */

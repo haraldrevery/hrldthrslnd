@@ -420,11 +420,11 @@
   --shell-pad: 1.5rem;
   --shell-pad-lg: 2.5rem;
   --nav-height: 3.6rem;
-  --logo-nav-size: 1.01em;
-  --logo-footer-size: 2.13em;
+  --logo-nav-size: 1.00em;
+  --logo-footer-size: 1.04em;
   --logo-aspect: 1;
   --logo-nudge-x: 0%;
-  --logo-nudge-y: -6%;
+  --logo-nudge-y: -14%;
   --reading-width: 100%;
 }
 @font-face {
