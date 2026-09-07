@@ -3063,8 +3063,25 @@
   .page-link[aria-current="page"] {
     color: var(--ink);
     border-color: transparent;
-    background: var(--grad-flow);
-    background-size: 200% 100%;
+    background: var(--page-accent, var(--c-magenta));
+  }
+  .page-link[aria-current="page"]:nth-child(6n + 2) {
+    --page-accent: var(--c-teal);
+  }
+  .page-link[aria-current="page"]:nth-child(6n + 3) {
+    --page-accent: var(--c-magenta);
+  }
+  .page-link[aria-current="page"]:nth-child(6n + 4) {
+    --page-accent: var(--c-amber);
+  }
+  .page-link[aria-current="page"]:nth-child(6n + 5) {
+    --page-accent: var(--c-violet);
+  }
+  .page-link[aria-current="page"]:nth-child(6n + 6) {
+    --page-accent: var(--c-orange);
+  }
+  .page-link[aria-current="page"]:nth-child(6n + 1) {
+    --page-accent: var(--c-mint);
   }
   .page-link[aria-disabled="true"] {
     opacity: 0.35;

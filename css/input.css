@@ -4473,12 +4473,32 @@
                 border-color var(--dur-fast) var(--ease-liquid);
   }
   .page-link:hover, .page-link:focus-visible { color: var(--fg); border-color: var(--fg); }
+  /* The current page's chip is one flat hue rather than --grad-flow. A
+     seven-stop gradient on a 2.5rem square reads as decoration; a single
+     colour reads as a marker.
+
+     Which hue is decided by position, not by the template: the previous-page
+     control is always the first child of .pagination, so page N is child
+     N + 1, and the palette cycles every six pages. Deterministic, so a page
+     keeps its colour across reloads and rebuilds, and no JavaScript runs. The
+     order below is scattered instead of walking the spectrum so consecutive
+     pages look unrelated.
+
+     Six colours, not the full ten. --c-crimson, --c-azure and --c-ultra sit at
+     4.3:1, 4.3:1 and 2.6:1 against --ink in the light scheme; the six kept all
+     clear 4.5:1 in both schemes. --c-lemon is left out as well — it would be a
+     second yellow next to --c-amber, which weakens the point of the cycle. */
   .page-link[aria-current="page"] {
     color: var(--ink);
     border-color: transparent;
-    background: var(--grad-flow);
-    background-size: 200% 100%;
+    background: var(--page-accent, var(--c-magenta));
   }
+  .page-link[aria-current="page"]:nth-child(6n + 2) { --page-accent: var(--c-teal); }
+  .page-link[aria-current="page"]:nth-child(6n + 3) { --page-accent: var(--c-magenta); }
+  .page-link[aria-current="page"]:nth-child(6n + 4) { --page-accent: var(--c-amber); }
+  .page-link[aria-current="page"]:nth-child(6n + 5) { --page-accent: var(--c-violet); }
+  .page-link[aria-current="page"]:nth-child(6n + 6) { --page-accent: var(--c-orange); }
+  .page-link[aria-current="page"]:nth-child(6n + 1) { --page-accent: var(--c-mint); }
   .page-link[aria-disabled="true"] { opacity: 0.35; pointer-events: none; }
 
   /* -- Status check table ------------------------------------------------------ */
