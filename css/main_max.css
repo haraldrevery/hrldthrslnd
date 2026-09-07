@@ -242,6 +242,9 @@
   .table {
     display: table;
   }
+  .shrink {
+    flex-shrink: 1;
+  }
   .grow {
     flex-grow: 1;
   }
@@ -301,6 +304,7 @@
   --font-display-min: 2.1rem;
   --font-display-fluid: 6.4vw;
   --font-display-max: 5.4rem;
+  --font-display-md: clamp(1.5rem, 3.6vw, 2.9rem);
   --optical-shift-caps: 0.086em;
   --optical-shift-text: 0.030em;
   --step--3: calc(var(--font-text-root) * 0.579);
@@ -580,6 +584,18 @@
       padding-inline: var(--shell-pad-lg);
     }
   }
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  @media (max-width: 47.999rem) {
+    .section-head .btn {
+      font-size: min(var(--step-0), var(--font-display-md));
+    }
+  }
   .display {
     font-family: var(--font-display-family);
     font-size: clamp(var(--font-display-min), var(--font-display-fluid), var(--font-display-max));
@@ -591,7 +607,7 @@
   }
   .display-md {
     font-family: var(--font-display-family);
-    font-size: clamp(1.5rem, 3.6vw, 2.9rem);
+    font-size: var(--font-display-md);
     letter-spacing: calc(var(--font-display-tracking) * 0.72);
     line-height: calc(var(--font-display-leading) + 0.06);
     text-transform: uppercase;
@@ -2173,35 +2189,33 @@
       display: none;
     }
   }
-  @media (min-width: 48rem) {
-    .nav-inner {
-      transition: transform var(--dur-fast) var(--ease-liquid), opacity var(--dur-fast) var(--ease-liquid);
-    }
-    .site-nav::before, .site-nav {
-      transition: opacity var(--dur-fast) var(--ease-liquid), border-color var(--dur-fast) var(--ease-liquid);
-    }
-    html.js-nav-reveal:not(.nav-revealed) .nav-inner {
-      transform: translateY(-100%);
-      opacity: 0;
-    }
-    html.js-nav-reveal:not(.nav-revealed) .site-nav::before {
-      opacity: 0;
-    }
-    html.js-nav-reveal:not(.nav-revealed) .site-nav {
-      border-bottom-color: transparent;
-      pointer-events: none;
-    }
-    html.js-nav-reveal .site-nav:focus-within .nav-inner, html.js-nav-reveal:has(.nav-toggle:checked) .nav-inner {
-      transform: none;
-      opacity: 1;
-    }
-    html.js-nav-reveal .site-nav:focus-within::before, html.js-nav-reveal:has(.nav-toggle:checked) .site-nav::before {
-      opacity: 1;
-    }
-    html.js-nav-reveal .site-nav:focus-within, html.js-nav-reveal:has(.nav-toggle:checked) .site-nav {
-      border-bottom-color: var(--hairline);
-      pointer-events: auto;
-    }
+  .nav-inner {
+    transition: transform var(--dur-fast) var(--ease-liquid), opacity var(--dur-fast) var(--ease-liquid);
+  }
+  .site-nav::before, .site-nav {
+    transition: opacity var(--dur-fast) var(--ease-liquid), border-color var(--dur-fast) var(--ease-liquid);
+  }
+  html.js-nav-reveal:not(.nav-revealed) .nav-inner {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  html.js-nav-reveal:not(.nav-revealed) .site-nav::before {
+    opacity: 0;
+  }
+  html.js-nav-reveal:not(.nav-revealed) .site-nav {
+    border-bottom-color: transparent;
+    pointer-events: none;
+  }
+  html.js-nav-reveal .site-nav:focus-within .nav-inner, html.js-nav-reveal:has(.nav-toggle:checked) .nav-inner {
+    transform: none;
+    opacity: 1;
+  }
+  html.js-nav-reveal .site-nav:focus-within::before, html.js-nav-reveal:has(.nav-toggle:checked) .site-nav::before {
+    opacity: 1;
+  }
+  html.js-nav-reveal .site-nav:focus-within, html.js-nav-reveal:has(.nav-toggle:checked) .site-nav {
+    border-bottom-color: var(--hairline);
+    pointer-events: auto;
   }
   .footer-wordmark {
     display: flex;

@@ -100,7 +100,13 @@ title: false
 {% set featured = collections.posts | limit(5) %}
 {% if featured.length %}
 <section class="shell" style="padding-block:clamp(3rem,8vh,5.5rem);">
-  <header style="display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:1rem;">
+  {# .section-head is the masthead-plus-button row, lifted out of the five
+     inline style properties that used to be on this element. The class is not
+     tidiness: at phone width .display-md sits pinned at its clamp floor while
+     .btn does not shrink at all, so the button was rendering a step larger
+     than the heading beside it — and an inline style cannot be reached by the
+     media query that fixes it. See .section-head in input.css. #}
+  <header class="section-head">
     <h2 class="display-md">Latest</h2>
     {# The site's own button component, same as the way out at the foot of every
        post — the rule draws in under the label and the arrow steps along on

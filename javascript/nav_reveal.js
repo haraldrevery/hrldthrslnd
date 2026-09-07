@@ -5,6 +5,12 @@
  * the hero has the screen to itself, and slides in about half a viewport down.
  * On every other page this does nothing at all.
  *
+ * This applies at every width, phones included. At phone width the bar holds the
+ * only navigation the page has — the wordmark and the menu button — so while a
+ * leading hero owns the screen there is nothing to tap until the reader scrolls.
+ * That is the intended behaviour, not an oversight; the CSS side documents the
+ * three rules that keep it from stranding anyone.
+ *
  * "A full-height hero" means one of the opening sections named in
  * LEAD_SECTIONS below, placed at the top of <main>. Nothing else is touched.
  *

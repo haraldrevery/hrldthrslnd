@@ -232,6 +232,47 @@
   .shell-wide { max-width: none; padding-inline: var(--shell-pad); }
   @media (min-width: 48rem) { .shell-wide { padding-inline: var(--shell-pad-lg); } }
 
+  /* -- Section header: a masthead with a button opposite ---------------------
+     The `Latest / All entries` row on the front page, and any section that
+     wants the same arrangement. It was five inline style properties on the
+     <header> element; it is a class for the reason .hero-copy is one — an
+     inline style cannot be reached by a media query, and the one thing this
+     row needs at phone width is a media query.
+
+     baseline, not center: the two items are type of different sizes and what
+     the eye lines up is the line they sit on, not the middles of their boxes.
+     wrap plus the gap is the fallback for a narrow screen — the button drops
+     under the heading rather than crushing it.
+
+     The button's size is the whole point of the block below. .display-md is a
+     clamp pinned at its 1.5rem floor everywhere under about 711px, while .btn
+     is a flat --step-0 (1.6rem) that does not shrink with the viewport — so on
+     a phone the button came out a step LARGER than the heading it belongs to,
+     in the same face and the same case, and the row read as two headings with
+     the wrong one first. Above that width the heading overtakes it on its own
+     and there is nothing to correct.
+
+     min() rather than a second clamp: it hands the button whichever of the two
+     is smaller, so the button matches the heading exactly wherever the heading
+     is the smaller of the pair and is left at its own size the moment the
+     heading passes it. There is no width at which this makes a button bigger
+     than it was, and no seam at the breakpoint — the two values have already
+     converged by the time the query stops applying.
+
+     Everything on .btn is em-based — the rule that sweeps in under the label,
+     the arrow, its travel on hover — so all of it scales with the label and
+     nothing needs a second rule here. */
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  @media (max-width: 47.999rem) {
+    .section-head .btn { font-size: min(var(--step-0), var(--font-display-md)); }
+  }
+
   /* -- Type --------------------------------------------------------------- */
   .display {
     font-family: var(--font-display-family);
@@ -244,7 +285,9 @@
   }
   .display-md {
     font-family: var(--font-display-family);
-    font-size: clamp(1.5rem, 3.6vw, 2.9rem);
+    /* The value lives in theme.css, because .section-head has to size a button
+       against it — see the note on --font-display-md there. */
+    font-size: var(--font-display-md);
     letter-spacing: calc(var(--font-display-tracking) * 0.72);
     line-height: calc(var(--font-display-leading) + 0.06);
     text-transform: uppercase;
@@ -646,7 +689,7 @@
      There is nothing to slide now: the hero ground already fills the space
      behind the bar, whether or not the bar is drawn.
 
-     Which it is not, on a wide screen, until about half a viewport down — see
+     Which it is not, at any width, until about half a viewport down — see
      "Nav reveal over a leading hero" in section F. That is a later decision
      layered on top of this one and it does not change the geometry here: the
      negative margin is what makes the hero a full viewport tall, and the
@@ -3268,70 +3311,99 @@
      box stays exactly where it was: still sticky, still --nav-height tall,
      nothing reflows on the way in or out.
 
-     Desktop only. The menu button lives inside .nav-inner, so hiding the row
-     on a phone would leave the index with no way into the site at all until
-     the reader scrolled — the bar is the only navigation there is at that
-     width. Above 48rem the links are already on screen and the hero is tall
-     enough for the bar's absence to read as intent.
+     Every width, phones included. This was desktop-only, and the reason it was
+     is still true and worth writing down rather than deleting: the menu button
+     lives inside .nav-inner, so at phone width this hides the ONLY navigation
+     the page has, and a reader landing on the front page has nothing to tap
+     until they have scrolled. That is now the intended behaviour — the hero is
+     the front door and the scroll cue is what it says to do — but it is a
+     decision, not an oversight, and anything added to the bar has to be read
+     against it. Put a control in .nav-inner that a reader might need while the
+     hero owns the screen and it will be invisible there.
+
+     Three things keep that from being a trap, and none of them may be dropped:
+
+       :focus-within    the bar comes back the instant anything in it takes
+                        focus, so the skip link and the wordmark are never a
+                        focus ring on nothing. This is WCAG 2.4.7, not polish,
+                        and it is the entire keyboard path back to the bar at
+                        this width.
+
+       :has(:checked)   a menu opened below the line and still open when the
+                        reader scrolls back up keeps the bar drawn under it.
+                        On a phone the drawer is real, so this matters here in
+                        a way it never did above 48rem — .nav-drawer and
+                        .nav-scrim are siblings of .nav-inner and are NOT
+                        hidden by the transform, and a drawer hanging off a bar
+                        that is not there is the one state this must not reach.
+
+       pointer-events   the header box is still full width at z-index 50. An
+                        invisible bar that swallows taps along the top edge of
+                        the hero is worse on a phone than anywhere else, since
+                        the top edge is where the reader's thumb rests.
+
+     The reveal line is a percentage of the viewport (nav_reveal.js, REVEAL_LINE),
+     so it re-reads itself when the window resizes — which on a phone it does
+     constantly, as the URL bar hides and shows. That is why it is a percentage
+     and not a measured pixel offset: the line stays at the same place on the
+     screen the reader actually has, rather than going stale at the first scroll.
 
      The transitions inherit the global reduced-motion block at the foot of
      this file, which flattens them to instant. The bar then appears and
      disappears at the same line, without the slide. */
-  @media (min-width: 48rem) {
-    .nav-inner {
-      transition:
-        transform var(--dur-fast) var(--ease-liquid),
-        opacity var(--dur-fast) var(--ease-liquid);
-    }
-    .site-nav::before,
-    .site-nav {
-      transition:
-        opacity var(--dur-fast) var(--ease-liquid),
-        border-color var(--dur-fast) var(--ease-liquid);
-    }
+  .nav-inner {
+    transition:
+      transform var(--dur-fast) var(--ease-liquid),
+      opacity var(--dur-fast) var(--ease-liquid);
+  }
+  .site-nav::before,
+  .site-nav {
+    transition:
+      opacity var(--dur-fast) var(--ease-liquid),
+      border-color var(--dur-fast) var(--ease-liquid);
+  }
 
-    html.js-nav-reveal:not(.nav-revealed) .nav-inner {
-      transform: translateY(-100%);
-      opacity: 0;
-    }
-    html.js-nav-reveal:not(.nav-revealed) .site-nav::before { opacity: 0; }
+  html.js-nav-reveal:not(.nav-revealed) .nav-inner {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  html.js-nav-reveal:not(.nav-revealed) .site-nav::before { opacity: 0; }
 
-    /* The colour goes, the border does not: a transparent border still takes
-       its width in layout, so the hero behind it does not jump when the
-       hairline fades.
+  /* The colour goes, the border does not: a transparent border still takes
+     its width in layout, so the hero behind it does not jump when the
+     hairline fades.
 
-       pointer-events matters more than it looks. The header box is still
-       there, still on top at z-index 50, and still the full width of the
-       screen — an invisible bar that swallows clicks along the top edge of the
-       hero is worse than a visible one. */
-    html.js-nav-reveal:not(.nav-revealed) .site-nav {
-      border-bottom-color: transparent;
-      pointer-events: none;
-    }
+     pointer-events matters more than it looks. The header box is still
+     there, still on top at z-index 50, and still the full width of the
+     screen — an invisible bar that swallows clicks along the top edge of the
+     hero is worse than a visible one. */
+  html.js-nav-reveal:not(.nav-revealed) .site-nav {
+    border-bottom-color: transparent;
+    pointer-events: none;
+  }
 
-    /* Focus brings the bar back, and this is a requirement rather than a
-       nicety. The skip link is the first tab stop and the wordmark is the
-       second, so without this a keyboard reader tabs off the skip link and
-       into a bar they cannot see — focus lands somewhere invisible, which is
-       precisely what WCAG 2.4.7 is about. :focus-within on the header covers
-       every control in the row, the open search dropdown included.
+  /* Focus brings the bar back, and this is a requirement rather than a
+     nicety. The skip link is the first tab stop and the wordmark is the
+     second, so without this a keyboard reader tabs off the skip link and
+     into a bar they cannot see — focus lands somewhere invisible, which is
+     precisely what WCAG 2.4.7 is about. :focus-within on the header covers
+     every control in the row, the open search dropdown included.
 
-       The checked toggle is belt and braces: the drawer is struck out above
-       48rem, but a menu opened at phone width and left open across a resize
-       must never end up hanging off a bar that is not drawn. */
-    html.js-nav-reveal .site-nav:focus-within .nav-inner,
-    html.js-nav-reveal:has(.nav-toggle:checked) .nav-inner {
-      transform: none;
-      opacity: 1;
-    }
-    html.js-nav-reveal .site-nav:focus-within::before,
-    html.js-nav-reveal:has(.nav-toggle:checked) .site-nav::before { opacity: 1; }
+     The checked toggle is belt and braces: the drawer is struck out above
+     48rem, but a menu opened at phone width and left open across a resize
+     must never end up hanging off a bar that is not drawn. */
+  html.js-nav-reveal .site-nav:focus-within .nav-inner,
+  html.js-nav-reveal:has(.nav-toggle:checked) .nav-inner {
+    transform: none;
+    opacity: 1;
+  }
+  html.js-nav-reveal .site-nav:focus-within::before,
+  html.js-nav-reveal:has(.nav-toggle:checked) .site-nav::before { opacity: 1; }
 
-    html.js-nav-reveal .site-nav:focus-within,
-    html.js-nav-reveal:has(.nav-toggle:checked) .site-nav {
-      border-bottom-color: var(--hairline);
-      pointer-events: auto;
-    }
+  html.js-nav-reveal .site-nav:focus-within,
+  html.js-nav-reveal:has(.nav-toggle:checked) .site-nav {
+    border-bottom-color: var(--hairline);
+    pointer-events: auto;
   }
 
   /* -- Footer ---------------------------------------------------------------- */

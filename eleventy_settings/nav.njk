@@ -6,14 +6,18 @@
    search_bar.js marks <html> — see section I of input.css.
 
    Two things here now want scripting, and neither is the navigation itself.
-   The search field is one; the other is nav_reveal.js, which on a wide screen
-   holds this bar back over a page that opens with a hero until the reader is
-   about half a viewport into it. Both fail the same way: with scripting off
-   the field is never shown and the bar is never held back, so what is left
-   is a complete nav bar with links that work. Nothing in this file is
-   conditional on it — the markup is identical on every page, and the reveal
-   is entirely a matter of two classes on <html> and the rules in section F
-   that read them. #}
+   The search field is one; the other is nav_reveal.js, which holds this bar
+   back over a page that opens with a hero until the reader is about half a
+   viewport into it. Both fail the same way: with scripting off the field is
+   never shown and the bar is never held back, so what is left is a complete
+   nav bar with links that work. Nothing in this file is conditional on it —
+   the markup is identical on every page, and the reveal is entirely a matter
+   of two classes on <html> and the rules in section F that read them.
+
+   That reveal runs at every width, phones included, and the menu button below
+   goes with the rest of the row when it does. So anything put inside
+   .nav-inner is off screen while a leading hero owns the page: a control a
+   reader might need before they have scrolled does not belong in here. #}
 {% import "search.njk" as search %}
 <header class="site-nav">
   <div class="shell">

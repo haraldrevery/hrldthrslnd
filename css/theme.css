@@ -43,6 +43,16 @@
   --font-display-fluid: 6.4vw;   /* clamp() fluid term                         */
   --font-display-max: 5.4rem;    /* clamp() ceiling                            */
 
+  /* The section masthead, .display-md — a token rather than a literal in its
+     own rule because a second component now has to read it. A section header
+     that pairs this heading with a .btn (see .section-head in input.css) sizes
+     the button against the heading beside it, and the two cannot be allowed to
+     drift apart: below about 711px the clamp is pinned at its floor while the
+     button is not, and the button was coming out LARGER than the heading it
+     belonged to. One value, read twice. .display and .display-sm keep their own
+     arrangements — nothing else needs to know their sizes.                     */
+  --font-display-md: clamp(1.5rem, 3.6vw, 2.9rem);
+
   /* --- Optical vertical centring -------------------------------------------
      These faces put their ink high in the line box. Measured at 200px:
      uppercase caps sit 28px below the box top but 97px above the box bottom,
