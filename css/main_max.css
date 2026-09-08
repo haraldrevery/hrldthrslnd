@@ -293,7 +293,7 @@
   --font-text-family: "Harald Revery Text", Georgia, "Times New Roman", serif;
   --font-text-root: 1.6rem;
   --font-text-tracking: 0.005em;
-  --font-text-leading: 1.68;
+  --font-text-leading: 1.6;
   --font-mono-family: "Harald Revery Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --font-mono-root: 1.6rem;
   --font-mono-tracking: 0.02em;
@@ -321,6 +321,16 @@
   --font-katex-tracking: 0em;
   --font-katex-leading: 1.0;
   --font-katex-display-scale: 0.98;
+}
+@media (max-width: 47.999rem) {
+  :root {
+    --font-text-leading: 1.4;
+    --font-text-root: 1.4rem;
+    --font-mono-leading: 1.4;
+    --font-mono-root: 1.4rem;
+  }
+}
+:root {
   --c-magenta: #ff2d78;
   --c-crimson: #e8192c;
   --c-orange: #ff7a1a;

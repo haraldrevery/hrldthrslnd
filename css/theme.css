@@ -6,6 +6,7 @@
 
    Sections
      1. Typography roots   — per-font size / tracking / leading knobs
+     1b. Mobile leading    — the one type root that differs below the cutover
      2. KaTeX typography   — own metrics; size proportional to section 1
      3. Palette constants  — the fixed chroma hues, identical in both schemes
      4. Light scheme       — semantic tokens
@@ -24,7 +25,7 @@
   --font-text-family: "Harald Revery Text", Georgia, "Times New Roman", serif;
   --font-text-root: 1.6rem;   /* base size all Text-font sizes scale from   */
   --font-text-tracking: 0.005em; /* base letter-spacing                        */
-  --font-text-leading: 1.68;     /* base line-height (unitless)                */
+  --font-text-leading: 1.6;     /* base line-height (unitless)                */
 
   /* --- Harald Revery Mono: mastheads, eyebrows, labels, code --------------- */
   --font-mono-family: "Harald Revery Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -124,6 +125,22 @@
      0.753 x 1.20 = 0.904 of the text root.                                   */
   --font-katex-display-scale: 0.98;
 }
+
+
+
+/* --- 1b. Mobile leading override --------------------------------------------
+
+   Tune by eye on a real phone; that is what the knob is for.                 */
+@media (max-width: 47.999rem) {
+  :root {
+    --font-text-leading: 1.4;   /* desktop is around 1.6 — see the note above        */
+    --font-text-root: 1.4rem;  
+    --font-mono-leading: 1.4;
+    --font-mono-root: 1.4rem;
+   }
+}
+
+
 
 /* -----------------------------------------------------------------------------
    3. PALETTE CONSTANTS
