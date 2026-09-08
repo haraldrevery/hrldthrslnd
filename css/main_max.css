@@ -2243,6 +2243,9 @@
   .site-nav::before, .site-nav {
     transition: opacity var(--dur-fast) var(--ease-liquid), border-color var(--dur-fast) var(--ease-liquid);
   }
+  html.js-nav-reveal-init .nav-inner, html.js-nav-reveal-init .site-nav::before, html.js-nav-reveal-init .site-nav {
+    transition: none;
+  }
   html.js-nav-reveal:not(.nav-revealed) .nav-inner {
     transform: translateY(-100%);
     opacity: 0;
@@ -2901,6 +2904,16 @@
     .hero-stage > .collage-shell {
       align-self: center;
     }
+    .collage-stage {
+      --hero-fade-clear: max(clamp(1.5rem, 4vh, 2.5rem),
+                             calc(var(--hero-fade) * 0.34));
+    }
+    .collage-stage .hero-scroll-cue {
+      --cue-clear: var(--hero-fade-clear);
+    }
+    main > .collage-stage:first-child {
+      padding-top: calc(clamp(2rem, 7vh, 6.5rem) + var(--nav-height) + var(--hairline-width));
+    }
     .collage {
       grid-template-columns: repeat(12, minmax(0, 1fr));
       column-gap: clamp(1rem, 2vw, 1.75rem);
@@ -2931,27 +2944,60 @@
     }
     .collage-rule {
       grid-area: 4 / 1 / 5 / 9;
-      margin-top: clamp(1.5rem, 4vh, 2.5rem);
+      margin-top: clamp(1rem, 3vh, 2.5rem);
       margin-bottom: calc((var(--step--1) - var(--step--2)) * var(--font-mono-leading) / 2);
+    }
+    .collage {
+      --collage-plate: clamp(13rem, 34vh, 27rem);
     }
     .collage-portrait .art-plate {
       aspect-ratio: auto;
-      height: clamp(19rem, 46vh, 27rem);
+      height: var(--collage-plate);
     }
     .collage-landscape .art-plate {
       aspect-ratio: auto;
-      height: clamp(10rem, 24vh, 15rem);
+      height: clamp(7rem, 18vh, 15rem);
     }
     .collage-panel {
-      margin-top: clamp(-15rem, -26vh, -9rem);
+      margin-top: max(calc(var(--collage-plate) * -0.86), clamp(-15rem, -26vh, -9rem));
     }
     .collage-block {
-      margin-top: clamp(-9rem, -15vh, -4rem);
+      margin-top: clamp(-11rem, -20vh, -4rem);
+    }
+    .collage-panel .display {
+      font-size: clamp(var(--font-display-min), min(var(--font-display-fluid), 8.4vh), var(--font-display-max));
+    }
+    .collage-panel .lede {
+      font-size: clamp(var(--step--1), min(var(--step-1), 2.9vh), var(--step-1));
+    }
+    .collage-panel {
+      padding: clamp(1.25rem, min(4vw, 4.2vh), 3rem);
+      --hero-copy-gap-1: clamp(0.75rem, 2vh,   1.25rem);
+      --hero-copy-gap-2: clamp(0.9rem,  2.4vh, 1.5rem);
+      --hero-copy-gap-3: clamp(1.15rem, 3.2vh, 2rem);
     }
     .collage-stamp {
       justify-self: end;
-      margin-top: clamp(-5rem, -9vh, -2.5rem);
+      margin-top: clamp(-6rem, -12vh, -2.5rem);
       translate: clamp(-3.5rem, -4vw, -1rem) 0;
+    }
+  }
+  @media (min-width: 60rem) and (max-width: 75rem) {
+    .collage-panel {
+      grid-area: 2 / 4 / 3 / 13;
+    }
+    .collage-block {
+      grid-area: 2 / 1 / 3 / 4;
+      margin-top: clamp(-16rem, -30vh, -6rem);
+    }
+    .collage-rule {
+      grid-area: 4 / 1 / 5 / 11;
+    }
+    .collage-panel {
+      --hero-actions-gap: clamp(0.75rem, 1.6vw, 1.5rem);
+    }
+    .collage-panel .btn {
+      font-size: var(--step--1);
     }
   }
   .scrubber {

@@ -3617,6 +3617,33 @@
       border-color var(--dur-fast) var(--ease-liquid);
   }
 
+  /* The one frame that must not animate is the first one.
+
+     nav_reveal.js arms .js-nav-reveal from inside the observer's first
+     callback, which is a frame or two AFTER first paint — so on a leading hero
+     the bar has already been drawn at full strength, and the rules below then
+     transition it away. The reveal is meant to be a bar arriving from above as
+     the hero leaves; on load it played that backwards, and a bar retreating off
+     the top of the screen announces the piece of furniture the hero exists to
+     open without. Measured on block_test_page_c: logo, search, all four links
+     and the hairline, drawn over the collage and then sliding out over 0.28s.
+
+     So the script adds .js-nav-reveal-init alongside .js-nav-reveal, flushes
+     style, and drops it again. This rule holds the three transitions off across
+     that single recalc, so the hidden state lands instantly; removing the class
+     afterwards changes no property, so nothing animates on the way out either.
+     Every later crossing of the reveal line transitions normally.
+
+     Scoping the transitions themselves to .js-nav-reveal would NOT do it, and
+     that is worth writing down because it is the obvious first attempt: a
+     transition starts against the AFTER-change style, so a transition-property
+     arriving in the same recalc as the hidden state still runs. The suppressing
+     class has to be removed in a LATER recalc than the one that hides the bar,
+     which is what the flush in the script buys.                              */
+  html.js-nav-reveal-init .nav-inner,
+  html.js-nav-reveal-init .site-nav::before,
+  html.js-nav-reveal-init .site-nav { transition: none; }
+
   html.js-nav-reveal:not(.nav-revealed) .nav-inner {
     transform: translateY(-100%);
     opacity: 0;
@@ -4746,6 +4773,80 @@
        clear which hero is being placed. */
     .hero-stage > .collage-shell { align-self: center; }
 
+    /* -- Making the composition answer to the HEIGHT it is given -------------
+       Everything from here to the end of this block exists because the collage
+       was sized against the width alone, and a hero is a screenful.
+
+       Measured before this, at 1440x900: the section came out 1250px tall
+       against a 900px screen — 350px over — so the ruler AND the scroll cue,
+       which are pinned to the section's bottom rather than the viewport's,
+       landed 170 and 214px below the fold. A "scroll down" you have to scroll
+       to find is the one thing this hero cannot afford. Sweeping the height at
+       1440 wide, the cue did not clear the fold until 1200px and the section
+       did not stop overflowing until 1400 — so this was not a squat-window
+       edge case, it was every laptop and every desktop. The other four heroes
+       on the site measured exactly 900. Only the two compositions overflowed.
+
+       The reason is structural rather than a wrong number anywhere. The plates
+       are vh-driven and shrink correctly; the PANEL is text at a width-driven
+       type scale, so on a short screen it keeps its full height while the
+       stage around it contracts, and the fixed laps cannot absorb the
+       difference. The comment further up this block anticipated the section
+       growing — "the ruler is back on the bottom line beside the scroll cue" —
+       and treated it as the laptop case. It is the normal case.
+
+       So the 350px is taken from everywhere at once, the way the 43rem block
+       in section B takes it from the stages: shorter dissolve, tighter pad,
+       smaller plates, one cap on the masthead, deeper laps. Every value keeps
+       a vh term, and every one of them is written so a TALL screen resolves to
+       what it resolved to before — the ceilings are the old numbers. Nothing
+       below changes a 1440x1400 window, which is where the composition already
+       fit; 1920x1080 was 107px over and is answered by the small end of the
+       same terms. Nothing is hidden and nothing is truncated.                */
+
+    /* The dissolve's clearance. The stage's own 0.55 is written for a column
+       of centred type, which stops well short of the bottom edge and needs the
+       ground under it held clear. The collage's foot is a RULER — a 27px line
+       — and it sits on the bottom content edge deliberately, so it needs about
+       a third of the fade rather than over half. --hero-fade is untouched, so
+       the dissolve itself is the same length; only what is reserved above it
+       moves. 178px to 110px at 900 tall.
+
+       And the cue comes back to the stage's own bottom content edge. The
+       desktop rule in section B pulls it to 0.76 of the clearance, which is
+       right for a stage where the cue is the only thing on that line — but the
+       grid above leaves columns 9 to 12 empty precisely so the cue can sit
+       beside the ruler rather than under it, and 0.76 put it 63px below the
+       ruler at 1440x900. Pinning --cue-clear back to the clearance halves
+       that.
+
+       It does not close it, and the remaining gap is not a bug to chase. The
+       ruler's margin-bottom above — half the leading difference between its
+       labels and the cue's type — is written for the case where the collage
+       exactly fills the stage and its foot IS the content edge. Now that the
+       composition fits with room to spare, `align-self: center` splits the
+       leftover height above and below it, so the ruler floats that half-share
+       clear of the edge the cue is pinned to: 37px at 1440x900, and more on a
+       tall screen. Two absolutely positioned boxes and one centred grid cannot
+       share a baseline at every proportion, and of the two the cue is the one
+       that must stay in its corner — it is pointing at the bottom of the
+       screen, not at the ruler. Read the margin above as the floor of that
+       relationship rather than as a promise about it.                        */
+    .collage-stage {
+      --hero-fade-clear: max(clamp(1.5rem, 4vh, 2.5rem),
+                             calc(var(--hero-fade) * 0.34));
+    }
+    .collage-stage .hero-scroll-cue { --cue-clear: var(--hero-fade-clear); }
+
+    /* The top pad, for the same reason and only on this stage: 10vh of
+       breathing room above a composition that already does not fit is the
+       cheapest 27px on the page. The nav repayment is untouched — that part is
+       not spare, it is what keeps the masthead clear of the bar.             */
+    main > .collage-stage:first-child {
+      padding-top: calc(clamp(2rem, 7vh, 6.5rem)
+                        + var(--nav-height) + var(--hairline-width));
+    }
+
     .collage {
       grid-template-columns: repeat(12, minmax(0, 1fr));
       column-gap: clamp(1rem, 2vw, 1.75rem);
@@ -4776,27 +4877,155 @@
        Both boxes are flush with the stage's bottom content edge, so without it
        the taller cue hangs its baseline below the ruler's; half the difference
        centres the two lines on each other. */
-    .collage-rule      { grid-area: 4 / 1 / 5 / 9; margin-top: clamp(1.5rem, 4vh, 2.5rem);
+    .collage-rule      { grid-area: 4 / 1 / 5 / 9; margin-top: clamp(1rem, 3vh, 2.5rem);
                          margin-bottom: calc((var(--step--1) - var(--step--2))
                                              * var(--font-mono-leading) / 2); }
 
-    .collage-portrait .art-plate  { aspect-ratio: auto; height: clamp(19rem, 46vh, 27rem); }
-    .collage-landscape .art-plate { aspect-ratio: auto; height: clamp(10rem, 24vh, 15rem); }
+    /* The plates. Both ceilings are the old ones, so a screen tall enough for
+       the composition to have fitted in the first place gets exactly the
+       picture it got before — 27rem of portrait, 15rem of landscape. What
+       changes is the slope below that: 46vh and 24vh reached their ceilings at
+       939px and 1000px of viewport, which is to say almost immediately, so
+       every laptop was being handed a plate sized for a screen it did not
+       have. 34vh and 18vh reach the same ceilings at 1271px and 1333px, which
+       is where the section actually stops overflowing.
+
+       The portrait's height is a token because the lap below is bounded
+       against it: a picture that has shrunk must not be lapped by the same
+       absolute margin it was given at full size, or the panel walks over the
+       whole photograph on the shortest screens.                              */
+    .collage { --collage-plate: clamp(13rem, 34vh, 27rem); }
+    .collage-portrait .art-plate  { aspect-ratio: auto; height: var(--collage-plate); }
+    .collage-landscape .art-plate { aspect-ratio: auto; height: clamp(7rem, 18vh, 15rem); }
 
     /* The two laps. The panel rises far enough to cross the landscape's lower
        edge and the portrait's right-hand columns; the block rises just enough
        to sit on the portrait's bottom corner. Both are negative margins on
        in-flow grid items, so each piece still contributes its own height to the
        row and nothing can spill out of the section's bottom edge. */
-    .collage-panel { margin-top: clamp(-15rem, -26vh, -9rem); }
-    .collage-block { margin-top: clamp(-9rem, -15vh, -4rem); }
+    /* The vh clamps are unchanged — and that is a finding, not an oversight.
+
+       The obvious read on this hero is that the laps are the wrong way round:
+       -26vh gets SMALLER in magnitude as the screen shortens, so the pieces
+       overlap less exactly when they need to overlap more. True, and it costs
+       about 40px between 1080 and 768. But deepening the lap cannot be the
+       answer here, because row one is now vh-driven too: take the lap past the
+       plate and the panel simply walks over the photograph. Solved for at
+       1440x900 the lap would have had to reach -307px against a 306px plate,
+       which is a masthead sitting on the composition's top edge with the
+       portrait entirely behind it. The height has to come from the panel,
+       which is where it actually is; see the type rules below.
+
+       What the max() adds is the bound that makes the plate token worth
+       having. max() of two negative lengths picks the one nearer zero, so this
+       reads "lap by the clamp, but never by more than 86% of the picture you
+       are lapping". On every screen the clamp already fits inside that bound
+       and the term is inert — at 1440x900 it is -263 against -234 — so nothing
+       moves today. It is a floor for the short end, where the plate keeps
+       shrinking on 34vh and an absolute -15rem would eventually swallow it
+       whole. Deleting it puts that failure back a few hundred pixels down.  */
+    .collage-panel { margin-top: max(calc(var(--collage-plate) * -0.86),
+                                     clamp(-15rem, -26vh, -9rem)); }
+    .collage-block { margin-top: clamp(-11rem, -20vh, -4rem); }
+
+    /* -- The panel, which is where the 350px actually was --------------------
+       Four blocks of type in a card, and the only piece of the composition
+       whose height nothing was allowed to argue with: .display and .lede are
+       sized off the WIDTH, so at 1440x900 the panel measured 631px — more than
+       the 573px the whole collage had to spend. Every value below keeps its
+       old ceiling, so a screen with the height to afford the full masthead
+       still gets it; what they add is a vh term that caps the type when there
+       is no such height. The pattern is section B's `min(--font-display-fluid,
+       12vh)`, and the reasoning is the one written there: min() against the
+       fluid term means the headline can only ever come out SMALLER than it
+       would have been, so a wide short window never scales it up.
+
+       The numbers, measured at 1440x900: display 244px, lede 140, padding 96,
+       gaps 76. Nothing here reflows the headline or drops a line — the hard
+       break stays, the button row stays on one line, all four blocks stay. */
+    .collage-panel .display {
+      font-size: clamp(var(--font-display-min),
+                       min(var(--font-display-fluid), 8.4vh),
+                       var(--font-display-max));
+    }
+    /* The lede is the one block whose height is set by how much the page had
+       to say rather than by the design — the same note section B makes about
+       the phone. Capped rather than stepped, so it comes down continuously
+       instead of falling a whole step at a breakpoint. */
+    .collage-panel .lede {
+      font-size: clamp(var(--step--1), min(var(--step-1), 2.9vh), var(--step-1));
+    }
+    /* Padding and the three copy gaps. 4vw alone resolved to 57.6px at 1440
+       and was only held to 48 by the ceiling; the vh arm is what makes a short
+       window pay less for the card's margins than a tall one. The ceilings —
+       3rem, and the 1.25/1.5/2rem the panel declares outside this block — are
+       reached at about 1150px of viewport, so a tall screen is untouched. */
+    .collage-panel {
+      padding: clamp(1.25rem, min(4vw, 4.2vh), 3rem);
+      --hero-copy-gap-1: clamp(0.75rem, 2vh,   1.25rem);
+      --hero-copy-gap-2: clamp(0.9rem,  2.4vh, 1.5rem);
+      --hero-copy-gap-3: clamp(1.15rem, 3.2vh, 2rem);
+    }
     /* The stamp rises into the panel's lower right corner rather than sitting
        in clear space below it. Left in its own row it was the only thing on
        that line, which put a band of nothing across the width of the hero. */
-    .collage-stamp { justify-self: end; margin-top: clamp(-5rem, -9vh, -2.5rem);
+    .collage-stamp { justify-self: end; margin-top: clamp(-6rem, -12vh, -2.5rem);
                      /* Pulled in from the right edge so it clears the shell's
                         margin instead of kissing it. */
                      translate: clamp(-3.5rem, -4vw, -1rem) 0; }
+  }
+
+  /* -- The composition between 60rem and 75rem ------------------------------
+     The block above answers the height. This one answers the WIDTH, and it is
+     a separate problem with a separate symptom: three of the collage's rows
+     stop fitting on one line and wrap, which costs height that no vh term can
+     give back because nothing here is short — a 1024x768 window is over its
+     screenful by 249px with every cap above already at work, and 200 of that
+     is three wraps.
+
+     Measured at 1024x768, against the same pieces at 1440:
+
+       .hero-actions   118px, not 41 — three buttons at 592px of type in a
+                       576px column, so the row breaks to three lines
+       .collage-rule    74px, not 27 — two nowrap labels either side of a
+                       12rem track in eight of twelve columns
+       .display        four lines rather than two
+
+     The cause is the same in all three: the panel and the ruler are given a
+     fraction of the twelve columns, and a fraction of 960px is not a fraction
+     of 1440px. The scrubber's own wrap rule stops at 59.999rem — correct for
+     the stacked layout it was written for, and it means nothing above the
+     cutover catches this.
+
+     So the ruler takes two more columns and the button row comes down a step,
+     which is the move section B already makes for the same row on a phone. The
+     cue keeps columns 11 and 12; it is about 150px wide and they are about
+     250px at the bottom of this band, so it still sits beside the ruler rather
+     than under it, which is the arrangement .collage-rule's margin-bottom is
+     computed against.
+
+     75rem rather than the 60rem cutover because that is where the wraps stop,
+     not where the layout changes: at 1200px the panel's column is wide enough
+     for the button row at full size and the band is inert above it.
+
+     What this does NOT do is re-compose. Five pieces on twelve columns at
+     960px is a cramped collage, and the honest answer at the bottom of this
+     band may be the one the 48rem block gives — stop unwinding and change
+     shape. That is a design decision rather than a measurement, so it is left
+     alone; this block takes the wraps out and nothing else.                  */
+  @media (min-width: 60rem) and (max-width: 75rem) {
+    .collage-panel { grid-area: 2 / 4 / 3 / 13; }
+    /* Three columns rather than four, so the panel can have the ninth — and
+       that makes this the tall piece in row two at the bottom of the band
+       (421px at 1024, against the panel's 414), so its lap has to deepen to
+       match or it, not the masthead, sets the row's height. */
+    .collage-block { grid-area: 2 / 1 / 3 / 4;
+                     margin-top: clamp(-16rem, -30vh, -6rem); }
+    .collage-rule  { grid-area: 4 / 1 / 5 / 11; }
+    .collage-panel {
+      --hero-actions-gap: clamp(0.75rem, 1.6vw, 1.5rem);
+    }
+    .collage-panel .btn { font-size: var(--step--1); }
   }
 
   /* -- Scrubber: a segmented ruler ----------------------------------------------

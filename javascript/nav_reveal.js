@@ -98,7 +98,26 @@
       // would hide the bar for the frame before the first callback corrected
       // it, which is a flicker in exactly the case the bar should never have
       // been hidden at all.
-      root.classList.add("js-nav-reveal");
+      //
+      // That recalc is a frame or two after first paint, though, so on a
+      // leading hero the bar HAS been drawn by the time we get here, and the
+      // transitions in input.css would play the reveal backwards: the bar
+      // retreating off the top of a hero it should never have been on. The
+      // init class holds those transitions off while the hidden state lands.
+      //
+      // Reading offsetHeight between the two is the load-bearing line, not a
+      // superstition: it forces style and layout, so the hidden state is
+      // applied WITH transitions suppressed, and the class comes off in a
+      // later recalc that changes no property of its own. Drop the flush and
+      // both class changes coalesce into one recalc, transitions and all, and
+      // the slide is back. Later crossings of the reveal line are untouched —
+      // this branch runs once, on the first callback.
+      if (!root.classList.contains("js-nav-reveal")) {
+        root.classList.add("js-nav-reveal-init");
+        root.classList.add("js-nav-reveal");
+        void root.offsetHeight;
+        root.classList.remove("js-nav-reveal-init");
+      }
     },
     { rootMargin: "-" + REVEAL_LINE + "% 0px 0px 0px", threshold: 0 }
   );
