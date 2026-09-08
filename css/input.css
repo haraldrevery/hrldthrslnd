@@ -4787,8 +4787,21 @@
      in step, which is the trap the original fell into.
 
      Set each segment's share with `flex` in the markup. A segment carrying
-     .seg-rest is painted over in --hairline instead: that is the tail of the
-     ruler, the part not yet accounted for.
+     .seg-rest is VEILED rather than painted over: that is the tail of the
+     ruler, the part not yet accounted for, set back a shade while the gradient
+     keeps running underneath it. The spectrum reaches the end of the track in
+     both schemes — the ruler is one continuous fade, and the tail is a tint
+     laid on it rather than a stop cut into it.
+
+     The literal alpha is deliberate, and it is the one exception to the note
+     above about not hardcoding colour here. --hairline is the token this reads
+     for by name, and it is opaque in the light scheme (#d9d9d6) and translucent
+     in the dark (13% white) — right for the job it IS named for, a 1px rule
+     sitting on the ground, and wrong for this one, where the paint has to let
+     the gradient through. Read directly it cut the light tail to a flat grey
+     while the dark tail kept its colour: one class rendering as two different
+     ideas depending on the visitor's setting. One alpha covers both schemes,
+     and there is still no hex here to keep in step with theme.css.
 
      Decorative, so mark the track aria-hidden and put whatever it measures in
      the labels beside it.                                                     */
@@ -4802,7 +4815,7 @@
   }
   .scrubber > * { display: block; }
   .scrubber .seg-gap { flex: none; width: 2px; background: var(--bg); }
-  .scrubber .seg-rest { background: var(--hairline); }
+  .scrubber .seg-rest { background: rgba(255, 255, 255, 0.13); }
 
   /* -- Offset slices -----------------------------------------------------------
      A numbered row that steps further into the page than the one above it.

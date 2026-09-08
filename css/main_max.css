@@ -2968,7 +2968,7 @@
     background: var(--bg);
   }
   .scrubber .seg-rest {
-    background: var(--hairline);
+    background: rgba(255, 255, 255, 0.13);
   }
   .slice-list {
     display: grid;
