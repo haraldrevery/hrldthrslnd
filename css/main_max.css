@@ -1566,6 +1566,9 @@
     .cine-eyebrow {
       margin-bottom: clamp(1.25rem, 4vh, 2rem);
     }
+    .cine-stage {
+      --logo-hero-size: clamp(5.4rem, 10.5vw, 12.66rem);
+    }
     .cine-rule {
       margin-block: clamp(0.75rem, 2.6vh, 1.5rem);
     }

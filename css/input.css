@@ -2434,6 +2434,28 @@
     .cine-stage { --cine-lockup-gap: clamp(1.25rem, 4vh, 2rem); }
     .cine-eyebrow { margin-bottom: clamp(1.25rem, 4vh, 2rem); }
 
+    /* A bigger mark on a phone. Only the FLOOR moves — the middle and top
+       terms are the root token's, unchanged.
+
+       That is the whole change, because on a phone the floor is the only term
+       that is ever in play: 8.58vw of a 390px screen is 33px, well under even
+       the old 2.47rem floor, so the fluid term has never once been what sized
+       this mark on a handset. Raising it to 3.3rem is a straight 53px, and the
+       vw term does not take over again until about 615px wide — a tablet, not
+       a phone — which is why the two ends still meet with no step at the
+       47.999rem edge of this query. Anything wider than that resolves to the
+       same number it did before.
+
+       Nothing else needs retuning with it. --cine-logo-lift is a fraction of
+       this token and --cine-eyebrow-tail is a fraction of the eyebrow's, so
+       the lockup gaps above and below the mark follow on their own.
+
+       The short-viewport block below deliberately does NOT get the same lift.
+       A phone on its side has ~390px of HEIGHT to spend on the whole card, and
+       the note there is from the last time the mark was allowed to outgrow the
+       name in that orientation. */
+    .cine-stage { --logo-hero-size: clamp(5.4rem, 10.5vw, 12.66rem); }
+
     .cine-rule    { margin-block: clamp(0.75rem, 2.6vh, 1.5rem); }
     .cine-tagline { font-size: clamp(1rem, 2.8vh, 1.25rem); line-height: 1.55; }
     .cine-actions {
