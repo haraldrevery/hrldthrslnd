@@ -15,21 +15,26 @@
 
     <div class="block-two-col" style="align-items:start;">
       <div>
-        {# Same file and same mask as the nav mark, at --logo-footer-size, so
-           there is one artwork to swap for both placements. Hidden from
-           assistive tech because the site name is printed in text beside it.
-           It takes currentColor from the footer's body text, not from the
-           gradient wordmark next to it.
+        {# The name alone. The mark that used to sit beside it now closes the
+           footer from the bottom-right corner — see .footer-baseline below —
+           so this column is type only, and .text-flow is free to carry the
+           gradient without a flat mark beside it to argue with.
 
-           The mark sits OUTSIDE the <p>, not inside it: --logo-footer-size is
-           in em and resolves against the font-size it is inherited at, so
-           inside the display type it would scale with the wordmark instead of
-           with the footer's body text. The .footer-wordmark row centres the
-           two on each other. #}
-        <div class="footer-wordmark">
-          <span class="site-logo footer-logo" aria-hidden="true"></span>
-          <p class="display-sm"><span class="text-flow">{{ settings.name }}</span></p>
-        </div>
+           A link home, like the wordmark in the bar, wearing .link-underline
+           so the drawn rule is the same one every prose link on the site uses.
+           The gradient sits on the <span> INSIDE the anchor and not on the
+           anchor itself — both classes paint a background, and one element
+           cannot serve both. See .footer-name in input.css.
+
+           No aria-label: the visible name is the accessible name, which is
+           what WCAG 2.5.3 asks for and what a voice-control user will say.
+           The bar's wordmark needs one because half of it is a picture; this
+           is text. Two links to "/" on the page is fine. #}
+        {# Kept on one line on purpose: whitespace between <a> and <span> is
+           part of the anchor's inline box, and the underline is drawn to that
+           box — so a newline in here can hang the rule a space wider than the
+           name it belongs to. #}
+        <p class="display-sm"><a class="footer-name link-underline" href="/"><span class="text-flow">{{ settings.name }}</span></a></p>
       </div>
 
       <nav class="footer-nav" aria-label="Footer">
@@ -43,12 +48,32 @@
       </nav>
     </div>
 
-    <p class="micro" style="margin-top:2.5rem; color:var(--fg-faint);">
-      © {{ build.date | year }} {{ settings.author or settings.name }}
-    </p>
+    {# The closing line of the footer, and the mark that ends it. The fine
+       print runs down the left, the mark sits hard against the shell's right
+       edge and is bottom-aligned with the last line of it, so it lands in the
+       corner of the page rather than floating beside the text.
 
-    {% if settings.footer_note %}
-    <p style="margin-top:0.6rem; font-size:var(--step--1); color:var(--fg-muted); max-width:60ch;">{{ settings.footer_note }}</p>
-    {% endif %}
+       Same file and same mask as the nav mark, at --logo-footer-size. It is
+       kept OUTSIDE both <p>s, not tucked into the copyright line: that token
+       is in em and resolves against the font-size it is inherited at, so
+       inside .micro it would come out at the size of the smallest type on the
+       page. Out here it inherits the footer's body size, which is what the
+       token was tuned against.
+
+       Still hidden from assistive tech. It is decoration either way, and the
+       site name is printed in text further up this same footer. #}
+    <div class="footer-baseline">
+      <div>
+        <p class="micro" style="color:var(--fg-faint);">
+          © {{ build.date | year }} {{ settings.author or settings.name }}
+        </p>
+
+        {% if settings.footer_note %}
+        <p style="margin-top:0.6rem; font-size:var(--step--1); color:var(--fg-muted); max-width:60ch;">{{ settings.footer_note }}</p>
+        {% endif %}
+      </div>
+
+      <span class="site-logo footer-logo" aria-hidden="true"></span>
+    </div>
   </div>
 </footer>

@@ -264,6 +264,9 @@
   .italic {
     font-style: italic;
   }
+  .underline {
+    text-decoration-line: underline;
+  }
   .shadow {
     --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
@@ -507,7 +510,7 @@
   --shell-pad-lg: 2.5rem;
   --nav-height: 3.6rem;
   --logo-nav-size: 1.00em;
-  --logo-footer-size: 1.04em;
+  --logo-footer-size: 2.04em;
   --logo-hero-size: clamp(2.47rem, 8.58vw, 10.66rem);
   --logo-aspect: 1;
   --logo-nudge-x: -4%;
@@ -821,7 +824,7 @@
     --icon: url("/svg/cross.svg");
   }
   .link-underline {
-    background-image: linear-gradient(var(--link-underline), var(--link-underline));
+    background-image: var(--link-underline-image, linear-gradient(var(--link-underline), var(--link-underline)));
     background-repeat: no-repeat;
     background-position: 0 100%;
     background-size: 0% 1.5px;
@@ -2113,6 +2116,9 @@
     gap: 0.55rem;
     color: var(--fg);
   }
+  .nav-wordmark:hover, .nav-wordmark:focus-visible {
+    color: var(--fg-muted);
+  }
   .nav-wordmark .site-logo {
     margin-top: calc(var(--optical-shift-caps) * -2);
   }
@@ -2256,14 +2262,23 @@
     border-bottom-color: var(--hairline);
     pointer-events: auto;
   }
-  .footer-wordmark {
+  .footer-baseline {
     display: flex;
-    align-items: center;
-    gap: 0.7rem;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+  .footer-baseline > :first-child {
+    min-width: 0;
   }
   .footer-logo {
     height: var(--logo-footer-size);
     width: calc(var(--logo-footer-size) * var(--logo-aspect));
+  }
+  .footer-name {
+    display: inline;
+    --link-underline-image: var(--grad-flow-b);
   }
   .footer-nav {
     display: flex;

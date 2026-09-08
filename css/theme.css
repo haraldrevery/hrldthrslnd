@@ -590,7 +590,7 @@
      Tune by eye. 1.54em / 2.13em are simply where the old fixed 2.05rem and
      3.4rem landed, kept so the change of unit moved nothing on screen. */
   --logo-nav-size:    1.00em;
-  --logo-footer-size: 1.04em;
+  --logo-footer-size: 2.04em;
   /* The mark over the name on the title card. The odd one out in this group,
      and it has to be: the other two are in em so they track the type they sit
      beside, and this one stands alone over a masthead set in clamp(2.4rem,

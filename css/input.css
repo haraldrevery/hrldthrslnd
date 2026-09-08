@@ -573,8 +573,29 @@
   .icon-cross { --icon: url("/svg/cross.svg"); }
 
   /* -- Links --------------------------------------------------------------- */
+  /* The rule is a background image grown from 0% to 100% width, not a
+     text-decoration, because only a background can be animated open like this.
+
+     Two identical stops is how a flat bar is spelled as an image. Set
+     --link-underline-image on any link to hand it a real gradient instead —
+     see .footer-name. The fallback keeps every other link exactly as it was,
+     so this is a hook rather than a change.
+
+     The hook is a SECOND token and does not replace --link-underline, which
+     must stay a plain <color>: six other rules consume it as one — --btn-accent,
+     .catalogue-row .num, two accent-color declarations and a
+     text-decoration-color — and a linear-gradient() in any of those is invalid
+     and would drop the declaration silently.
+
+     Note what a gradient does here that a flat bar does not. background-size
+     is what animates, and a gradient always spans the width currently drawn,
+     so the arc stays whole and its hues slide as the rule opens rather than
+     each point holding one colour. That is the effect, not a bug; pinning the
+     hues would take an absolutely positioned pseudo-element, which an inline
+     link that wraps across two lines cannot carry. */
   .link-underline {
-    background-image: linear-gradient(var(--link-underline), var(--link-underline));
+    background-image: var(--link-underline-image,
+      linear-gradient(var(--link-underline), var(--link-underline)));
     background-repeat: no-repeat;
     background-position: 0 100%;
     background-size: 0% 1.5px;
@@ -3214,6 +3235,22 @@
     gap: 0.55rem;
     color: var(--fg);
   }
+  /* Hover runs the other way here than it does for the links opposite, and it
+     has to: they rest at --fg-muted and brighten to --fg, and this one already
+     sits at --fg because it is the site's identity rather than one more
+     destination. There is nowhere brighter for it to go, so it steps DOWN to
+     --fg-muted instead — the same two colours and the same --dur-fast
+     transition inherited from .nav-link, travelled in the opposite direction.
+
+     What that buys is feedback that the lockup is a link at all; what it costs
+     is that the pointer briefly puts the name at the same weight as the links
+     it is meant to sit above. That trade is the point of the rule.
+
+     Placed after .nav-link:hover deliberately. Both selectors weigh the same,
+     so this only wins on source order — moving it above that rule silently
+     turns it off. The mark follows through currentColor. */
+  .nav-wordmark:hover,
+  .nav-wordmark:focus-visible { color: var(--fg-muted); }
   /* Cancels, for the mark only, the optical nudge .nav-link applies to every
      item in the bar. That padding exists because these faces put uppercase ink
      high in the line box, so type centred by the browser reads as sitting too
@@ -3602,22 +3639,89 @@
   }
 
   /* -- Footer ---------------------------------------------------------------- */
-  /* The footer mark sits beside the wordmark, the same lockup the bar uses, so
-     mark and name read as one thing in both placements. Bigger here than in the
-     bar — --logo-footer-size against the footer's body text — because the
-     footer has the room the bar does not.
+  /* The closing row: fine print left, the mark in the corner right.
 
-     Centred on each other, not on a baseline: the mark has no baseline. No
-     counter-nudge like .nav-wordmark .site-logo, because the display type here
-     carries none of .nav-link's optical padding for the mark to cancel. */
-  .footer-wordmark {
+     Unlike the bar, the footer does NOT keep mark and name as one lockup. The
+     name is display type at the top of the footer and the mark closes the page
+     from the opposite corner, so the two are read as bookends rather than as
+     one object. The upside is that .text-flow's gradient on the name no longer
+     has a flat monochrome mask sitting against it.
+
+     align-items: flex-end is what makes it a corner rather than a float: the
+     mark bottoms out on the last line of the fine print, whether that is the
+     copyright alone or the optional footer_note under it. justify-content
+     pushes it to the shell's right padding edge.
+
+     No wrap. The mark is about one line of body text tall and carries flex:
+     none from .site-logo, so it costs a couple of rem next to a column that is
+     already capped at 60ch; letting it wrap would drop it to the LEFT margin
+     below the text, which is the one place it must not land. The gap holds the
+     two apart at phone widths instead. */
+  .footer-baseline {
     display: flex;
-    align-items: center;
-    gap: 0.7rem;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-top: 2.5rem;
   }
+  /* A flex item's default min-width is auto, which refuses to shrink below the
+     widest unbreakable thing inside it — a long URL in footer_note would push
+     the mark off the shell's right edge rather than wrap. Same minmax(0, …)
+     reasoning as .block-two-col, in the flex spelling. */
+  .footer-baseline > :first-child { min-width: 0; }
+  /* Bigger than the bar's mark — --logo-footer-size against the footer's body
+     text — because the footer has the room the bar does not. It inherits that
+     body size from .footer-baseline, which is why the mark is a sibling of the
+     fine print rather than a child of it; see the note in footer.njk.
+
+     No colour of its own, deliberately. It takes currentColor from the footer's
+     body text, exactly as it did when it sat beside the name — the move to the
+     corner changed where the mark is, not how brightly it is inked, and a
+     colour pinned here would be one more thing to keep in step with the theme.
+     No counter-nudge like .nav-wordmark .site-logo either: nothing out here
+     carries .nav-link's optical padding for the mark to cancel. */
   .footer-logo {
     height: var(--logo-footer-size);
     width: calc(var(--logo-footer-size) * var(--logo-aspect));
+  }
+
+  /* The name at the top of the footer is a link home, and it wears
+     .link-underline like every other prose link on the site rather than
+     growing a hover of its own — one drawn underline, one component.
+
+     The anchor and the gradient have to be two elements, and that is not a
+     preference. .text-flow paints a gradient into a background and clips it to
+     the glyphs; .link-underline paints its rule into a background too, and
+     grows it from 0% to 100% width. Put both on one element and the second
+     background wins outright — the name loses its gradient and the underline
+     inherits background-clip: text, which crops it to the glyph shapes and
+     leaves nothing to see. So .link-underline rides on the <a> and .text-flow
+     on a <span> inside it.
+
+     inline, not inline-block: the underline is drawn at the bottom of the
+     element's background box, and an inline box in display type hugs the type
+     it contains. Given a block box it would drop to the bottom of the line box
+     instead and float clear of the name.
+
+     The one link on the site that draws its rule as a gradient rather than as
+     flat --link-underline. It is the only link sitting under display type and
+     the only one whose own text is a gradient, so it is where the extra colour
+     is paid for; everywhere else keeps the flat bar through the fallback in
+     .link-underline above.
+
+     A FOUR-stop arc, not --grad-flow. The seven-stop signature is the name's
+     own, through .text-flow directly above this — repeating it in a 1.5px rule
+     would be the same sweep twice over, and section 5 of theme.css already
+     argues that seven hues at that scale read as a rainbow strip rather than
+     as a colour. -b is the arc that ENDS on teal, so the rule still finishes on
+     the colour every other link on the site draws.
+
+     The 115deg tilt those tokens carry is for a card's top edge; at 1.5px tall
+     it projects to within a fraction of a percent of horizontal, so the arc
+     reads left-to-right here. Nothing to correct. */
+  .footer-name {
+    display: inline;
+    --link-underline-image: var(--grad-flow-b);
   }
 
   /* The footer runs its own link list, settings.footer_nav, rather than
