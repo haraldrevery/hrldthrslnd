@@ -631,7 +631,7 @@
      Tune by eye — that is what they are here for; the optical-shift tokens in
      section 1 are the same kind of knob for type. */
   --logo-nudge-x: -4%;
-  --logo-nudge-y: -3%;
+  --logo-nudge-y: -8%; /* negative is up, positive is down*/
 
   /* Reading width cycle (see javascript/reading_width.js). The default is 100%;
      the other five steps only ever apply when JavaScript has set data-width. */

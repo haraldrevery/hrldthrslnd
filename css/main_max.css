@@ -514,7 +514,7 @@
   --logo-hero-size: clamp(2.47rem, 8.58vw, 10.66rem);
   --logo-aspect: 1;
   --logo-nudge-x: -4%;
-  --logo-nudge-y: -3%;
+  --logo-nudge-y: -8%;
   --reading-width: 100%;
 }
 @font-face {
