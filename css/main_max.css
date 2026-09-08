@@ -305,8 +305,8 @@
   --font-display-fluid: 6.4vw;
   --font-display-max: 5.4rem;
   --font-display-md: clamp(1.5rem, 3.6vw, 2.9rem);
-  --optical-shift-caps: 0.086em;
-  --optical-shift-text: 0.030em;
+  --optical-shift-caps: 0.175em;
+  --optical-shift-text: 0.175em;
   --step--3: calc(var(--font-text-root) * 0.579);
   --step--2: calc(var(--font-text-root) * 0.694);
   --step--1: calc(var(--font-text-root) * 0.833);
@@ -511,7 +511,7 @@
   --logo-hero-size: clamp(2.47rem, 8.58vw, 10.66rem);
   --logo-aspect: 1;
   --logo-nudge-x: -4%;
-  --logo-nudge-y: -14%;
+  --logo-nudge-y: -3%;
   --reading-width: 100%;
 }
 @font-face {

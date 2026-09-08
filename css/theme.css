@@ -63,8 +63,8 @@
      block padding on centred single-line controls (buttons, chips, nav links,
      pagination). Tune by eye — that is what they are here for; set them to 0em
      to see the uncorrected version.                                          */
-  --optical-shift-caps: 0.086em;  /* uppercase Mono: half of the 0.172em skew */
-  --optical-shift-text: 0.030em;  /* mixed-case Text: half of the 0.059em skew */
+  --optical-shift-caps: 0.175em;  /* uppercase Mono: half of the 0.172em skew */
+  --optical-shift-text: 0.175em;  /* mixed-case Text: half of the 0.059em skew */
 
   /* --- Derived scale (do not edit; edit the roots above) ------------------- */
   --step--3: calc(var(--font-text-root) * 0.579);
@@ -631,7 +631,7 @@
      Tune by eye — that is what they are here for; the optical-shift tokens in
      section 1 are the same kind of knob for type. */
   --logo-nudge-x: -4%;
-  --logo-nudge-y: -14%;
+  --logo-nudge-y: -3%;
 
   /* Reading width cycle (see javascript/reading_width.js). The default is 100%;
      the other five steps only ever apply when JavaScript has set data-width. */
