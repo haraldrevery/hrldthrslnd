@@ -308,8 +308,8 @@
   --font-display-fluid: 6.4vw;
   --font-display-max: 5.4rem;
   --font-display-md: clamp(1.5rem, 3.6vw, 2.9rem);
-  --optical-shift-caps: 0.175em;
-  --optical-shift-text: 0.175em;
+  --optical-shift-caps: 0.115em;
+  --optical-shift-text: 0.115em;
   --step--3: calc(var(--font-text-root) * 0.579);
   --step--2: calc(var(--font-text-root) * 0.694);
   --step--1: calc(var(--font-text-root) * 0.833);
