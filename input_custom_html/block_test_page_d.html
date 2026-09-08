@@ -17,8 +17,26 @@ draft: false
   and the space around them is left alone. Where C overlaps five pieces, D
   hangs ONE thing and lets the air do the work.
 
-  Four moves, and every one of them is an existing component plus inline
-  tokens — nothing was added to css/input.css for this page:
+  Five moves. Four of them are an existing component plus inline tokens, and
+  the composition is still the argument this page makes: a hero this elaborate
+  needs no stylesheet of its own at a desktop width.
+
+  The fifth is the exception, and it is stated up front rather than buried,
+  because the page used to claim nothing at all was added to css/input.css and
+  that is no longer true. .salon-stage is one media query, below 48rem, that
+  hides four of the pieces below — see "The salon hero on a phone" in
+  input.css. It could not be done from here: an inline style cannot be reached
+  by a media query, which is the same reason .hero-copy and .section-head are
+  components rather than attributes, and putting a <style> block in this file
+  instead is the arrangement the cinematic card was deliberately moved OUT of.
+
+  What the query does and why is documented at the rule. The short version is
+  that .block-two-col unwinds a row into a stack on a phone, so this hero came
+  to 1344px on a 390x844 screen against the one screenful .hero-stage promises,
+  and no amount of tightening reaches that — a phone gets the title and the
+  portrait, which is what the block is.
+
+  The four composition moves, then:
 
     1. The gilded word. .text-flow already gradient-clips and animates its
        fill; the inline `--flow-image: var(--grad-heat)` re-inks it with
@@ -78,8 +96,14 @@ draft: false
 
 <!-- ===== COPY FROM HERE: Hero D — the salon =====
      Must be the FIRST thing in the page: .hero-stage only runs the full
-     viewport height and slides under the nav as main's first child. -->
-<section class="hero-stage">
+     viewport height and slides under the nav as main's first child.
+
+     Keep .salon-stage on the section and the .salon-* classes on the caption
+     and the engraved line. They carry no desktop styling whatsoever — their
+     only job is to be reachable by the phone-width query in input.css that
+     takes this composition down to the title and the portrait. Paste the block
+     without them and it is 1344px tall on a phone. -->
+<section class="hero-stage salon-stage">
   <div class="editorial-grid" aria-hidden="true"></div>
 
   <div class="shell">
@@ -143,15 +167,19 @@ draft: false
 
         <!-- Caption centred under the frame; the top margin clears the
              mount's lower lip. -->
-        <p class="micro hero-in" style="--hero-in-beat:4; margin-top:clamp(1.5rem,3vh,2rem); text-align:center; color:var(--fg-faint);">
+        <p class="micro hero-in salon-plate-caption" style="--hero-in-beat:4; margin-top:clamp(1.5rem,3vh,2rem); text-align:center; color:var(--fg-faint);">
           Plate i — On the stairs · May 2022
         </p>
       </div>
     </div>
 
-    <!-- The engraved line. It sits on the stage's bottom line, so it
-         reserves --hero-cue-lane for the scroll cue beside it. -->
-    <div class="hero-in" style="--hero-in-beat:6; display:flex; align-items:center; gap:clamp(1rem,3vw,1.75rem); margin-top:clamp(1.75rem,5vh,3.25rem); margin-bottom:var(--hero-cue-lane);">
+    <!-- The engraved line. It sits on the stage's bottom line, so it reserves
+         --hero-cue-lane for the scroll cue beside it — see .salon-rule in
+         input.css, which is where its layout lives. It is the one piece of this
+         hero whose style could NOT stay in a style attribute: `display: flex`
+         inline beats `display: none` from a stylesheet whatever the selector,
+         so the phone block could never have hidden it. -->
+    <div class="hero-in salon-rule" style="--hero-in-beat:6;">
       <span class="hairline" aria-hidden="true" style="flex:1;"></span>
       <p class="micro" style="color:var(--fg-faint); text-align:center;">Harald Revery · Established MMXXVI · Variant D of IV</p>
       <span class="hairline" aria-hidden="true" style="flex:1;"></span>
@@ -245,40 +273,6 @@ draft: false
 <!-- ===== COPY TO HERE ===== -->
 
 
-<!-- ===== COPY FROM HERE: Collection note
-     .ink-panel is fixed dark in both schemes — a velvet room inside the page.
-     The stat-grid tiles go transparent so the panel's own ink shows through,
-     and --hairline is retuned for the dark ground, the way variant C does it. -->
-<section class="shell" style="padding-block:clamp(1rem,3vh,2rem) clamp(2rem,5vh,3.5rem);">
-  <div class="ink-panel" style="padding:clamp(2rem,5vw,3.5rem);">
-    <div class="block-two-col" style="align-items:center; gap:clamp(2rem,5vw,3.5rem); --hairline:rgba(255,255,255,0.18);">
-      <blockquote style="margin:0; font-size:var(--step-2); line-height:1.45; border-left:var(--hairline-width) solid rgba(255,255,255,0.35); padding-left:1.5rem; text-align:justify; hyphens:auto;">
-        A gallery is a room that has agreed to stay quiet. The frames do the
-        talking; the wall, the light and the air between them do the rest.
-      </blockquote>
-
-      <div class="stat-grid" style="grid-template-columns:repeat(2, minmax(0, 1fr));">
-        <div style="background:transparent;">
-          <p class="micro" style="color:rgba(244,244,242,0.6);">Frames</p>
-          <p class="display-sm" style="margin-top:0.5rem;">V</p>
-        </div>
-        <div style="background:transparent;">
-          <p class="micro" style="color:rgba(244,244,242,0.6);">Rooms</p>
-          <p class="display-sm" style="margin-top:0.5rem;">II</p>
-        </div>
-        <div style="background:transparent;">
-          <p class="micro" style="color:rgba(244,244,242,0.6);">Scripts</p>
-          <p class="display-sm" style="margin-top:0.5rem;">00</p>
-        </div>
-        <div style="background:transparent;">
-          <p class="micro" style="color:rgba(244,244,242,0.6);">New CSS</p>
-          <p class="display-sm" style="margin-top:0.5rem;">00</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- ===== COPY TO HERE ===== -->
 
 
 <!-- ===== COPY FROM HERE: Catalogue

@@ -462,6 +462,33 @@
     rgba(250, 250, 248, 0.74) 74%,
     rgba(250, 250, 248, 0.88) 100%);
 
+  /* The same wash, thinner, for a photographic HERO that follows the scheme —
+     .hero-stage-photo-adaptive, and only that.
+
+     The two differ because what they hold up is different. --hero-scrim-pale
+     above is tuned for .photo-stage-adaptive, a mid-page band carrying small
+     type and stat tiles over a picture, where the wash has to be heavy enough
+     for a .micro label to sit on it anywhere in the frame. A hero carries four
+     things — an eyebrow, a masthead, one lede and a button row — all of them
+     large, all of them in the middle third where any scrim is thinnest.
+
+     At the heavier alphas the hero read as washed out: the photograph went to
+     near-white under the headline while the middle of the frame looked right,
+     and raising the picture's own opacity barely moved it, because at 0.60 the
+     scrim owns 60% of every pixel no matter what is underneath. Six points off
+     each stop is what actually changes the ground.
+
+     The floor is measured, not judged. Over the darkest ground these alphas can
+     make — a near-black region of the photograph at --hero-photo-opacity under
+     the 42% stop — black type comes out about 7.5:1 and the muted lede about
+     5.0:1. The lede is what caps this: at 0.46 in the middle it drops to 4.4:1
+     and under AA. Do not thin these further without re-measuring that one. */
+  --hero-scrim-pale-thin: linear-gradient(180deg,
+    rgba(250, 250, 248, 0.82) 0%,
+    rgba(250, 250, 248, 0.52) 42%,
+    rgba(250, 250, 248, 0.66) 74%,
+    rgba(250, 250, 248, 0.82) 100%);
+
   --radius: 4px;
   --radius-pill: 999px;
   --hairline-width: 1px;

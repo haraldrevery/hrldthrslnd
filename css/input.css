@@ -703,10 +703,18 @@
      still clears the bar; the nav's z-index (50) keeps it above, since the
      hero is `position: relative` with no z-index of its own. */
   main > .hero-stage:first-child {
-    margin-top: calc(-1 * var(--nav-height));
+    /* --nav-height is the height of .nav-inner, not of the header: .site-nav
+       adds a --hairline-width bottom border underneath it. Pulling up by the
+       token alone left the stage one pixel short of the top of the document,
+       and that pixel was a line of page ground across the top of every hero on
+       the site — pale on a dark hero, dark on a pale one, and most visible on
+       a phone, where the picture is meant to run into the top edge of the
+       screen. Both halves of the pair have to carry it or the copy moves. */
+    margin-top: calc(-1 * (var(--nav-height) + var(--hairline-width)));
     min-height: 100vh;
     min-height: 100svh;
-    padding-top: calc(clamp(3rem, 10vh, 6.5rem) + var(--nav-height));
+    padding-top: calc(clamp(3rem, 10vh, 6.5rem)
+                      + var(--nav-height) + var(--hairline-width));
   }
 
   /* The two masked layers: the ground/scrim, and the photograph beneath it.
@@ -1381,7 +1389,8 @@
                              calc(var(--hero-fade) * 0.42));
     }
     main > .hero-stage:first-child {
-      padding-top: calc(clamp(1.25rem, 4vh, 2.5rem) + var(--nav-height));
+      padding-top: calc(clamp(1.25rem, 4vh, 2.5rem)
+                        + var(--nav-height) + var(--hairline-width));
     }
     .hero-copy {
       --hero-copy-gap-1: clamp(0.85rem, 2vh,   1.5rem);
@@ -1391,6 +1400,41 @@
     }
     .hero-stage .lede { font-size: clamp(var(--step-0),  4.6vw, var(--step-1)); }
     .hero-stage .btn  { font-size: clamp(var(--step--1), 4vw,   var(--step-0)); }
+
+    /* The scroll cue is absolutely positioned, so it takes no space and
+       anything reaching the bottom of the content box is drawn straight
+       underneath it. --hero-cue-lane exists for exactly that, and until now
+       only .collage-rule and .salon-rule spent it — because the token's own
+       note assumed "a hero whose shell holds nothing but type never notices,
+       since centred type stops well short of the bottom edge".
+
+       That assumption is a desktop assumption. On a small screen the type does
+       NOT stop short: it fills the box, and the last line of a wrapped button
+       row is then painted under the cue. Measured at 375x553 the cue sat on
+       "Hero variant A" on block_test_page and on "Variant D" on the cinematic
+       card; at 844x390 it sat on "See variant C" on variant B. Two of those
+       three heroes fit their screen exactly — the collision is not an overflow,
+       which is why tightening the spacing never fixed it.
+
+       Only .cine-card reserves it, and the restraint is the point. The lane is
+       about 36px; spending it on .hero-copy as well was measured and reverted,
+       because that column is the tall one on most of these pages and the margin
+       pushed variant B from 84px over a 375x553 screen to 133, and the salon —
+       which hides its button row at this width and so cannot collide at all —
+       from 7px over to 56, taking its cue off the bottom of the screen. A
+       reserve that creates the overflow it is meant to relieve is not a fix.
+
+       The cinematic card can afford it because it is the shorter composition
+       and because its collision is real rather than an overflow: at 375x553 it
+       fits the screen exactly, with .cine-actions landing on the cue's own
+       line. Fourteen pixels of overflow buys that, and the cue stays on screen.
+
+       The .hero-copy pages are answered the other way, at the source: where one
+       of them collided it was because its hero had never been converted to the
+       component and was still four inline style attributes, so none of the
+       phone rules above reached it. See block_test_page.html. */
+    .hero-actions,
+    .cine-card { margin-bottom: var(--hero-cue-lane); }
   }
 
   /* Short and wide — a phone in landscape, and only that. The block above has
@@ -1414,7 +1458,8 @@
       --hero-fade-clear: max(0.5rem, calc(var(--hero-fade) * 0.42));
     }
     main > .hero-stage:first-child {
-      padding-top: calc(clamp(0.75rem, 3vh, 1.5rem) + var(--nav-height));
+      padding-top: calc(clamp(0.75rem, 3vh, 1.5rem)
+                        + var(--nav-height) + var(--hairline-width));
     }
     .hero-stage .display {
       font-size: clamp(var(--font-display-min),
@@ -1439,6 +1484,142 @@
      — a 390x664 iPhone keeps the full --step-0 lede.                         */
   @media (max-width: 47.999rem) and (max-height: 38rem) {
     .hero-stage .lede { font-size: var(--step--1); }
+  }
+
+  /* -- The salon hero on a phone ---------------------------------------------
+     .salon-stage is block_test_page_d's composition: a column of type and one
+     hung portrait sharing the stage as two voices in a quiet room. It is built
+     entirely from existing components — .hero-copy, .block-two-col, .art-plate,
+     .paper-panel — and at desktop widths this file says nothing about it at
+     all. The class exists for one reason, and only below 48rem.
+
+     The two blocks above cannot fix this hero, and it is worth being precise
+     about why, because their comment says "nothing is hidden and nothing is
+     truncated" and this one hides four things.
+
+     Those blocks tighten a hero whose contents are a COLUMN. This hero's
+     contents are a ROW, and .block-two-col unwinds a row into a stack below
+     48rem — so the phone does not get a tighter version of the composition, it
+     gets both halves of it end to end. Measured at 390x844 the stage came to
+     1344px, 500px past the one screenful .hero-stage exists to be, with the
+     scroll cue 341px below the fold. Tighter gaps cannot reach that: the two
+     tallest pieces are a six-line lede (246px) and the portrait itself
+     (405px), and shrinking the portrait is shrinking the only thing on the
+     page worth looking at.
+
+     So a phone gets a different composition rather than a squeezed one — the
+     same judgement .collage-stage makes for itself further down this file, and
+     for the same measurement. What is left is the masthead and the hung
+     portrait: the title and the picture, which is what the block is.
+
+     WHAT GOES, AND WHY EACH ONE CAN
+
+       .eyebrow        "Variant D · The salon" — a label on the composition,
+                       and below 48rem there is no composition left to label.
+                       It went in the second pass, when the scroll cue turned
+                       out to be landing inside the photograph on every phone
+                       but a tall one; the space it frees is what pays for the
+                       cue's lane at the foot of this block, so the hero stays
+                       one screenful rather than growing by the reserve.
+
+       .lede           the composition's own argument, and the one block whose
+                       height is set by how much there was to say rather than
+                       by the design. The page below the hero opens by making
+                       the same point in .prose, so nothing is lost that the
+                       reader does not meet again one screen later.
+
+       .hero-actions   the row this hero can least afford (88px plus its gap,
+                       wrapping to two lines at 390px) and the one that is
+                       purely a shortcut: every destination in it is either the
+                       gallery immediately below the cue or a sibling page the
+                       nav bar carries. Note that the bar is itself held back
+                       over a leading hero at this width — see "Nav reveal" in
+                       section F — so on a phone this hero deliberately offers
+                       nothing to tap but the scroll cue. That is the front-door
+                       arrangement the index already uses; it is a decision, and
+                       if it is ever reversed, reverse it in both places.
+
+       .salon-plate-caption
+       .salon-rule     the composition's furniture — a plate number and a
+                       dedication under the lintel. Both are captions on an
+                       arrangement, and below 48rem there is no arrangement
+                       left for them to caption.
+
+     WHAT STAYS, AND WHAT THAT COSTS
+
+     Nothing here touches the portrait's height. It is an inline
+     clamp(15rem, 48vh, 28rem) on the plate, so it is already answering to the
+     screen; with the four blocks above gone the stage measures 733px at
+     390x844 and 629px at 390x664, both inside one screenful with the cue on
+     its own bottom line. If a fifth thing is ever added to this hero, measure
+     again before adding a height rule here — the fit is the reason there is no
+     height rule to begin with.
+
+     .salon-rule also carries `margin-bottom: var(--hero-cue-lane)`, the reserve
+     that keeps the engraved line off the scroll cue's line. Hiding it takes the
+     reserve with it, which is safe only because what is left is shorter than
+     the stage and centres with slack under it. That is measured, not assumed —
+     re-measure if anything above grows.                                       */
+  /* The engraved line at the foot of the salon hero: a flex row of two
+     hairlines with a dedication between them.
+
+     It is a class rather than the five-property style attribute it used to be
+     for one reason, and it is the reason worth remembering — `display: flex` in
+     a style attribute CANNOT be overridden by `display: none` in a stylesheet.
+     Inline wins on origin, not specificity, so no selector written here could
+     ever have reached it and the phone block below was hiding the lede, the
+     buttons and the caption while this went on drawing. The other four
+     properties came along rather than being left behind in a split
+     declaration, half here and half in the markup.
+
+     margin-bottom is --hero-cue-lane — the reserve .hero-stage defines so that
+     a block reaching the stage's bottom line stays off the scroll cue's. */
+  .salon-rule {
+    display: flex;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 1.75rem);
+    margin-top: clamp(1.75rem, 5vh, 3.25rem);
+    margin-bottom: var(--hero-cue-lane);
+  }
+
+  /* The comma is an OR, and the two arms answer different failures.
+
+     Narrow is the stack: .block-two-col unwinds below 48rem and the phone gets
+     both halves of the composition end to end.
+
+     Short is the opposite — a phone on its side is 844px wide, past 48rem, so
+     it keeps the two-column layout and no width query would ever reach it. At
+     844x390 the type column alone measures 537px in 390px of screen. 30rem is
+     the same cutover .collage-stage uses for the same case, and it is
+     deliberately well below any desktop window: a squat 1280x680 laptop keeps
+     the full composition, which a 43rem arm would have taken apart. */
+  @media (max-width: 47.999rem), (max-height: 30rem) {
+    .salon-stage .eyebrow,
+    .salon-stage .lede,
+    .salon-stage .hero-actions,
+    .salon-plate-caption,
+    .salon-rule { display: none; }
+
+    /* The portrait is the last thing in the stack, so it is the thing that
+       reaches the stage's bottom line — and that line is the scroll cue's.
+       Same collision the button rows have, same token, and here it is the
+       picture rather than a row of type that was being drawn under the cue:
+       measured at 375x553 the frame's bottom edge and the cue's were the same
+       pixel, with the label sitting 32px up inside the photograph. Only
+       390x844 was clear, which is why it survived the first pass.
+
+       The reserve goes on the row rather than on the frame because the row is
+       what has a bottom margin to give: .salon-rule below it is display:none at
+       this width, so .block-two-col is the last thing in the shell.
+
+       Dropping the eyebrow above pays for this. The lane is about 48px and the
+       eyebrow with its gap is about 45, so the composition comes out a hair
+       shorter than it went in and the hero stays one screenful — a reserve that
+       creates the overflow it is meant to relieve is the mistake this file
+       already records one block up. The eyebrow is also the right thing to
+       lose: on a phone this hero is the masthead and the picture, and "Variant
+       D · The salon" is a label on a composition that is no longer there. */
+    .salon-stage .block-two-col { margin-bottom: var(--hero-cue-lane); }
   }
 
   .glass-surface { position: relative; overflow: hidden; background: #101115; color: var(--paper); }
@@ -1580,6 +1761,17 @@
     --cine-fade: 30vh;
     --hero-fade-clear: max(clamp(1.5rem, 5vh, 3rem), calc(var(--cine-fade) * 0.55));
 
+    /* The fourth token .hero-scroll-cue's arrangement needs, declared here for
+       the reason the three above are: this stage is not a .hero-stage, so it
+       has to carry the same names or the rules that read them resolve to
+       nothing. --hero-cue-lane is the strip along the bottom of the content box
+       that the cue owns; the card reserves it on a small screen, where it is
+       otherwise tall enough to put .cine-actions on the cue's own line. Without
+       this declaration that margin would be an invalid value and silently
+       compute to zero, which is exactly how the collision went unnoticed. */
+    --hero-cue-lane: calc(var(--step--1) * var(--font-mono-leading)
+                          + clamp(1rem, 2.5vh, 1.75rem));
+
     --hero-fg: rgb(var(--cine-ink));
     --hero-fg-muted: rgba(var(--cine-ink), 0.62);
 
@@ -1633,8 +1825,11 @@
      pull itself up over whatever comes before it. */
   main > .cine-stage:first-child,
   main > style:first-child + .cine-stage {
-    margin-top: calc(-1 * var(--nav-height));
-    padding-top: calc(clamp(6rem, 18vh, 10rem) + var(--nav-height));
+    /* The hairline as well as the bar — same one-pixel seam the note on
+       `main > .hero-stage:first-child` describes, and the same pair of edits. */
+    margin-top: calc(-1 * (var(--nav-height) + var(--hairline-width)));
+    padding-top: calc(clamp(6rem, 18vh, 10rem)
+                      + var(--nav-height) + var(--hairline-width));
   }
 
   /* --- The frame: photograph, scrim, grain --- */
@@ -5515,7 +5710,11 @@ html[data-width="18"]  { --reading-width: 18%; }
      — there .hero-stage-photo's fixed dim is the honest answer, and a hero that
      answers to the visitor's setting is not worth an unreadable headline. */
   .hero-stage-photo-adaptive {
-    --hero-ground: var(--stage-scrim);
+    /* --hero-scrim-pale-thin rather than --stage-scrim, which is what
+       .photo-stage-adaptive reads. The two surfaces want different weights of
+       wash and the note on the token in theme.css says why; the dark half puts
+       --hero-scrim back below, so this is a light-mode change only. */
+    --hero-ground: var(--hero-scrim-pale-thin);
     --hero-fg: var(--panel-adaptive-fg-strong);
     --hero-fg-muted: var(--panel-adaptive-fg-muted);
 
@@ -5529,18 +5728,28 @@ html[data-width="18"]  { --reading-width: 18%; }
        more of the picture taken out from under it — and at 0.50 the two
        together left about a tenth of the photograph showing.
 
-       0.72 puts the light frame at roughly the presence the dark one has, and
-       it is not paid for in contrast: over the darkest ground this makes, black
-       type still measures near 10:1 and the muted lede stays over 6:1. Both
-       floors are what set the ceiling on this number — raise it further and the
-       lede is the first thing to go. */
-    --hero-photo-opacity: 0.72;
+       0.85 is the second pass at this number. 0.72 was set to put the light
+       frame at roughly the presence the dark one has, which it did on paper and
+       did not in the eye: --hero-scrim-pale still lays 0.88 of near-white across
+       the top stop, exactly where the headline sits, so the picture was washing
+       out under the type while the middle of the frame read correctly.
+
+       Contrast is what caps it, and it is measured rather than judged. Over the
+       darkest ground this opacity can make — a near-black region of the
+       photograph under the scrim's thinnest stop — black type comes out near
+       8.8:1 and the muted lede near 5.7:1, both clear of AA with room. The lede
+       is the first thing to fail if this is raised again; re-measure it, do not
+       eyeball it. */
+    --hero-photo-opacity: 0.85;
   }
   /* The dark half puts the shared value back, so a hero that opts into this
      modifier is pixel-for-pixel the fixed variant in the dark scheme and only
      the light half is new — the same contract .photo-stage-adaptive keeps. */
   @media (prefers-color-scheme: dark) {
-    .hero-stage-photo-adaptive { --hero-photo-opacity: 0.50; }
+    .hero-stage-photo-adaptive {
+      --hero-ground: var(--hero-scrim);
+      --hero-photo-opacity: 0.50;
+    }
   }
   /* The ground the picture's own opacity blends into. Fixed near-black on the
      dark-pinned variant, because the type over that one is fixed too; here it

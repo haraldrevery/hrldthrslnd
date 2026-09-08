@@ -469,6 +469,11 @@
     rgba(250, 250, 248, 0.60) 42%,
     rgba(250, 250, 248, 0.74) 74%,
     rgba(250, 250, 248, 0.88) 100%);
+  --hero-scrim-pale-thin: linear-gradient(180deg,
+    rgba(250, 250, 248, 0.82) 0%,
+    rgba(250, 250, 248, 0.52) 42%,
+    rgba(250, 250, 248, 0.66) 74%,
+    rgba(250, 250, 248, 0.82) 100%);
   --radius: 4px;
   --radius-pill: 999px;
   --hairline-width: 1px;
@@ -853,10 +858,10 @@
     color: var(--hero-fg);
   }
   main > .hero-stage:first-child {
-    margin-top: calc(-1 * var(--nav-height));
+    margin-top: calc(-1 * (var(--nav-height) + var(--hairline-width)));
     min-height: 100vh;
     min-height: 100svh;
-    padding-top: calc(clamp(3rem, 10vh, 6.5rem) + var(--nav-height));
+    padding-top: calc(clamp(3rem, 10vh, 6.5rem) + var(--nav-height) + var(--hairline-width));
   }
   .hero-stage {
     --hero-fade-mask: linear-gradient(to bottom,
@@ -1165,7 +1170,7 @@
                              calc(var(--hero-fade) * 0.42));
     }
     main > .hero-stage:first-child {
-      padding-top: calc(clamp(1.25rem, 4vh, 2.5rem) + var(--nav-height));
+      padding-top: calc(clamp(1.25rem, 4vh, 2.5rem) + var(--nav-height) + var(--hairline-width));
     }
     .hero-copy {
       --hero-copy-gap-1: clamp(0.85rem, 2vh,   1.5rem);
@@ -1179,6 +1184,9 @@
     .hero-stage .btn {
       font-size: clamp(var(--step--1), 4vw, var(--step-0));
     }
+    .hero-actions, .cine-card {
+      margin-bottom: var(--hero-cue-lane);
+    }
   }
   @media (max-height: 30rem) {
     .hero-stage {
@@ -1186,7 +1194,7 @@
       --hero-fade-clear: max(0.5rem, calc(var(--hero-fade) * 0.42));
     }
     main > .hero-stage:first-child {
-      padding-top: calc(clamp(0.75rem, 3vh, 1.5rem) + var(--nav-height));
+      padding-top: calc(clamp(0.75rem, 3vh, 1.5rem) + var(--nav-height) + var(--hairline-width));
     }
     .hero-stage .display {
       font-size: clamp(var(--font-display-min), min(var(--font-display-fluid), 12vh), var(--font-display-max));
@@ -1201,6 +1209,21 @@
   @media (max-width: 47.999rem) and (max-height: 38rem) {
     .hero-stage .lede {
       font-size: var(--step--1);
+    }
+  }
+  .salon-rule {
+    display: flex;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 1.75rem);
+    margin-top: clamp(1.75rem, 5vh, 3.25rem);
+    margin-bottom: var(--hero-cue-lane);
+  }
+  @media (max-width: 47.999rem), (max-height: 30rem) {
+    .salon-stage .eyebrow, .salon-stage .lede, .salon-stage .hero-actions, .salon-plate-caption, .salon-rule {
+      display: none;
+    }
+    .salon-stage .block-two-col {
+      margin-bottom: var(--hero-cue-lane);
     }
   }
   .glass-surface {
@@ -1247,6 +1270,8 @@
     --cine-title-head: calc(var(--cine-title-size) * 0.159);
     --cine-fade: 30vh;
     --hero-fade-clear: max(clamp(1.5rem, 5vh, 3rem), calc(var(--cine-fade) * 0.55));
+    --hero-cue-lane: calc(var(--step--1) * var(--font-mono-leading)
+                          + clamp(1rem, 2.5vh, 1.75rem));
     --hero-fg: rgb(var(--cine-ink));
     --hero-fg-muted: rgba(var(--cine-ink), 0.62);
     --cine-image-opacity: 0.68;
@@ -1266,8 +1291,8 @@
     animation-delay: 3.2s;
   }
   main > .cine-stage:first-child, main > style:first-child + .cine-stage {
-    margin-top: calc(-1 * var(--nav-height));
-    padding-top: calc(clamp(6rem, 18vh, 10rem) + var(--nav-height));
+    margin-top: calc(-1 * (var(--nav-height) + var(--hairline-width)));
+    padding-top: calc(clamp(6rem, 18vh, 10rem) + var(--nav-height) + var(--hairline-width));
   }
   .cine-media {
     position: absolute;
@@ -3726,13 +3751,14 @@ html[data-width="18"] {
     background: var(--panel-adaptive-tile);
   }
   .hero-stage-photo-adaptive {
-    --hero-ground: var(--stage-scrim);
+    --hero-ground: var(--hero-scrim-pale-thin);
     --hero-fg: var(--panel-adaptive-fg-strong);
     --hero-fg-muted: var(--panel-adaptive-fg-muted);
-    --hero-photo-opacity: 0.72;
+    --hero-photo-opacity: 0.85;
   }
   @media (prefers-color-scheme: dark) {
     .hero-stage-photo-adaptive {
+      --hero-ground: var(--hero-scrim);
       --hero-photo-opacity: 0.50;
     }
   }

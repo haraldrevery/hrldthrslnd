@@ -54,16 +54,26 @@ draft: false
 <!-- ===== COPY FROM HERE: Hero — full-viewport stage (always first on the page) ===== -->
 <section class="hero-stage">
   <div class="editorial-grid" aria-hidden="true"></div>
-  <div class="shell" style="position:relative;">
+  <!-- .hero-copy and .hero-actions, not the four inline style attributes this
+       block used to carry. This hero was written before those components
+       existed and never converted, and it was the only one on the site still
+       out of step: every phone rule in input.css is written against .hero-copy,
+       so this page alone kept its desktop gaps, its desktop button size and its
+       full-size type on a 375px screen — which is why the scroll cue was being
+       painted over "Hero variant A" there and nowhere else.
+
+       The breaks are .hero-break for the same reason, with a space before each
+       one so the words do not run together when a short screen drops them. -->
+  <div class="shell hero-copy" style="position:relative;">
     <p class="eyebrow">Reference — 01</p>
-    <h1 class="display" style="margin-top:1.5rem;">
-      Block<br><span class="text-flow">test</span><br>page
+    <h1 class="display">
+      Block <br class="hero-break"><span class="text-flow">test</span> <br class="hero-break">page
     </h1>
-    <p class="lede" style="margin-top:2rem;">
+    <p class="lede">
       Every block type, in single and two column arrangements. If something is
       broken in the theme, it will be visible somewhere on this page.
     </p>
-    <div style="display:flex; flex-wrap:wrap; gap:2.25rem; margin-top:2.5rem;">
+    <div class="hero-actions">
       <a class="btn" href="#galleries">Jump to galleries</a>
       <a class="btn btn-ghost" href="/block_test_page_a.html">Hero variant A</a>
     </div>
