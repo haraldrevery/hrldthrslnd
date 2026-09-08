@@ -15,7 +15,7 @@ import katexPluginModule from "@vscode/markdown-it-katex";
 
 import path from "node:path";
 
-import { headingSlug, escapeHtml, mediaKind, mediaType } from "./paths.js";
+import { headingSlug, escapeHtml, mediaKind, mediaType, extensionOf } from "./paths.js";
 import { imageSize, resolveThumbnail } from "./imagesize.js";
 import { publishedPathForSource, normaliseKey } from "./slugs.js";
 
@@ -282,6 +282,32 @@ function lightboxLink(src, alt, title, inner) {
   );
 }
 
+/**
+ * Whether a still image should get the lightbox anchor.
+ *
+ * The test used to be "the thumbnail differs from the source" — link out only
+ * when there is a SEPARATE full-resolution file to link to. That reads as an
+ * optimisation and is really a silent feature removal: an SVG, a GIF, an AVIF
+ * and a WebP with no hand-made counterpart all resolve to themselves, so every
+ * one of them rendered as a bare <img>. No zoom on click, and — because the
+ * slider is built from the anchors — no place in the post's gallery group
+ * either, so the arrows stepped straight past them. Nothing said so, and the
+ * cell even keeps the hover scale `.art-plate:hover img` gives it, so it goes
+ * on looking clickable.
+ *
+ * GLightbox was never the limit. Its own source-type test accepts
+ * `jpeg|jpg|jpe|gif|png|apn|webp|avif|svg`, and it opens an animated GIF or a
+ * vector the same way it opens a photograph.
+ *
+ * So the rule is about the URL, not the format: anything this site serves
+ * itself is lightboxed. A remote or `data:` src is left alone — it is not ours
+ * to open at full resolution, and putting one behind an anchor would pull the
+ * vendor bundle onto a page for a picture the site does not own.
+ */
+function lightboxable(src) {
+  return typeof src === "string" && src.startsWith("/");
+}
+
 function renderFigure(token, md, root, env) {
   const src = resolveSrc(token.attrGet("src") ?? "", env, root);
   const title = token.attrGet("title") ?? "";
@@ -297,9 +323,10 @@ function renderFigure(token, md, root, env) {
   const thumb = resolveThumbnail(src, root);
   const img = imageTag(thumb, alt, title, imageSize(thumb, root));
 
-  // Only link out to a full-resolution file when there actually is a separate
-  // one; an SVG or GIF is already the file it points at.
-  const media = thumb !== src ? lightboxLink(src, alt, title, img) : img;
+  // `src`, not `thumb`: the anchor always opens the file as written, which for
+  // a photograph is the full-resolution original and for an SVG or GIF is the
+  // only file there is. See lightboxable() for why those are not two cases.
+  const media = lightboxable(src) ? lightboxLink(src, alt, title, img) : img;
 
   const caption = title || alt;
   return (
@@ -325,7 +352,7 @@ function renderCell(token, md, root, env) {
   const thumb = resolveThumbnail(src, root);
   const size = imageSize(thumb, root);
   const img = imageTag(thumb, alt, title, size);
-  const media = thumb !== src ? lightboxLink(src, alt, title, img) : img;
+  const media = lightboxable(src) ? lightboxLink(src, alt, title, img) : img;
 
   // The cell's native ratio drives both its flex-basis and its flex-grow, so a
   // wide picture claims a wider share of the row than a tall one — that is the
@@ -382,9 +409,13 @@ function renderPlayer(kind, src, alt, title, root) {
  * would happily return a path to a file that does not exist.
  */
 function posterFor(src, root) {
-  const dot = src.lastIndexOf(".");
-  if (dot < 0) return "";
-  const candidate = `${src.slice(0, dot)}_min.jpg`;
+  // extensionOf(), not lastIndexOf("."): a dot in a DIRECTORY name is not the
+  // file's extension, so "/video.old/clip" was cut at the folder and asked
+  // about "/video_min.jpg" — a file in a different folder entirely, and one
+  // that could plausibly exist.
+  const ext = extensionOf(src);
+  if (!ext) return "";
+  const candidate = `${src.slice(0, src.length - ext.length)}_min.jpg`;
   return imageSize(candidate, root) ? candidate : "";
 }
 

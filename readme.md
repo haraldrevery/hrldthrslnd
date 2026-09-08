@@ -635,6 +635,15 @@ goes for `svg/` and `gif/`. Thumbnail resolution checks the filesystem rather
 than rewriting paths blindly, so a front-matter `image:` never points at a file
 that was not generated.
 
+Having no counterpart does not cost a picture its lightbox. **Every still image
+the site serves itself gets the anchor**, whether it opens a separate
+full-resolution original or the one file there is — so an SVG, a GIF or a WebP
+in a run of images is a cell in the gallery and a slide in the slider like any
+photograph. Only a remote or `data:` src is left as a plain `<img>`. A GIF is
+the one format where that has a weight cost, because the cell loads the whole
+animation; the `max_gif_bytes` budget in `site_settings.json` is what watches
+that.
+
 Every `<img>` is emitted with `width` and `height`. That is not decoration: it
 reserves the right space so the page does not jump on load, and it stops
 `loading="lazy"` deadlocking on an image whose height would otherwise collapse

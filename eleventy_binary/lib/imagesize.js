@@ -94,6 +94,58 @@ function readPng(buffer) {
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
 }
 
+/**
+ * A WebP's dimensions, from whichever of the three chunk layouts the file uses.
+ *
+ * .webp is in RASTER_EXT — it takes a _min counterpart and a hand-made one is
+ * picked up like any other — but nothing here could measure one, so every WebP
+ * shipped with no width and height. That is a layout shift on load and, on a
+ * `loading="lazy"` image whose height collapses to zero, often no load at all:
+ * the picture never enters the viewport, so the browser never fetches it.
+ *
+ * All three layouts sit inside the same 12-byte RIFF header ("RIFF" ␣␣␣␣
+ * "WEBP") and differ only in the chunk that follows:
+ *
+ *   VP8   lossy      dimensions at +26, 14 bits each, after a 3-byte start code
+ *   VP8L  lossless   at +21, packed 14+14 bits little-endian, both minus one
+ *   VP8X  extended   at +24, 24-bit little-endian canvas size, both minus one
+ */
+function readWebp(buffer) {
+  if (buffer.length < 30) return null;
+  if (buffer.toString("ascii", 0, 4) !== "RIFF") return null;
+  if (buffer.toString("ascii", 8, 12) !== "WEBP") return null;
+
+  const chunk = buffer.toString("ascii", 12, 16);
+
+  if (chunk === "VP8 ") {
+    // 0x9d 0x01 0x2a is the key frame start code; without it this is not a
+    // frame header and the two 16-bit reads would be arbitrary bytes.
+    if (buffer[23] !== 0x9d || buffer[24] !== 0x01 || buffer[25] !== 0x2a) return null;
+    return {
+      width: buffer.readUInt16LE(26) & 0x3fff,
+      height: buffer.readUInt16LE(28) & 0x3fff,
+    };
+  }
+
+  if (chunk === "VP8L") {
+    if (buffer[20] !== 0x2f) return null; // the lossless signature byte
+    const bits = buffer.readUInt32LE(21);
+    return {
+      width: (bits & 0x3fff) + 1,
+      height: ((bits >> 14) & 0x3fff) + 1,
+    };
+  }
+
+  if (chunk === "VP8X") {
+    return {
+      width: (buffer[24] | (buffer[25] << 8) | (buffer[26] << 16)) + 1,
+      height: (buffer[27] | (buffer[28] << 8) | (buffer[29] << 16)) + 1,
+    };
+  }
+
+  return null;
+}
+
 function readGif(buffer) {
   if (buffer.length < 10) return null;
   return { width: buffer.readUInt16LE(6), height: buffer.readUInt16LE(8) };
@@ -148,6 +200,7 @@ export function readImageHeader(filePath) {
     fs.readSync(handle, buffer, 0, buffer.length, 0);
     if (ext === ".png") return readPng(buffer);
     if (ext === ".gif") return readGif(buffer);
+    if (ext === ".webp") return readWebp(buffer);
     if (ext === ".svg") return readSvg(buffer);
     return null;
   } catch {

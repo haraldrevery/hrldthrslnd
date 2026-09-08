@@ -174,6 +174,70 @@ describe("readImageHeader — other formats", () => {
     expect(readImageHeader(path.join(root, "a.gif"))).toEqual({ width: 120, height: 90 });
   });
 
+  test("WebP, all three chunk layouts", () => {
+    // The three the format actually ships in. .webp is in RASTER_EXT, so it
+    // takes a _min counterpart like any raster — but nothing could measure one
+    // until readWebp() existed, and an unmeasured lazy image is often an image
+    // that never loads at all.
+    const riff = (chunk, body) => {
+      const buffer = Buffer.alloc(12 + 4 + 4 + body.length);
+      buffer.write("RIFF", 0, "ascii");
+      buffer.writeUInt32LE(buffer.length - 8, 4);
+      buffer.write("WEBP", 8, "ascii");
+      buffer.write(chunk, 12, "ascii");
+      buffer.writeUInt32LE(body.length, 16);
+      body.copy(buffer, 20);
+      return buffer;
+    };
+
+    // Lossy: frame tag, the 0x9d 0x01 0x2a start code, then 14-bit w and h.
+    const lossy = Buffer.alloc(20);
+    Buffer.from([0x9d, 0x01, 0x2a]).copy(lossy, 3);
+    lossy.writeUInt16LE(640, 6);
+    lossy.writeUInt16LE(480, 8);
+
+    // Lossless: signature byte, then (w-1) and (h-1) packed 14 bits each.
+    const lossless = Buffer.alloc(20);
+    lossless[0] = 0x2f;
+    lossless.writeUInt32LE((639 & 0x3fff) | ((479 & 0x3fff) << 14), 1);
+
+    // Extended: flags, then (w-1) and (h-1) as 24-bit little-endian.
+    const extended = Buffer.alloc(20);
+    extended.writeUIntLE(639, 4, 3);
+    extended.writeUIntLE(479, 7, 3);
+
+    const root = project({
+      "lossy.webp": riff("VP8 ", lossy),
+      "lossless.webp": riff("VP8L", lossless),
+      "extended.webp": riff("VP8X", extended),
+    });
+
+    for (const name of ["lossy", "lossless", "extended"]) {
+      expect(readImageHeader(path.join(root, `${name}.webp`))).toEqual({
+        width: 640,
+        height: 480,
+      });
+    }
+  });
+
+  test("a WebP whose chunk is not one of the three, and a truncated one", () => {
+    // Returning a wrong size is worse than returning none: it reserves the
+    // wrong shape and the page jumps anyway.
+    const bogus = Buffer.alloc(40);
+    bogus.write("RIFF", 0, "ascii");
+    bogus.write("WEBP", 8, "ascii");
+    bogus.write("ANIM", 12, "ascii");
+
+    const short = Buffer.alloc(20);
+    short.write("RIFF", 0, "ascii");
+    short.write("WEBP", 8, "ascii");
+    short.write("VP8 ", 12, "ascii");
+
+    const root = project({ "bogus.webp": bogus, "short.webp": short });
+    expect(readImageHeader(path.join(root, "bogus.webp"))).toBe(null);
+    expect(readImageHeader(path.join(root, "short.webp"))).toBe(null);
+  });
+
   test("SVG by viewBox, falling back to width and height", () => {
     const root = project({
       "box.svg": '<svg viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg"></svg>',

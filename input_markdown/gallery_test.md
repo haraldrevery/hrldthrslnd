@@ -25,6 +25,7 @@ Nothing has to wrap, so the row height is whatever makes the two of them fit.
 
 ![Snow-covered peaks from a plane window](/image/2016nicemountains.jpg)
 ![Wet cobblestones at night, street lights out of focus behind](/image/2016romestreets.jpg)
+![gif thing.](/gif/haraldrevery11techbw.gif)
 
 Consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.
 Cras venenatis euismod malesuada. Nulla facilisi. Etiam euismod, nisl vel
@@ -80,6 +81,11 @@ consectetur purus sit amet fermentum. Aenean lacinia bibendum nulla sed
 consectetur. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum
 id ligula porta felis euismod semper. Praesent commodo cursus magna, vel
 scelerisque nisl consectetur et. Donec sed odio dui.
+
+![Snow-covered peaks from a plane window](/image/2016nicemountains.jpg)
+![Wet cobblestones at night, street lights out of focus behind](/svg/cross.svg)
+![Wet cobblestones at night, street lights out of focus behind](/svg/logo.svg)
+![gif thing.](/gif/haraldrevery11techbw.gif)
 
 ## Nothing but portraits
 
