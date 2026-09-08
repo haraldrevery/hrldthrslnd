@@ -2787,8 +2787,8 @@
   .card:nth-child(7n + 1) { --accent-grad: var(--grad-flow-a); }
   .card:nth-child(7n + 2) { --accent-grad: var(--grad-flow-b); }
   .card:nth-child(7n + 3) { --accent-grad: var(--grad-flow-c); }
-  .card:nth-child(7n + 4) { --accent-grad: var(--grad-flow-c); }
-  .card:nth-child(7n + 5) { --accent-grad: var(--grad-flow-d); }
+  .card:nth-child(7n + 4) { --accent-grad: var(--grad-flow-e); }
+  .card:nth-child(7n + 5) { --accent-grad: var(--grad-flow-a); }
   .card:nth-child(7n + 6) { --accent-grad: var(--grad-flow-d); }
   .card:nth-child(7n + 7) { --accent-grad: var(--grad-flow-b); }
   .card-media { aspect-ratio: 16 / 10; margin-bottom: 1.1rem; }

@@ -341,6 +341,7 @@
   --c-azure: #1f6dff;
   --c-ultra: #4b2ee6;
   --c-violet: #a44bff;
+  --c-green: #91e35e;
   --ink: #0d0d10;
   --ink-soft: #1c1d22;
   --paper: #f4f4f2;
@@ -445,6 +446,7 @@
     --c-azure: #5a8dff;
     --c-ultra: #7c63ff;
     --c-violet: #bd78ff;
+    --c-green: #91e35e;
     color-scheme: dark;
   }
 }
@@ -460,6 +462,8 @@
     var(--c-azure) 0%, var(--c-teal) 33%, var(--c-mint) 67%, var(--c-amber) 100%);
   --grad-flow-d: linear-gradient(115deg,
     var(--c-mint) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
+  --grad-flow-e: linear-gradient(115deg,
+    var(--c-green) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
   --accent-grad: var(--grad-flow);
   --grad-heat: linear-gradient(90deg, var(--c-lemon), var(--c-orange), var(--c-crimson));
   --grad-cool: linear-gradient(90deg, var(--c-mint), var(--c-teal), var(--c-ultra));
@@ -1815,10 +1819,10 @@
     --accent-grad: var(--grad-flow-c);
   }
   .card:nth-child(7n + 4) {
-    --accent-grad: var(--grad-flow-c);
+    --accent-grad: var(--grad-flow-e);
   }
   .card:nth-child(7n + 5) {
-    --accent-grad: var(--grad-flow-d);
+    --accent-grad: var(--grad-flow-a);
   }
   .card:nth-child(7n + 6) {
     --accent-grad: var(--grad-flow-d);

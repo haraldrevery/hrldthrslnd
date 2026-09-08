@@ -167,6 +167,9 @@
   --c-ultra:   #4b2ee6;
   --c-violet:  #a44bff;
 
+    /* One for green */
+    --c-green:   #91e35e;
+
   /* Absolute ink/paper constants. These never swap. Use them for surfaces that
      are intentionally dark in BOTH schemes (hero matte stage, glass sections). */
   --ink:       #0d0d10;
@@ -373,6 +376,8 @@
     --c-ultra:   #7c63ff;
     --c-violet:  #bd78ff;
 
+    /* One for green */
+    --c-green:   #91e35e;
     color-scheme: dark;
   }
 }
@@ -422,7 +427,8 @@
     var(--c-azure) 0%, var(--c-teal) 33%, var(--c-mint) 67%, var(--c-amber) 100%);
   --grad-flow-d: linear-gradient(115deg,
     var(--c-mint) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
-
+  --grad-flow-e: linear-gradient(115deg,
+    var(--c-green) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
   /* The accent edge, as one token. Every rule and marker that identifies a
      block — the card's top edge, the slice's left edge, the index row's hover
      marker, the feature panel's rule — paints with this rather than naming a
@@ -430,6 +436,7 @@
      custom property on itself and nothing else has to know. Cards are the only
      thing that does, in input.css; everything else takes the default, which is
      the full seven-stop signature. */
+     
   --accent-grad: var(--grad-flow);
   --grad-heat: linear-gradient(90deg, var(--c-lemon), var(--c-orange), var(--c-crimson));
   --grad-cool: linear-gradient(90deg, var(--c-mint), var(--c-teal), var(--c-ultra));
