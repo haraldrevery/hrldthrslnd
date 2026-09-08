@@ -4103,10 +4103,16 @@
   .outline-glyph-close { display: none; }
   .outline-toggle:checked ~ .outline-toggle-label .outline-glyph-open { display: none; }
   .outline-toggle:checked ~ .outline-toggle-label .outline-glyph-close { display: inline; }
+  /* Keep .outline-list holding links and nothing else. The hover colour below
+     is keyed to :nth-child, so one stray element in here shifts the whole
+     cycle by a step. The outlineList shortcode emits a flat run of <a>s joined
+     by a newline, and text nodes are not children, so this holds today. */
   .outline-list { display: flex; flex-direction: column; }
   .outline-link {
     display: block;
-    padding: 0.34rem 0;
+    /* The per-level indent is a custom property rather than a padding-left of
+       its own, because the hover state has to ADD to it -- see below. */
+    padding: 0.34rem 0 0.34rem var(--outline-indent, 0rem);
     font-size: var(--step--1);
     line-height: 1.34;
     color: var(--fg-muted);
@@ -4114,14 +4120,57 @@
     transition: color var(--dur-fast) var(--ease-liquid),
                 border-color var(--dur-fast) var(--ease-liquid);
   }
+
+  /* The marker walks the hue wheel down the list rather than repeating one
+     colour, in the order --grad-flow itself sweeps -- so running a pointer
+     down the outline traces the site's signature gradient a stop at a time.
+
+     SIX colours on a 6n cycle, so no two adjacent entries ever share one. The
+     card grid gets away with four gradients in seven slots because colliding
+     cards are diagonal neighbours and only one is lit at a time; an outline is
+     a vertical list where every neighbour is adjacent and all of it is on
+     screen at once, so the cycle length has to equal the colour count.
+
+     WHICH six is not a free choice. theme.css records that amber, lemon and
+     mint sit at 1.6-1.8 contrast against the white --bg-raised of the light
+     scheme, and ultra at 2.3 against the dark one; those four are out, and the
+     six below are the whole rest of the wheel. Measured on the light panel the
+     weakest survivors are teal at 2.5 and orange at 2.6, against crimson's
+     4.6 -- acceptable for a 2px decorative rule that never carries the
+     affordance on its own, because hover also lifts the label from --fg-muted
+     to --fg. The dark scheme re-cuts every --c-* lighter, so it is the light
+     panel that binds. Swapping a colour in here means re-checking that.
+
+     Position, not meaning: an entry's colour comes from where it sits in the
+     list, so the same section is a different colour in a post that later gains
+     a heading above it. That is fine while the colours mean nothing, and it is
+     the first thing to revisit if they ever come to -- at which point this
+     belongs in the outlineList shortcode, keyed to the heading. */
+  .outline-link:nth-child(6n + 1) { --outline-accent: var(--c-orange); }
+  .outline-link:nth-child(6n + 2) { --outline-accent: var(--c-crimson); }
+  .outline-link:nth-child(6n + 3) { --outline-accent: var(--c-magenta); }
+  .outline-link:nth-child(6n + 4) { --outline-accent: var(--c-violet); }
+  .outline-link:nth-child(6n + 5) { --outline-accent: var(--c-azure); }
+  .outline-link:nth-child(6n + 6) { --outline-accent: var(--c-teal); }
+
+  /* The var() fallback is the colour this marker was before the cycle existed,
+     so if --outline-accent ever fails to land -- a wrapper appearing around the
+     links, say -- the failure mode is the old single colour rather than an
+     invalid border-left-color falling back to currentColor.
+
+     padding-left ADDS to the level indent. It used to be a flat 0.5rem, and
+     since `.outline-link:hover` outweighs `.outline-h4` on specificity while
+     also sitting above it in the file, hovering a nested entry yanked it LEFT:
+     an h4 jumped from 1.8rem to 0.5rem and lost the indent that shows its
+     depth. Every level now steps the same 0.5rem to the right instead. */
   .outline-link:hover, .outline-link:focus-visible {
     color: var(--fg);
-    border-left-color: var(--c-magenta);
-    padding-left: 0.5rem;
+    border-left-color: var(--outline-accent, var(--c-magenta));
+    padding-left: calc(var(--outline-indent, 0rem) + 0.5rem);
   }
-  .outline-h3 { padding-left: 0.9rem; font-size: var(--step--2); }
-  .outline-h4 { padding-left: 1.8rem; font-size: var(--step--2); color: var(--fg-faint); }
-  .outline-h5, .outline-h6 { padding-left: 2.5rem; font-size: var(--step--2); color: var(--fg-faint); }
+  .outline-h3 { --outline-indent: 0.9rem; font-size: var(--step--2); }
+  .outline-h4 { --outline-indent: 1.8rem; font-size: var(--step--2); color: var(--fg-faint); }
+  .outline-h5, .outline-h6 { --outline-indent: 2.5rem; font-size: var(--step--2); color: var(--fg-faint); }
 
   /* -- Galleries ------------------------------------------------------------- */
   .gallery { --gallery-gap: 0.75rem; }
@@ -5555,26 +5604,81 @@
 }
 .glightbox-clean .gslide-desc a { color: var(--c-amber); }
 
-/* Controls: the site's own iconography weight, not the default chrome. */
+/* Controls: the glyph and nothing else. No plate, no border, no rounding --
+   the same idiom as .dock-btn in the corner dock, which is already "bare
+   glyphs: no border, no raised ground, no shadow". Only the drawing goes; the
+   hit target glightbox sizes (40x50 for the arrows, 35x35 for the close) is
+   untouched, so these still take a click exactly where they used to.
+
+   `background`, `border` and `border-radius` are DECLARED, not deleted.
+   Upstream paints these itself -- `.glightbox-clean .gprev{background-color:
+   rgba(0,0,0,.75);border-radius:4px}`, plus a second, weaker value inside its
+   own `@media (min-width:769px)`. Dropping our declarations would not leave
+   the buttons bare, it would hand them back to glightbox in two different
+   strengths depending on viewport width. This block is unlayered, so it beats
+   both. The radius goes to 0 rather than being left to upstream's 4px because
+   `outline` follows the border curve: with nothing else drawn, that radius is
+   visible only in the focus ring, and a rectangle there matches every other
+   bare-glyph control on the site.
+
+   The drop-shadow stack replaces the plate and is not decoration. At >=769px
+   glightbox moves the arrows to `top:45%` -- ON TOP OF THE IMAGE, 30px in from
+   its edge -- so whenever a wide image fills the viewport, a bare white arrow
+   lands on a blown-out sky or a white product shot, and these are the
+   component's primary navigation. Checked against a pure white plate, which is
+   the worst case there is.
+
+   THREE shadows, all but one of them centred. A single offset shadow was tried
+   first and failed twice over: at 0.7 alpha it left the arrow barely readable
+   on white, and because it was displaced it read as a second, ghosted chevron
+   beside the real one rather than as a contour. Stacked drop-shadows compound
+   -- each one is cast by the result of the last, halo included -- so two tight
+   centred passes build a dark outline that hugs the glyph the way a stroke
+   would, and the offset third adds the depth. On the .gclose, which sits over
+   the backdrop, the whole thing costs nothing and shows as nothing.
+
+   Hover used to be carried by the border brightening; with no border the
+   opacity step is the whole cue. It was widened to 0.7->1 to compensate and
+   then put back: opacity fades the glyph's shadow along with the glyph, so a
+   lower resting value is paid for in exactly the case the shadow exists to
+   cover -- an arrow lying on a white image. 0.85 is what it was, the hover
+   step is the same size it has always been, and legibility at rest wins over
+   a livelier hover on a control that is 40px wide. */
 .glightbox-clean .gnext,
 .glightbox-clean .gprev,
 .glightbox-clean .gclose {
-  background-color: rgba(28, 29, 34, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: var(--radius-pill);
+  background: none;
+  border: 0;
+  border-radius: 0;
   opacity: 0.85;
-  transition: opacity var(--dur-fast) var(--ease-liquid),
-              border-color var(--dur-fast) var(--ease-liquid);
+  transition: opacity var(--dur-fast) var(--ease-liquid);
 }
 .glightbox-clean .gnext:hover,
 .glightbox-clean .gprev:hover,
 .glightbox-clean .gclose:hover {
   opacity: 1;
-  border-color: rgba(255, 255, 255, 0.4);
 }
+
+/* Every image in a post shares data-gallery="post", so a post carrying ONE
+   image opens a gallery of one and glightbox marks both arrows .disabled.
+   Upstream fades those to 0.1, but that rule lives in @layer vendor and the
+   opacity above is unlayered, so it was overriding it -- dead arrows drawn at
+   full strength. It went unnoticed while they had a plate and a border to look
+   like buttons; bare, a lit arrow that does nothing is worse. Restated here so
+   the disabled state wins again. */
+.glightbox-clean .gnext.disabled,
+.glightbox-clean .gprev.disabled {
+  opacity: 0.1;
+}
+
 .glightbox-clean .gnext svg,
 .glightbox-clean .gprev svg,
-.glightbox-clean .gclose svg { fill: var(--paper); }
+.glightbox-clean .gclose svg {
+  fill: var(--paper);
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9))
+          drop-shadow(0 0 2px rgba(0, 0, 0, 0.8))
+          drop-shadow(0 1px 4px rgba(0, 0, 0, 0.55));
+}
 
 .glightbox-clean .gslide-description { background: transparent; }
 .goverlay { background: rgba(6, 6, 8, 0.94); }

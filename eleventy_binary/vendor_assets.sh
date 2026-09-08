@@ -157,6 +157,19 @@ all_urls=$(occurrences 'url(' "$glightbox_src")
 data_urls=$(occurrences 'url(data:' "$glightbox_src")
 [ "$all_urls" = "$data_urls" ] ||
   die "glightbox.min.css references $((all_urls - data_urls)) external file(s); teach this script to vendor them"
+
+# css/input.css restyles the lightbox chrome by name, and since the controls
+# were stripped to bare glyphs the whole look of them rides on these selectors
+# still existing upstream. A release that renamed one would break no test and
+# fail no build -- the overrides would simply stop applying and glightbox's own
+# black pill would come back. A dependency bump runs this script, so this is
+# where it can be caught. Same reasoning as the .katex{ assertion above.
+for sel in '\.glightbox-clean \.gprev' '\.glightbox-clean \.gnext' \
+           '\.glightbox-clean \.gclose' '\.gbtn\.focused' '\.gprev\.disabled'; do
+  [ "$(occurrences "$sel" "$glightbox_src")" != 0 ] ||
+    die "glightbox.min.css no longer contains '$sel', which css/input.css restyles"
+done
+
 cp "$glightbox_src" "$tmp/glightbox.min.css"
 
 # --- Wrap both sheets in the vendor layer and install them ------------------
