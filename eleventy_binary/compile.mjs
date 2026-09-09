@@ -49,10 +49,12 @@ const shimEleventyPackageJson = {
     );
   },
 };
-
+/* Cover most consumer hardware just in case */
 const TARGETS = [
   { target: "bun-linux-x64", outfile: path.join(root, "site_generate") },
   { target: "bun-windows-x64", outfile: path.join(root, "site_generate.exe") },
+  { target: "bun-linux-arm64",   outfile: path.join(root, "site_generate-arm64") },
+  { target: "bun-windows-arm64", outfile: path.join(root, "site_generate-arm64.exe") },
 ];
 
 const only = process.argv[2];

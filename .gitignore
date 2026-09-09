@@ -15,6 +15,8 @@ node_modules.off/
 # Delete these two lines if you would rather ship the binaries in the repo.
 site_generate
 site_generate.exe
+site_generate-arm64
+site_generate-arm64.exe
 
 # OS and editor noise
 .DS_Store
