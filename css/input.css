@@ -1760,7 +1760,7 @@
        that space is most of what makes an evenly-margined stack look uneven.
        Overridden together with the rules that used to hold these values, in the
        short-viewport block at the foot of this component. */
-    --cine-title-size: clamp(2.4rem, 9vw, 7.5rem);
+    --cine-title-size: clamp(2.4rem, 9vw, 5.8rem);
     --cine-eyebrow-size: 1.2rem;
 
     /* The ink-to-ink gap on either side of the mark — what the eye actually
@@ -2075,7 +2075,7 @@
     position: relative;
     z-index: 4;
     text-align: center;
-    max-width: 60rem;
+    max-width: 74rem;
   }
 
   /* The eyebrow and the tagline are the two pieces of type on the card set well
@@ -2116,7 +2116,7 @@
 
   /* The tracking settles from wide to its final value as the letters land. */
   .cine-title {
-    margin: 0;
+    margin: 2.8rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
