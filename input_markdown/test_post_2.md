@@ -2,9 +2,9 @@
 title: Stress test 2
 date: 2026-02-05
 tags: [test, template]
+category: [Astronomy, Survival]   
 image: /image/padova2016.jpg
 description: Markdown and KaTeX stress test.
-draft: false
 ---
 
 # Lorem Ipsum Dolor Sit Amet

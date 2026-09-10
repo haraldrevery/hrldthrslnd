@@ -25,7 +25,11 @@
 
   <div class="card-meta">
     <time class="micro" datetime="{{ post.data.date | isoDate }}">{{ post.data.date | isoDate }}</time>
-    {% for tag in post.data.tags | limit(3) %}
+    {#- The site-wide spelling, not this page's: the chip and the page it opens
+        have to read the same. Categories are appended after tags, so a post
+        with three or more tags shows none of them here — raise the limit if a
+        category should always be visible on a card. -#}
+    {% for tag in post.data.tags | tagLabel | limit(3) %}
     <a class="tag-chip" href="/blog_tag_{{ tag | tagSlug }}.html">{{ tag }}</a>
     {% endfor %}
   </div>
@@ -41,7 +45,7 @@
     <a class="card-link link-underline" href="{{ post.url }}">{{ post.data.title }}</a>
   </h3>
   <p class="micro" style="color:var(--fg-muted);">
-    {% for tag in post.data.tags | limit(2) %}{{ tag }}{% if not loop.last %} · {% endif %}{% endfor %}
+    {% for tag in post.data.tags | tagLabel | limit(2) %}{{ tag }}{% if not loop.last %} · {% endif %}{% endfor %}
   </p>
 </article>
 {% endmacro %}

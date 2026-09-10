@@ -26,6 +26,22 @@ import { humanBytes } from "./format.js";
 const REQUIRED_FRONT_MATTER = ["title", "date", "description", "tags"];
 
 /**
+ * Keys that satisfy a requirement between them.
+ *
+ * `tags` and `category` are two names for the same list and are merged into one
+ * before anything renders, so a page filed only under a category IS on a
+ * subject page. Checking `tags` alone reported it as filed under nothing —
+ * permanently, on a page that was perfectly correct, which is the shape of
+ * false positive that teaches an author to stop reading this report.
+ *
+ * This check reads raw source with a regex and never sees the merge, so the
+ * pairing has to be stated here as well as in subjects.js. It is stated as a
+ * list of alternatives rather than by parsing, because that is all this pre-pass
+ * can honestly know: whether the key is there and carries something.
+ */
+const EQUIVALENT_KEYS = { tags: ["tags", "category"] };
+
+/**
  * Attributes that point at a local asset we can verify exists.
  *
  * Both quoting styles, because HTML allows either and hand-written pages use
@@ -187,22 +203,30 @@ function checkFrontMatter(root, findings, includeDrafts) {
     }
 
     for (const key of REQUIRED_FRONT_MATTER) {
-      if (!hasValue(block, key)) {
-        findings.push({
-          level: level(key === "title" || key === "date" ? "error" : "warn"),
-          scope: "front matter",
-          page,
-          // A key written with no value is its own mistake and reads nothing
-          // like a forgotten line, so it is worth naming separately.
-          message: hasKey(block, key) ? `"${key}" has no value` : `missing "${key}"`,
-          detail:
-            key === "description"
-              ? "used for the meta description, cards and search results"
-              : key === "tags"
-                ? "the page will not appear on any subject page"
-                : "required",
-        });
-      }
+      const accepted = EQUIVALENT_KEYS[key] ?? [key];
+      if (accepted.some((name) => hasValue(block, name))) continue;
+
+      // A key written with no value is its own mistake and reads nothing like a
+      // forgotten line, so it is worth naming separately. With alternatives,
+      // the one the author actually wrote is the one to name — telling someone
+      // who wrote `category:` that they are missing "tags" sends them to add a
+      // second key they do not need.
+      const written = accepted.find((name) => hasKey(block, name));
+      const named = accepted.join('" or "');
+
+      findings.push({
+        level: level(key === "title" || key === "date" ? "error" : "warn"),
+        scope: "front matter",
+        page,
+        message: written ? `"${written}" has no value` : `missing "${named}"`,
+        detail:
+          key === "description"
+            ? "used for the meta description, cards and search results"
+            : key === "tags"
+              ? "the page will not appear on any subject page — `tags` and " +
+                "`category` are merged into one list, so either will do"
+              : "required",
+      });
     }
 
     if (!hasValue(block, "image")) {

@@ -25,7 +25,7 @@ layout: false
     <guid isPermaLink="true">{{ post.url | absolute }}</guid>
     <pubDate>{{ post.data.date | rfc822Date }}</pubDate>
     <description>{{ post.data.description }}</description>
-    {%- for tag in post.data.tags %}
+    {%- for tag in post.data.tags | tagLabel %}
     <category>{{ tag }}</category>
     {%- endfor %}
   </item>

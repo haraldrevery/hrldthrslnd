@@ -4,6 +4,8 @@ date: 2026-02-05
 tags: [test, template]
 image: /image/padova2016.jpg
 description: Markdown and KaTeX stress test.
+category: [Astronomy, Survival, House]
+author: Harald
 draft: false
 ---
 

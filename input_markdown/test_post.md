@@ -5,6 +5,7 @@ image: /image/2016moremountains.jpg
 tags: [tag_1, tag_2]
 description: Short description or summary of the page.
 draft: false
+category: [Astronomy, Survival]   
 ---
 
 # Full Markdown Stress Test

@@ -11,6 +11,9 @@
 export default {
   pageKind: "custom_post",
   tags: [],
+  // A second name for `tags`. The two are merged into one subject list
+  // before anything renders, so a page can use either or both.
+  category: [],
   draft: false,
   templateEngineOverride: false,
 

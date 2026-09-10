@@ -11,6 +11,9 @@ export default {
   layout: "post.njk",
   pageKind: "markdown",
   tags: [],
+  // A second name for `tags`. The two are merged into one subject list
+  // before anything renders, so a page can use either or both.
+  category: [],
   draft: false,
 
   // Markdown only — no Liquid or Nunjucks pre-pass, so a stray {{ or {% in a

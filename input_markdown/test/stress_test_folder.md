@@ -1,9 +1,10 @@
 ---
 title: Stress test
 date: 2026-02-05
-tags: [test, template]
+tags: test, template
 image: /image/2016moremountains.jpg
 description: Markdown and KaTeX stress test.
+category: [template, Survival, House]
 draft: false
 ---
 

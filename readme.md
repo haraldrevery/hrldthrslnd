@@ -64,10 +64,45 @@ title: Title of the page
 date: 2026-09-03
 image: /image/photo.jpg          # card thumbnail and Open Graph image
 tags: [tag_1, tag_2]
+category: [Astronomy, Survival]  # optional — merged into tags, see below
 description: Short summary, used for the meta description and search results.
 draft: false
 ---
 ```
+
+#### Subjects — `tags` and `category`
+
+They are two names for one thing. Both are merged into a single list before
+anything renders, so a page can use either or both and the result is the same:
+one chip per subject, one `/blog_tag_*.html` page per subject, one entry in the
+feed, the search index and the JSON-LD keywords. A page filed only under
+`category` is a properly filed page; the status check accepts either key.
+
+Three ways to write the list, all equivalent:
+
+```yaml
+tags: [test, template]      # a flow sequence
+tags:                       # a block sequence
+  - test
+  - template
+tags: test, template        # a bare scalar, split on commas and trimmed
+```
+
+**Case is not part of a subject's identity.** `Astronomy`, `astronomy` and
+`ASTRONOMY` are one subject at one URL, and the site picks a single spelling and
+shows it everywhere, so a card chip can never read one thing while the page it
+opens is titled another. Without this, adding `category: [Survival]` to a site
+that already published a `survival` tag would have taken over that page's URL
+and pushed the original to `/blog_tag_survival-2.html`, breaking every link to
+it silently.
+
+Punctuation *is* part of it: `C++` and `C#` stay two subjects, and because both
+reduce to the same URL name one of them is published with a `-2` suffix and the
+build says so. That is the only remaining case where a subject does not get the
+name it asked for.
+
+A subject that genuinely contains a comma has to be written as an explicit list
+item — `tags: ["Wine, women and song"]` — because a bare scalar is split.
 
 ### 1. Markdown — `input_markdown/*.md`
 

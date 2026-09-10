@@ -20,6 +20,7 @@ import { imageSize, resolveThumbnail } from "./imagesize.js";
 import { injectAssets } from "./assets.js";
 import { rfc822Date, toDate } from "./format.js";
 import { stripFrontMatter } from "./front_matter.js";
+import { mergeSubjects, foldSubject } from "./subjects.js";
 
 /**
  * Directories copied verbatim into _site.
@@ -119,33 +120,56 @@ export function createConfig({
   const md = createMarkdownLibrary(root);
 
   /**
-   * Tag -> the slug its subject page is published under.
+   * Subject key -> the slug its page is published under.
    *
-   * One table, read by both routes from a tag to its URL: the tagList
+   * One table, read by both routes from a subject to its URL: the tagList
    * collection, which supplies blog-tag.njk's permalink and the chips in
    * tag_filter.njk, and the tagSlug filter, which card.njk and post.njk use to
-   * link a post's own tags. Deriving the slug independently on each side worked
-   * only while headingSlug was injective — and it is not, because it strips
-   * punctuation: "C++" and "C#" both reduce to "c". Deduplicating on one side
-   * alone would have been worse than the crash it replaced, pointing every C#
-   * chip at the C++ page with no broken link for the status check to find.
+   * link a post's own subjects. Deriving the slug independently on each side
+   * worked only while headingSlug was injective — and it is not, because it
+   * strips punctuation: "C++" and "C#" both reduce to "c". Deduplicating on one
+   * side alone would have been worse than the crash it replaced, pointing every
+   * C# chip at the C++ page with no broken link for the status check to find.
+   *
+   * Keyed by foldSubject(), not by the text as written, so that a post filed
+   * under "Astronomy" and one filed under "astronomy" resolve to the same page
+   * rather than to two pages fighting over one URL.
    */
   const tagSlugs = new Map();
 
   /**
-   * Fill that table, resolving collisions by suffix.
+   * Subject key -> the one spelling the whole site shows for it.
    *
-   * Assigned in code-unit order of the tag itself, never in the order the
-   * subject list is displayed in. That list is sorted by how many entries carry
-   * each tag, so tying the slugs to it would let publishing one post reshuffle
-   * which tag keeps the bare URL — silently breaking every link to the one that
-   * lost it. Tag text is the only input here that does not move.
+   * A subject is written by hand on every page that carries it, so the same
+   * subject arrives spelled several ways. The slug table above makes them one
+   * page; this makes them one NAME, so a card chip cannot read "Astronomy"
+   * while the page it links to is titled "astronomy".
    */
-  const assignTagSlugs = (tags) => {
+  const tagLabels = new Map();
+
+  /**
+   * Fill both tables, resolving slug collisions by suffix.
+   *
+   * Assigned in code-unit order of the subject KEY, never in the order the
+   * subject list is displayed in. That list is sorted by how many entries carry
+   * each subject, so tying the slugs to it would let publishing one post
+   * reshuffle which subject keeps the bare URL — silently breaking every link
+   * to the one that lost it. Ordering by the key rather than by the chosen
+   * spelling matters for the same reason: the spelling can change when a page
+   * is added, and the key cannot.
+   *
+   * @param {Iterable<{key: string, tag: string}>} subjects
+   */
+  const assignTagSlugs = (subjects) => {
     tagSlugs.clear();
+    tagLabels.clear();
     const taken = new Set();
 
-    for (const tag of [...tags].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
+    const ordered = [...subjects].sort((a, b) =>
+      a.key < b.key ? -1 : a.key > b.key ? 1 : 0,
+    );
+
+    for (const { key, tag } of ordered) {
       const desired = headingSlug(tag);
       let slug = desired;
       let suffix = 1;
@@ -164,7 +188,8 @@ export function createConfig({
       }
 
       taken.add(slug);
-      tagSlugs.set(tag, slug);
+      tagSlugs.set(key, slug);
+      tagLabels.set(key, tag);
     }
   };
 
@@ -287,6 +312,31 @@ export function createConfig({
      * Applied globally; each entry leaves pages it does not own untouched.
      */
     eleventyConfig.addGlobalData("eleventyComputed", {
+      /**
+       * The subjects a page is filed under: `tags` and `category` as one list.
+       *
+       * They are the same idea under two names, so the site publishes one page
+       * per subject and both keys feed it. Done here rather than in each input
+       * folder's .11tydata.js because every consumer — the subject collection,
+       * the chips, the feed's <category> elements, the JSON-LD keywords, the
+       * search index — reads `tags`, and merging at the single point they all
+       * read from is what keeps them from disagreeing.
+       *
+       * Note that this reads `data.tags`, the key it defines. Eleventy answers
+       * a self-reference in computed data with the value from the cascade, not
+       * with a partially computed one, so this sees exactly what the author
+       * wrote. (`outline` below relies on the same behaviour.)
+       *
+       * Eleventy's own automatic `collections.<tag>` is NOT fed by computed
+       * data and therefore knows nothing about categories. Nothing here uses
+       * it — every subject page comes from the `tagList` collection below — but
+       * that is the reason this approach works, so it is worth stating.
+       *
+       * `tags` is passed first so a page that already had them keeps its chips
+       * in the order and the capitalisation it had before categories existed.
+       */
+      tags: (data) => mergeSubjects(data.tags, data.category),
+
       /** Heading tree for the CSS-only outline panel. Markdown posts only. */
       outline: (data) => {
         if (data.pageKind !== "markdown") return data.outline ?? [];
@@ -378,8 +428,35 @@ export function createConfig({
     // what this filter returned for years, so the failure is the old behaviour
     // rather than a broken link.
     eleventyConfig.addFilter("tagSlug", (tag) => {
-      const key = String(tag);
-      return tagSlugs.get(key) ?? headingSlug(key);
+      const key = foldSubject(tag);
+      return tagSlugs.get(key) ?? headingSlug(String(tag).trim());
+    });
+    /**
+     * The site-wide spelling of a subject, for a page that holds its own.
+     *
+     * Accepts a string or a list and answers in kind, because base.njk and
+     * search-index.njk hand over the whole array while the chips ask one at a
+     * time. Unknown subjects come back trimmed rather than dropped: a page that
+     * is not in the subject list at all (a draft, in a build that includes
+     * them) still has to render its chips.
+     */
+    eleventyConfig.addFilter("tagLabel", (value) => {
+      const label = (tag) => tagLabels.get(foldSubject(tag)) ?? String(tag).trim();
+      return Array.isArray(value) ? value.map(label) : label(value);
+    });
+    /**
+     * Whether a page belongs on the subject page published at `slug`.
+     *
+     * Compared by slug rather than by `tagEntry.tag in post.data.tags`, which is
+     * what blog-tag.njk did. That test was an exact string match, so it silently
+     * missed every page whose spelling differed from the one the subject list
+     * settled on — which is now routine, since "Astronomy" and "astronomy" are
+     * deliberately one subject. The slug is the identity of a subject page;
+     * matching on anything else is matching on a display detail.
+     */
+    eleventyConfig.addFilter("hasSubject", (tags, slug) => {
+      if (!Array.isArray(tags)) return false;
+      return tags.some((tag) => tagSlugs.get(foldSubject(tag)) === slug);
     });
     /**
      * ` width="…" height="…" ` for an image, read off the file itself.
@@ -502,21 +579,34 @@ export function createConfig({
 
     eleventyConfig.addCollection("tagList", (api) => {
       const counts = new Map();
+
       for (const item of api.getAll().filter(publishable)) {
         for (const tag of item.data.tags ?? []) {
-          const key = String(tag);
-          const entry = counts.get(key) ?? { tag: key, count: 0 };
+          const key = foldSubject(tag);
+          if (!key) continue;
+          const name = String(tag).trim();
+          const entry = counts.get(key);
+
+          if (!entry) {
+            counts.set(key, { key, tag: name, count: 1 });
+            continue;
+          }
+
           entry.count += 1;
-          counts.set(key, entry);
+          // The spelling the site shows, when pages disagree about it: the one
+          // that sorts first, never the one that happened to be read first.
+          // Read order is the order pages come off disk, so tying the label to
+          // it would let adding an unrelated post rename a subject.
+          if (name < entry.tag) entry.tag = name;
         }
       }
 
-      // Every published tag is known at this point, which is the earliest the
-      // table can be built and still be complete.
-      assignTagSlugs(counts.keys());
+      // Every published subject is known at this point, which is the earliest
+      // the tables can be built and still be complete.
+      assignTagSlugs(counts.values());
 
       return [...counts.values()]
-        .map((entry) => ({ ...entry, slug: tagSlugs.get(entry.tag) }))
+        .map((entry) => ({ ...entry, slug: tagSlugs.get(entry.key) }))
         .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
     });
 

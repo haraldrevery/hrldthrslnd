@@ -19,7 +19,7 @@ layout: false
       "title": {{ (post.data.title or "") | jsonify | safe }},
       "url": {{ post.url | jsonify | safe }},
       "date": {{ (post.data.date | isoDate) | jsonify | safe }},
-      "tags": {{ (post.data.tags or []) | jsonify | safe }},
+      "tags": {{ (post.data.tags or []) | tagLabel | jsonify | safe }},
       "description": {{ (post.data.description or "") | jsonify | safe }},
       "text": {{ (post.templateContent | plain(600)) | jsonify | safe }}
     }{% if not loop.last %},{% endif %}

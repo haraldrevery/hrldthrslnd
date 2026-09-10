@@ -15,11 +15,16 @@ eleventyComputed:
 ---
 {% import "card.njk" as cards %}
 
-{# Tag filtering is done at build time, one page per tag. That keeps the filter
-   working with scripting disabled and gives every subject a real URL. #}
+{# Subject filtering is done at build time, one page per subject. That keeps the
+   filter working with scripting disabled and gives every subject a real URL.
+
+   Matched on the slug, not on `tagEntry.tag in post.data.tags`. A subject is
+   one page however its name is capitalised, so an exact string match dropped
+   every post that spelled it differently — and dropped it silently, since the
+   subject list had already counted that post. #}
 {% set tagged = [] %}
 {% for post in collections.posts %}
-  {% if tagEntry.tag in post.data.tags %}{% set tagged = (tagged.push(post), tagged) %}{% endif %}
+  {% if post.data.tags | hasSubject(tagEntry.slug) %}{% set tagged = (tagged.push(post), tagged) %}{% endif %}
 {% endfor %}
 
 <section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
