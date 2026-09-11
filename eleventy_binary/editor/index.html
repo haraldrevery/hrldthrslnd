@@ -4,72 +4,60 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page builder</title>
-<link rel="stylesheet" href="/css/main.css">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/editor.css">
 </head>
 <body class="ed">
-<header class="ed-top">
-  <span class="ed-brand" id="site-name">Page builder</span>
-  <label class="ed-field-inline">
-    <span class="micro">Post</span>
-    <select id="post-select"></select>
-  </label>
-  <button type="button" id="new-post" class="ed-btn">New</button>
-  <span class="ed-spacer"></span>
-  <button type="button" id="undo" class="ed-btn" title="Undo (Ctrl-Z)">Undo</button>
-  <button type="button" id="redo" class="ed-btn" title="Redo (Ctrl-Shift-Z)">Redo</button>
-  <button type="button" id="save" class="ed-btn ed-btn-primary" title="Save and keep a revision (Ctrl-S)">Save</button>
-  <button type="button" id="build" class="ed-btn">Build site</button>
-  <span id="status" class="ed-status micro"></span>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <button type="button" class="post-switch" id="post-switch" aria-haspopup="menu">
+      <span class="post-switch-title" id="post-title">Loading…</span>
+      <span class="post-switch-meta" id="post-meta"></span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+  </div>
+
+  <div class="topbar-center">
+    <div class="seg seg-icons" id="device" role="group" aria-label="Preview width">
+      <button type="button" data-device="desktop" title="Desktop" aria-pressed="true"><svg viewBox="0 0 20 20"><rect x="2" y="3.5" width="16" height="10.5" rx="1.5"/><path d="M7 17h6M10 14v3"/></svg></button>
+      <button type="button" data-device="tablet" title="Tablet, 834px"><svg viewBox="0 0 20 20"><rect x="4" y="2" width="12" height="16" rx="1.5"/><path d="M9 15.5h2"/></svg></button>
+      <button type="button" data-device="phone" title="Phone, 390px"><svg viewBox="0 0 20 20"><rect x="6" y="2" width="8" height="16" rx="1.5"/><path d="M9.25 15.5h1.5"/></svg></button>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <button type="button" class="icon-btn" id="undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 20 20"><path d="M7.5 5 4 8.5 7.5 12"/><path d="M4.5 8.5h7a4.5 4.5 0 0 1 0 9H9"/></svg></button>
+    <button type="button" class="icon-btn" id="redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 20 20"><path d="M12.5 5 16 8.5 12.5 12"/><path d="M15.5 8.5h-7a4.5 4.5 0 0 0 0 9H11"/></svg></button>
+    <span class="divider"></span>
+    <button type="button" class="checks-badge" id="checks-badge" aria-haspopup="dialog"></button>
+    <span class="save-state" id="save-state"></span>
+    <button type="button" class="btn" id="build">Build site</button>
+    <button type="button" class="btn btn-primary" id="save" title="Save and keep a revision (Ctrl+S)">Save</button>
+  </div>
 </header>
 
-<div class="ed-main" id="main">
-  <aside class="ed-pane ed-left">
-    <details open class="ed-section"><summary class="micro">Page</summary><div id="meta"></div></details>
-    <details open class="ed-section"><summary class="micro">Files in this folder</summary>
-      <div id="assets"></div>
-      <label class="ed-upload">
-        <input type="file" id="upload" multiple>
-        <span class="ed-btn">Add files…</span>
-        <span class="ed-hint">Photographs are turned upright, capped in size, stripped of location data and given a _min counterpart. Nothing is ever overwritten.</span>
-      </label>
-      <div id="upload-log"></div>
-    </details>
-    <details class="ed-section"><summary class="micro">Revisions</summary><div id="revisions"></div></details>
-  </aside>
+<div class="workspace">
+  <main class="stage" id="stage">
+    <div class="canvas-wrap" id="canvas-wrap" data-device="desktop">
+      <iframe id="canvas" class="canvas-frame" title="Page preview — click a block to edit it"></iframe>
+    </div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+  </main>
 
-  <section class="ed-pane ed-center">
-    <div id="blocks"></div>
-    <div class="ed-add" id="add-block"></div>
-  </section>
-
-  <aside class="ed-pane ed-right">
-    <div class="ed-checks" id="checks"></div>
-    <div class="ed-preview-head micro">Preview <span id="preview-url"></span></div>
-    <iframe id="preview" title="Preview" sandbox="allow-same-origin allow-scripts"></iframe>
+  <aside class="inspector" aria-label="Inspector">
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="block">Block</button>
+      <button type="button" role="tab" data-tab="page">Page</button>
+      <button type="button" role="tab" data-tab="files">Files <span class="tab-count" id="files-count"></span></button>
+    </nav>
+    <div class="inspector-body" id="inspector-body"></div>
   </aside>
 </div>
 
-<dialog id="build-dialog" class="ed-dialog">
-  <h2 class="display-sm">Build</h2>
-  <label><input type="checkbox" id="build-drafts"> include drafts (preview build, do not deploy)</label>
-  <pre id="build-log" class="ed-log"></pre>
-  <div class="ed-dialog-actions">
-    <button type="button" id="build-run" class="ed-btn ed-btn-primary">Run site_generate</button>
-    <button type="button" id="build-close" class="ed-btn">Close</button>
-  </div>
-</dialog>
-
-<dialog id="new-dialog" class="ed-dialog">
-  <h2 class="display-sm">New post folder</h2>
-  <label class="ed-field"><span>Folder name</span><input id="new-folder" placeholder="my_trip_2026" pattern="[A-Za-z0-9][A-Za-z0-9_-]*"></label>
-  <p class="ed-hint">Becomes input_custom_post/&lt;name&gt;/ and the page /&lt;name&gt;.html. Letters, digits, _ and -.</p>
-  <label class="ed-field"><span>Title</span><input id="new-title" placeholder="My trip"></label>
-  <div class="ed-dialog-actions">
-    <button type="button" id="new-create" class="ed-btn ed-btn-primary">Create</button>
-    <button type="button" id="new-cancel" class="ed-btn">Cancel</button>
-  </div>
-</dialog>
+<div class="popover" id="popover" hidden></div>
+<dialog class="modal" id="modal"></dialog>
+<input type="file" id="file-input" multiple hidden>
 
 <script src="/editor.js"></script>
 </body>

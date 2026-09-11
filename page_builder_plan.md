@@ -168,6 +168,49 @@ every block. Readmes updated. Binary recompiled and verified.
 | 3 | done | `lib/thumbnail.js`, `lib/exif.js`, orientation fixed in the build's mirror too |
 | 4 | done | `--edit`: `lib/editor/`, `editor/`; smoke-tested against every endpoint |
 | 5 | done | `post_i` ported, `post_blocks` added, readmes updated, binary recompiled |
+| UI pass | done | canvas editing, bulk import and drop, library picker, one inspector; driven end to end in a headless browser |
+
+---
+
+## Second pass: the editor's interface
+
+The first editor worked but was a form with a preview beside it: three panes,
+every field of every block on screen at once, all-caps labels and help text on
+each, a picture chosen by typing its file name, and a checks panel that grew
+into the preview's space. Trying it on a real post showed the failure plainly —
+a hero picture set by pasting a URL copied from the file list, because there
+was nothing to click.
+
+The second pass turns it around: **the page is the interface.**
+
+- **Canvas first.** The preview is the centre of the screen and never moves. It
+  is the rendered page with a thin overlay script (`editor/canvas.js`, served
+  only to the preview, never built into the site): hover outlines a block,
+  clicking selects it, a floating toolbar on the selected block moves,
+  duplicates or removes it, a grip drags it to a new position, and a "+"
+  between blocks inserts one there. Clicking a picture in a gallery selects
+  that picture. The overlay talks to the editor with `postMessage`; the page
+  markup carries `data-block` and `data-image` paths only when rendered for the
+  canvas.
+- **One inspector, three tabs.** Block, Page, Files. The Block tab shows the
+  selected block alone. Labels are small and quiet; help sits in a tooltip.
+- **Pictures are picked, dropped or bulk-imported, never typed.** A gallery's
+  pictures are a grid of thumbnails with drag-to-reorder. Files dropped onto a
+  gallery in the canvas, onto its inspector, or chosen with "Add pictures" are
+  imported in bulk and appended, alt and title prefilled from EXIF where the
+  file has any. Files dropped anywhere else on the canvas become a new gallery
+  at that place. The Files tab is a library: click a picture to add it to the
+  selected gallery, or drag it onto the canvas. A site-wide picture can still
+  be typed as a `/image/…` path in one place, the picture's own panel.
+- **Checks are a badge, not a pane.** The verdict sits in the top bar; clicking
+  it opens the list, and each finding focuses its field. Nothing pushes the
+  canvas.
+- **Device widths.** Desktop, tablet and phone, as a canvas width toggle.
+
+Not done in this pass: editing text directly on the canvas. Headings and
+markdown would need a round trip from rendered HTML back to source, and a
+wrong round trip silently rewrites the author's words. Selection and drag on
+the canvas, with the text in the inspector, is the safe form of it.
 
 Deferred, deliberately: zip export (the folder is the project; a zip of a folder
 is a shell command), Windows shell integration for `--edit` (the URL is printed;

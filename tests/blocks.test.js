@@ -131,6 +131,24 @@ describe("validatePost", () => {
     expect(errors[0].path).toBe("blocks[0].images[0].src");
   });
 
+  test("an address copied out of the editor is an error; any other remote URL a warning", () => {
+    const findings = validatePost(doc([{ type: "gallery", images: [
+      { src: "http://127.0.0.1:8484/post_x/a_min.jpg", alt: "a" },
+      { src: "https://example.org/b.jpg", alt: "b" },
+    ] }]), { assets: [] });
+    expect(findings.find((f) => f.path === "blocks[0].images[0].src").level).toBe("error");
+    expect(findings.find((f) => f.path === "blocks[0].images[1].src").level).toBe("warn");
+  });
+
+  test("an empty column slot is reported as such, and renders as an empty slot", () => {
+    const d = doc([{ type: "columns", items: [{ type: "text", markdown: "a" }, null] }]);
+    const finding = validatePost(d).find((f) => f.path === "blocks[0].items[1]");
+    expect(finding.message).toBe("column 2 is empty");
+    const { html, warnings } = renderPost(d, { md, slug: "post_x", editable: true });
+    expect(html).toContain('<div class="block-col" data-block="blocks[0].items[1]" data-block-type="empty"></div>');
+    expect(warnings).toEqual([]);
+  });
+
   test("a reference that climbs out of the folder is refused", () => {
     const findings = validatePost(doc([{ type: "download", src: "../secret.pdf" }]), { assets: [] });
     expect(findings.some((f) => f.level === "error" && /climbs/.test(f.message))).toBe(true);
@@ -270,6 +288,17 @@ describe("renderPost", () => {
   test("a relative picture inside markdown resolves through the resolver", () => {
     const { html } = render([{ type: "text", markdown: "![Inline](inline.jpg)" }]);
     expect(html).toContain('href="/post_x/inline.jpg"');
+  });
+
+  test("editable markup carries block and picture paths; the build's does not", () => {
+    const blocks = [{ type: "hero", title: "h" }, { type: "gallery", images: [{ src: "photo.jpg", alt: "A" }] }, { type: "columns", items: [{ type: "text", markdown: "a" }, { type: "text", markdown: "b" }] }];
+    const plain = render(blocks).html;
+    expect(plain).not.toContain("data-block");
+    const editable = renderPost(doc(blocks), { md, slug: "post_x", editable: true }).html;
+    expect(editable).toContain('<section class="hero-stage" data-block="blocks[0]" data-block-type="hero">');
+    expect(editable).toContain('<section class="shell block block-gallery" data-block="blocks[1]" data-block-type="gallery">');
+    expect(editable).toContain('data-image="blocks[1].images[0]"');
+    expect(editable).toContain('<div class="block-col block-col-text" data-block="blocks[2].items[1]" data-block-type="text">');
   });
 
   test("pageData translates meta into what a .md post's front matter carries", () => {

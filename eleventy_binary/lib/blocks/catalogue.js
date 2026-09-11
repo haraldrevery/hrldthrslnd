@@ -51,8 +51,8 @@ export const BLOCKS = [
         default: "stage",
         options: [
           { value: "stage", label: "Stage — type on the site's ground, no photograph" },
-          { value: "photo", label: "Photograph — full bleed, always light on dark" },
-          { value: "photo_adaptive", label: "Photograph — full bleed, follows the colour scheme" },
+          { value: "photo", label: "Photo, dark — full bleed, always light type on a darkened picture" },
+          { value: "photo_adaptive", label: "Photo, adaptive — full bleed, follows the reader's colour scheme" },
         ],
       },
       { name: "eyebrow", label: "Eyebrow", kind: "text", help: "The small label above the title." },

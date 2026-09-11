@@ -27,13 +27,15 @@ import process from "node:process";
 import indexHtml from "../../editor/index.html" with { type: "file" };
 import editorJs from "../../editor/editor.js" with { type: "file" };
 import editorCss from "../../editor/editor.css" with { type: "file" };
+import canvasJs from "../../editor/canvas.js" with { type: "file" };
 
 import log from "../log.js";
 import { loadSettings } from "../settings.js";
 import { getRegistry, sourcePathForPublished } from "../slugs.js";
 import { createMarkdownLibrary } from "../markdown.js";
 import { injectAssets } from "../assets.js";
-import { extensionOf, minFileName } from "../paths.js";
+import { extensionOf, minFileName, isRaster, isMinName, VIDEO_EXT, AUDIO_EXT } from "../paths.js";
+import { resolveThumbnail, readImageHeader } from "../imagesize.js";
 import { BLOCKS, META_FIELDS, COLUMN_TYPES, FORMAT_VERSION } from "../blocks/catalogue.js";
 import { validatePost, verdict } from "../blocks/validate.js";
 import { renderPost } from "../blocks/render.js";
@@ -92,16 +94,67 @@ export async function startEditor({ root, port = 8484 }) {
     return source ? serveFile(source) : null;
   }
 
+  /**
+   * One folder of the site-wide library, for the picker.
+   *
+   * Read-only, and confined to the asset folders site_settings.json names,
+   * minus the ones that hold no pictures a page would pick (the thumbnail
+   * mirror, fonts, scripts). `dir` is checked segment by segment before it
+   * becomes a path, so a request cannot list anything outside those folders.
+   */
+  const LIBRARY_EXCLUDE = new Set(["image_min", "font", "javascript", "css", "icon"]);
+  function libraryFolders() {
+    return (settings.asset_folders ?? []).filter((d) => !LIBRARY_EXCLUDE.has(d) && fs.existsSync(path.join(root, d)));
+  }
+  function siteAssets(dir) {
+    const clean = String(dir ?? "").replace(/^\/+|\/+$/g, "");
+    if (!clean) return { dir: "", parent: null, dirs: libraryFolders().map((d) => ({ name: d, path: d })), files: [] };
+
+    const segments = clean.split("/");
+    if (!libraryFolders().includes(segments[0]) || segments.some((s) => !s || s === "." || s === ".." || s.startsWith("."))) {
+      throw new StoreError(400, "not a library folder");
+    }
+    const full = path.join(root, ...segments);
+    if (!fs.existsSync(full) || !fs.statSync(full).isDirectory()) throw new StoreError(404, "no such folder");
+
+    const dirs = [];
+    const files = [];
+    for (const entry of fs.readdirSync(full, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      if (entry.name.startsWith(".")) continue;
+      const rel = `${clean}/${entry.name}`;
+      if (entry.isDirectory()) { dirs.push({ name: entry.name, path: rel }); continue; }
+      if (!entry.isFile() || isMinName(entry.name)) continue;
+      const ext = extensionOf(entry.name);
+      const kind = isRaster(entry.name) || ext === ".gif" || ext === ".svg" ? "image" : VIDEO_EXT.has(ext) ? "video" : AUDIO_EXT.has(ext) ? "audio" : "file";
+      const url = `/${rel.split("/").map(encodeURIComponent).join("/")}`;
+      const size = kind === "image" ? readImageHeader(path.join(full, entry.name)) : null;
+      files.push({
+        name: entry.name,
+        src: `/${rel}`,
+        url,
+        thumb: kind === "image" ? resolveThumbnail(url, root) : null,
+        kind,
+        bytes: fs.statSync(path.join(full, entry.name)).size,
+        width: size?.width ?? null,
+        height: size?.height ?? null,
+      });
+    }
+    return { dir: clean, parent: segments.length > 1 ? segments.slice(0, -1).join("/") : "", dirs, files };
+  }
+
   function previewDocument(doc, folder) {
     const registry = getRegistry(root);
     const record = registry.all.find((r) => r.kind === "custom_post" && r.folder === folder);
     const slug = record?.slug ?? folder;
-    const { html, warnings } = renderPost(doc, { md, slug, inputPath: `input_custom_post/${folder}/${folder}.json` });
+    // Rendered with the editor's paths on every block, and the canvas overlay
+    // appended. Neither exists in a build: this markup is for the iframe only.
+    const { html, warnings } = renderPost(doc, { md, slug, inputPath: `input_custom_post/${folder}/${folder}.json`, editable: true });
     const page =
       `<!doctype html>\n<html lang="${settings.language}">\n<head>\n<meta charset="utf-8">\n` +
       `<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Preview</title>\n` +
       `<!--vendor-css-->\n<link rel="stylesheet" href="/css/main.css">\n</head>\n` +
-      `<body class="grain">\n<main id="main">\n${html}\n</main>\n</body>\n</html>\n`;
+      `<body class="grain">\n<main id="main">\n${html}\n</main>\n` +
+      `<script src="/canvas.js" defer></script>\n</body>\n</html>\n`;
     return { html: injectAssets(page), warnings, slug };
   }
 
@@ -237,6 +290,10 @@ export async function startEditor({ root, port = 8484 }) {
       }
     }
 
+    if (parts[1] === "library" && method === "GET") {
+      return json(siteAssets(url.searchParams.get("dir")));
+    }
+
     if (parts[1] === "build" && method === "POST") {
       const { drafts } = await body();
       return json(await runBuild({ drafts: drafts === true }));
@@ -257,6 +314,7 @@ export async function startEditor({ root, port = 8484 }) {
         if (url.pathname === "/") return new Response(Bun.file(indexHtml), { headers: { "content-type": MIME[".html"], "cache-control": "no-store" } });
         if (url.pathname === "/editor.js") return new Response(Bun.file(editorJs), { headers: { "content-type": MIME[".js"], "cache-control": "no-store" } });
         if (url.pathname === "/editor.css") return new Response(Bun.file(editorCss), { headers: { "content-type": MIME[".css"], "cache-control": "no-store" } });
+        if (url.pathname === "/canvas.js") return new Response(Bun.file(canvasJs), { headers: { "content-type": MIME[".js"], "cache-control": "no-store" } });
         if (url.pathname.startsWith("/api/")) return await handleApi(req, url);
         if (req.method === "GET") return serveSitePath(url.pathname) ?? new Response("not found", { status: 404 });
         return fail(405, "method not allowed");

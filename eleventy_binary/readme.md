@@ -59,6 +59,7 @@ Exit code is non-zero only on **errors**. Warnings are information.
 | `lib/editor/store.js` | The editor's only path to disk: atomic writes, revisions, never delete or overwrite |
 | `lib/editor/import_media.js` | What happens to an uploaded file: decode, orient, cap, scrub, thumbnail, check |
 | `editor/` | The editor page: index.html, editor.css, editor.js — embedded in the binary |
+| `editor/canvas.js` | Injected into the editor's preview only: selection, the block toolbar, drag to move, drops. Never part of a build |
 | `lib/slugs.js` | One slug namespace across all three input folders, with conflict resolution |
 | `lib/images.js` | The `image/` → `image_min/` mirror |
 | `lib/codecs.js` | WASM codec bootstrap (see below) |

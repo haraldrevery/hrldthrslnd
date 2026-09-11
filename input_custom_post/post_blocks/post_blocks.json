@@ -4,26 +4,45 @@
     "title": "Block test post",
     "date": "2026-09-11",
     "description": "Every block the page builder can render, rendered from one JSON document. The data-driven twin of block_test_page.html.",
-    "tags": ["test", "reference"],
+    "tags": [
+      "test",
+      "reference"
+    ],
     "category": [],
     "image": "/card_thumbnail/thumbnail_rome.jpg",
-    "draft": false
+    "draft": true
   },
   "blocks": [
     {
       "type": "hero",
-      "variant": "stage",
+      "variant": "photo",
       "eyebrow": "Reference — 02",
       "title": "Block\ntest\npost",
       "accent": "test",
       "lede": "Every block type the builder knows, rendered from JSON by the build. If a block renders wrong, it is visible here.",
       "actions": [
-        { "label": "The hand-written twin", "href": "/block_test_page.html" },
-        { "label": "All entries", "href": "/blog.html" }
+        {
+          "label": "The hand-written twin",
+          "href": "/block_test_page.html"
+        },
+        {
+          "label": "All entries",
+          "href": "/blog.html"
+        }
       ],
-      "scroll_cue": true
+      "scroll_cue": true,
+      "image": {
+        "src": "http://127.0.0.1:8484/post_blocks/2024christian_halden_fredriksten_fortress1_min.jpg",
+        "alt": "",
+        "title": "",
+        "caption": ""
+      }
     },
-    { "type": "heading", "eyebrow": "Section label", "title": "Heading block" },
+    {
+      "type": "heading",
+      "eyebrow": "Section label",
+      "title": "Heading block"
+    },
     {
       "type": "text",
       "markdown": "### Text block\n\nBody copy sits in a `.prose` container. Inline mathematics such as $\\chi^2 = \\sum_i \\frac{(O_i - E_i)^2}{E_i}$ flows with the sentence and keeps its own metrics.\n\nDisplay mathematics gets its own block:\n\n$$\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}$$\n\n> A pull quote uses a gradient left border rather than a heavier weight, because these fonts have exactly one weight each.\n\n- Unordered lists use square markers in the accent colour\n- Nested items indent normally\n  - like this\n\nA picture written in markdown gets the same figure a note would:\n\n![Snow-streaked ridges seen from above through a break in the cloud](/image/2016mountains_and_clouds.jpg \"Mountains and clouds, 2016\")"
@@ -35,10 +54,26 @@
       "layout": "justified",
       "gap": "0.75rem",
       "images": [
-        { "src": "/image/2016mountains_and_clouds.jpg", "alt": "Snow-streaked ridges seen from above through a break in the cloud", "title": "Mountains and clouds, 2016" },
-        { "src": "/image/2016nicemountains.jpg", "alt": "A run of snow-covered peaks from a plane window, hazy blue distance behind", "title": "Ridge line, 2016" },
-        { "src": "/image/2016romestreets.jpg", "alt": "Wet cobblestones at night, street lights thrown out of focus behind them", "title": "Rome, 2016" },
-        { "src": "/gif/haraldrevery11techbw.gif", "alt": "A looping black and white animation of a figure at a desk", "title": "Loop" }
+        {
+          "src": "/image/2016mountains_and_clouds.jpg",
+          "alt": "Snow-streaked ridges seen from above through a break in the cloud",
+          "title": "Mountains and clouds, 2016"
+        },
+        {
+          "src": "/image/2016nicemountains.jpg",
+          "alt": "A run of snow-covered peaks from a plane window, hazy blue distance behind",
+          "title": "Ridge line, 2016"
+        },
+        {
+          "src": "/image/2016romestreets.jpg",
+          "alt": "Wet cobblestones at night, street lights thrown out of focus behind them",
+          "title": "Rome, 2016"
+        },
+        {
+          "src": "/gif/haraldrevery11techbw.gif",
+          "alt": "A looping black and white animation of a figure at a desk",
+          "title": "Loop"
+        }
       ]
     },
     {
@@ -48,10 +83,26 @@
       "layout": "uniform",
       "gap": "0.5rem",
       "images": [
-        { "src": "/image/2016just_mountains.jpg", "alt": "A wide field of snow-covered peaks under a pale horizon, seen from altitude", "title": "Over the Alps, 2016" },
-        { "src": "/image/2016moremountains.jpg", "alt": "Cloud shadows crossing green and grey ridges far below the aircraft", "title": "Green ridges, 2016" },
-        { "src": "/image/summersunset2018w.jpg", "alt": "Bare birches standing against a teal and orange sunset sky", "title": "A summer sunset, 2018" },
-        { "src": "/svg/compass_navigation.svg", "alt": "A line-drawn compass rose", "title": "Compass" }
+        {
+          "src": "/image/2016just_mountains.jpg",
+          "alt": "A wide field of snow-covered peaks under a pale horizon, seen from altitude",
+          "title": "Over the Alps, 2016"
+        },
+        {
+          "src": "/image/2016moremountains.jpg",
+          "alt": "Cloud shadows crossing green and grey ridges far below the aircraft",
+          "title": "Green ridges, 2016"
+        },
+        {
+          "src": "/image/summersunset2018w.jpg",
+          "alt": "Bare birches standing against a teal and orange sunset sky",
+          "title": "A summer sunset, 2018"
+        },
+        {
+          "src": "/svg/compass_navigation.svg",
+          "alt": "A line-drawn compass rose",
+          "title": "Compass"
+        }
       ]
     },
     {
@@ -61,17 +112,43 @@
       "layout": "waterfall",
       "gap": "0.75rem",
       "images": [
-        { "src": "/image/2018augusti10stranden.jpg", "alt": "Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind", "title": "The beach, August 2018", "caption": "The beach, August 2018" },
-        { "src": "/image/padova2016.jpg", "alt": "A stone statue silhouetted against a bright hazy sky", "title": "Padova, 2016", "caption": "Padova, 2016" },
-        { "src": "/image/harald_sitting_on_stairs_may_2022.jpg", "alt": "A person sitting on a flight of stone stairs, looking out past the camera", "title": "On the stairs, May 2022", "caption": "On the stairs, May 2022" },
-        { "src": "/image/2016somemountains.jpg", "alt": "A sheet of low cloud broken by dark summits, thinning towards the horizon", "title": "Peaks through cloud, 2016", "caption": "Peaks through cloud, 2016" }
+        {
+          "src": "/image/2018augusti10stranden.jpg",
+          "alt": "Waves breaking on a sand beach under a heavy grey sky, pines crowding the headland behind",
+          "title": "The beach, August 2018",
+          "caption": "The beach, August 2018"
+        },
+        {
+          "src": "/image/padova2016.jpg",
+          "alt": "A stone statue silhouetted against a bright hazy sky",
+          "title": "Padova, 2016",
+          "caption": "Padova, 2016"
+        },
+        {
+          "src": "/image/harald_sitting_on_stairs_may_2022.jpg",
+          "alt": "A person sitting on a flight of stone stairs, looking out past the camera",
+          "title": "On the stairs, May 2022",
+          "caption": "On the stairs, May 2022"
+        },
+        {
+          "src": "/image/2016somemountains.jpg",
+          "alt": "A sheet of low cloud broken by dark summits, thinning towards the horizon",
+          "title": "Peaks through cloud, 2016",
+          "caption": "Peaks through cloud, 2016"
+        }
       ]
     },
     {
       "type": "columns",
       "items": [
-        { "type": "text", "markdown": "### Left column\n\nTwo-column rows collapse to one column below the mobile breakpoint, which is defined once in `css/input.css`. Nothing here sets its own breakpoint." },
-        { "type": "text", "markdown": "### Right column\n\nAny two blocks can be paired this way — text beside a gallery, a download beside an FAQ. The editor offers the pairing as one block with two slots." }
+        {
+          "type": "text",
+          "markdown": "### Left column\n\nTwo-column rows collapse to one column below the mobile breakpoint, which is defined once in `css/input.css`. Nothing here sets its own breakpoint."
+        },
+        {
+          "type": "text",
+          "markdown": "### Right column\n\nAny two blocks can be paired this way — text beside a gallery, a download beside an FAQ. The editor offers the pairing as one block with two slots."
+        }
       ]
     },
     {
@@ -80,7 +157,10 @@
       "title": "Phrases",
       "src": "/video/under_25_mb/harald_revery_-_phrases.mp4",
       "poster": "/video/thumbnail/phrases_thumbnail.jpg",
-      "meta": ["H.264", "Under 25 MB"],
+      "meta": [
+        "H.264",
+        "Under 25 MB"
+      ],
       "caption": "A short clip kept here so the player has something heavier than a poster frame to load.",
       "download": true
     },
@@ -89,7 +169,10 @@
       "eyebrow": "Track 01 — WAV",
       "title": "One second of silence",
       "src": "/audio/silence_test.wav",
-      "meta": ["0:01", "44.1 kHz · 16 bit"],
+      "meta": [
+        "0:01",
+        "44.1 kHz · 16 bit"
+      ],
       "caption": "A second of digital silence, kept here so the player has something to load that is not a real recording.",
       "download": true
     },
@@ -108,8 +191,14 @@
           "title": "Questions",
           "open_first": true,
           "items": [
-            { "question": "Does this work without JavaScript?", "answer": "Yes. It is a native `<details>` element. The plus turns into a minus and the gradient fills the ring, all in CSS." },
-            { "question": "Can an answer hold markdown?", "answer": "It can: lists, links, *emphasis* and $E = mc^2$ all work inside it." }
+            {
+              "question": "Does this work without JavaScript?",
+              "answer": "Yes. It is a native `<details>` element. The plus turns into a minus and the gradient fills the ring, all in CSS."
+            },
+            {
+              "question": "Can an answer hold markdown?",
+              "answer": "It can: lists, links, *emphasis* and $E = mc^2$ all work inside it."
+            }
           ]
         }
       ]
@@ -119,7 +208,11 @@
       "eyebrow": "Featured — 01",
       "title": "One image, one argument",
       "text": "Use this when a run of text-and-image columns needs breaking up. The panel follows the colour scheme, so it reads as a solid card on the page in either one.",
-      "image": { "src": "/image/2016mountains_and_clouds.jpg", "alt": "Snow-streaked ridges seen from above through a break in the cloud", "title": "Mountains and clouds, 2016" },
+      "image": {
+        "src": "/image/2016mountains_and_clouds.jpg",
+        "alt": "Snow-streaked ridges seen from above through a break in the cloud",
+        "title": "Mountains and clouds, 2016"
+      },
       "image_side": "left",
       "action_label": "All entries",
       "action_href": "/blog.html"

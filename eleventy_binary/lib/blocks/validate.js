@@ -164,6 +164,10 @@ export function validatePost(doc, { assets = null } = {}) {
       if (items.length !== 2) error(`${path}.items`, `a two-column row holds exactly 2 blocks, this one holds ${items.length}`);
       items.forEach((inner, j) => {
         const innerPath = `${path}.items[${j}]`;
+        if (inner == null) {
+          error(innerPath, `column ${j + 1} is empty`, "choose a block for it, or replace the row with a single block");
+          return;
+        }
         const innerSpec = validateBlock(inner, innerPath, { error, warn, note });
         if (innerSpec && !COLUMN_TYPES.includes(innerSpec.type)) {
           error(innerPath, `a ${innerSpec.label.toLowerCase()} block cannot sit in a column`);
@@ -181,6 +185,17 @@ export function validatePost(doc, { assets = null } = {}) {
   /* ---------------------------------------------------------------- assets */
   const listing = assets == null ? null : new Set(assets);
   for (const ref of assetRefs(doc)) {
+    // The one mistake the editor itself invites: a picture's address copied
+    // out of the editor's own preview. It works while the editor is running
+    // and nowhere else, so it is an error rather than an ordinary remote URL.
+    if (/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\//i.test(ref.src)) {
+      error(ref.path, `"${ref.src}" points at the page builder's own server`, "it breaks the moment the site is published; choose the file from the library instead");
+      continue;
+    }
+    if (/^(https?:)?\/\//i.test(ref.src)) {
+      warn(ref.path, `"${ref.src}" is loaded from another site`, "this site is meant to serve every asset itself");
+      continue;
+    }
     if (!isFolderRef(ref.src)) {
       if (!ref.src.startsWith("/") && !/^[a-z][a-z0-9+.-]*:/i.test(ref.src)) {
         error(ref.path, `"${ref.src}" is not a file name or a site-absolute path`);

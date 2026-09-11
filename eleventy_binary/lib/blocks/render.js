@@ -68,9 +68,13 @@ function cssLength(value, fallback) {
  * @param {string} options.slug      the slug the registry assigned to this post
  * @param {string} options.inputPath the post's source path, so relative images
  *   inside markdown resolve through the same table as everything else
+ * @param {boolean} options.editable  add `data-block` and `data-image` paths
+ *   to the markup, so the editor's canvas can find what was clicked. Only the
+ *   editor's preview asks for this; the build never does, so nothing of the
+ *   editor reaches the published site.
  * @returns {{html: string, warnings: {path:string, message:string, detail?:string}[]}}
  */
-export function renderPost(doc, { md, slug, inputPath = "" }) {
+export function renderPost(doc, { md, slug, inputPath = "", editable = false }) {
   const warnings = [];
   const ctx = {
     md,
@@ -78,6 +82,9 @@ export function renderPost(doc, { md, slug, inputPath = "" }) {
     slug,
     env: inputPath ? { page: { inputPath } } : {},
     galleries: 0,
+    editable,
+    mark: (path, type) => (editable ? ` data-block="${esc(path)}"${type ? ` data-block-type="${esc(type)}"` : ""}` : ""),
+    markImage: (path) => (editable ? ` data-image="${esc(path)}"` : ""),
     warn: (path, message, detail) => warnings.push({ path, message, detail }),
   };
 
@@ -97,10 +104,10 @@ function renderTop(block, path, ctx) {
     ctx.warn(path, `unknown block type ${JSON.stringify(block?.type)}, skipped`);
     return "";
   }
-  if (spec.type === "hero") return renderHero(block, ctx);
+  if (spec.type === "hero") return renderHero(block, path, ctx);
 
   const inner = renderInner(block, path, ctx);
-  return `<section class="shell block block-${spec.type}">\n${inner}\n</section>`;
+  return `<section class="shell block block-${spec.type}"${ctx.mark(path, spec.type)}>\n${inner}\n</section>`;
 }
 
 /** The inside of a block, which is also what a column holds. */
@@ -174,7 +181,7 @@ function heroTitle(title, accent) {
     .join(' <br class="hero-break">');
 }
 
-function renderHero(block, ctx) {
+function renderHero(block, path, ctx) {
   const spec = BY_TYPE.get("hero");
   const variant = choice(spec, block, "variant");
   const photographic = variant !== "stage";
@@ -206,7 +213,7 @@ function renderHero(block, ctx) {
     : `\n  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>`;
 
   return (
-    `<section class="${classes.join(" ")}">\n` +
+    `<section class="${classes.join(" ")}"${ctx.mark(path, "hero")}>\n` +
     `  ${media}\n` +
     `  <div class="shell hero-copy">\n` +
     (text(block.eyebrow) ? `    <p class="eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
@@ -243,18 +250,19 @@ function renderGallery(block, path, ctx) {
   const cells = list(block.images).map((img, i) => {
     const url = assetUrl(img?.src, ctx.slug);
     const kind = mediaKind(url);
+    const at = ctx.markImage(`${path}.images[${i}]`);
 
     if (kind === "video") {
       const poster = posterFor(url, ctx.resolver);
       const size = poster ? ctx.resolver.imageSize(poster) : null;
       const player = playerTag("video", url, { poster, size });
       const ratio = size && size.height > 0 ? +(size.width / size.height).toFixed(4) : 1.7778;
-      if (layout === "waterfall") return `<figure>${player}${caption(img)}</figure>`;
-      return `<figure class="art-plate fill" style="--ar:${ratio}">${player}</figure>`;
+      if (layout === "waterfall") return `<figure${at}>${player}${caption(img)}</figure>`;
+      return `<figure class="art-plate fill" style="--ar:${ratio}"${at}>${player}</figure>`;
     }
     if (kind === "audio") {
       ctx.warn(`${path}.images[${i}]`, "an audio file in a gallery", "it is rendered as a player cell; the audio block suits it better");
-      return `<figure>${playerTag("audio", url)}${caption(img)}</figure>`;
+      return `<figure${at}>${playerTag("audio", url)}${caption(img)}</figure>`;
     }
 
     const p = picture(img, ctx, group);
@@ -262,13 +270,13 @@ function renderGallery(block, path, ctx) {
     if (!p.size) ctx.warn(`${path}.images[${i}]`, `could not measure "${img?.src}"`, "the cell takes the stylesheet's default ratio");
 
     if (layout === "waterfall") {
-      return `<figure><span class="art-plate">${p.html}</span>${caption(img)}</figure>`;
+      return `<figure${at}><span class="art-plate">${p.html}</span>${caption(img)}</figure>`;
     }
     if (layout === "uniform") {
       const vector = extensionOf(url) === ".svg";
-      return `<figure class="art-plate${vector ? " tile-vector" : " fill"}">${p.html}</figure>`;
+      return `<figure class="art-plate${vector ? " tile-vector" : " fill"}"${at}>${p.html}</figure>`;
     }
-    return `<figure class="art-plate fill"${ratio ? ` style="--ar:${ratio}"` : ""}>${p.html}</figure>`;
+    return `<figure class="art-plate fill"${ratio ? ` style="--ar:${ratio}"` : ""}${at}>${p.html}</figure>`;
   });
 
   const grid = `<div class="gallery gallery-${layout}" style="--gallery-gap:${gap}">\n${cells.join("\n")}\n</div>`;
@@ -373,12 +381,16 @@ function renderColumns(block, path, ctx) {
   const cols = list(block.items)
     .slice(0, 2)
     .map((inner, i) => {
+      const at = `${path}.items[${i}]`;
+      // An empty slot is a slot the editor is still filling, not a fault in
+      // the renderer's eyes; the validator reports it.
+      if (inner == null) return `<div class="block-col"${ctx.mark(at, "empty")}></div>`;
       const spec = BY_TYPE.get(inner?.type);
       if (!spec || spec.inColumns === false) {
-        ctx.warn(`${path}.items[${i}]`, `a ${spec ? spec.label.toLowerCase() : "unknown"} block cannot sit in a column, skipped`);
-        return `<div class="block-col"></div>`;
+        ctx.warn(at, `a ${spec ? spec.label.toLowerCase() : "unknown"} block cannot sit in a column, skipped`);
+        return `<div class="block-col"${ctx.mark(at, "empty")}></div>`;
       }
-      return `<div class="block-col block-col-${spec.type}">\n${renderInner(inner, `${path}.items[${i}]`, ctx)}\n</div>`;
+      return `<div class="block-col block-col-${spec.type}"${ctx.mark(at, spec.type)}>\n${renderInner(inner, at, ctx)}\n</div>`;
     });
   return `<div class="block-two-col">\n${cols.join("\n")}\n</div>`;
 }
