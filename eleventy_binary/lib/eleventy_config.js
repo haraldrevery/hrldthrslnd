@@ -21,6 +21,7 @@ import { injectAssets } from "./assets.js";
 import { rfc822Date, toDate } from "./format.js";
 import { stripFrontMatter } from "./front_matter.js";
 import { mergeSubjects, foldSubject } from "./subjects.js";
+import { renderPost, pageData } from "./blocks/render.js";
 
 /**
  * Directories copied verbatim into _site.
@@ -302,9 +303,66 @@ export function createConfig({
         const key = normaliseKey(record.inputPath);
         table[key] = value;
         table[`./${key}`] = value;
+        // A JSON post is known to Eleventy by its virtual path, and the
+        // directory data file looks its permalink up under that name.
+        if (record.virtualPath) {
+          table[record.virtualPath] = value;
+          table[`./${record.virtualPath}`] = value;
+        }
       }
       return table;
     })());
+
+    /* ------------------------------------------------------------ JSON posts
+       A post folder whose page is a `<folder>.json` document has no template
+       on disk for Eleventy to find. Its blocks are rendered here, through the
+       same markdown library every .md post uses, and the result is handed to
+       Eleventy as a virtual template at the path the registry reserved for it.
+       From there it is an ordinary page: it takes the site layout, joins
+       collections.posts, and reaches the feed, the sitemap, the search index
+       and the subject pages like anything else.
+
+       Rendered at configuration time, which is before Eleventy has read a
+       file. That is fine: everything the renderer needs — the registry, the
+       markdown library, the thumbnail lookups — already exists by then, and it
+       is the same moment the registry itself is consulted.
+
+       A document that fails to parse is not registered, and the "not
+       published" check reports the page the registry promised and never got.
+       A document that parses but fails validation IS rendered, as best it can
+       be, because the status check reports every finding against the source
+       file and the author fixes them there; refusing to render would only take
+       the page off the site while they do. */
+    for (const record of registry.all) {
+      if (record.source !== "json") continue;
+
+      let doc;
+      try {
+        doc = JSON.parse(fs.readFileSync(path.join(root, record.inputPath), "utf8"));
+      } catch (error) {
+        log.error("posts", `${record.inputPath} is not valid JSON, no page rendered`, error.message);
+        continue;
+      }
+
+      const { html, warnings } = renderPost(doc, {
+        md,
+        slug: record.slug,
+        inputPath: record.inputPath,
+      });
+      for (const warning of warnings) {
+        log.note("posts", `${record.inputPath} — ${warning.path}: ${warning.message}`, warning.detail);
+      }
+
+      eleventyConfig.addTemplate(record.virtualPath, html, {
+        ...pageData(doc, { slug: record.slug }),
+        layout: "page.njk",
+        pageKind: "custom_post",
+        // Author content, never run through a template engine — the same rule
+        // the directory data file states for hand-written pages.
+        templateEngineOverride: false,
+        permalink: record.permalink,
+      });
+    }
 
     /**
      * Computed data that needs the bundled libraries (the markdown parser, the

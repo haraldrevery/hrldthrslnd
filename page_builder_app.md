@@ -1,3 +1,8 @@
+> **Superseded in part.** The plan that was actually built is in
+> [`page_builder_plan.md`](page_builder_plan.md): the same features, delivered as
+> `site_generate --edit` rather than a Tauri or Electron app, and the reasons why.
+> This file is kept as the original brief.
+
 # Page builder app
 
 Concept: Instead of copy and pasting code for making custom html pages for photography/art portfolio or just fancier articles, a block editor where you can paste markdown+KaTeX in blocks and import images and see the image grid rendering and warn the user about missing compressed images (missing "*_min.jpg"). 

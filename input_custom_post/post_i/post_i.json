@@ -1,16 +1,50 @@
 {
-  "$comment": "Page builder save file. Not published — the generator skips .json when copying a post folder's assets. This is the shape the app will read and write.",
   "format": 1,
-  "slug": "post_i",
   "meta": {
     "title": "A page folder",
     "date": "2026-09-01",
+    "description": "A post folder — one document plus its own media, kept together and published as a unit.",
     "tags": ["reference", "test"],
-    "description": "A post folder: one HTML page plus its own media, kept together."
+    "category": [],
+    "image": "thumbnail.jpg",
+    "draft": false
   },
   "blocks": [
-    { "type": "hero", "variant": "split", "image": "street_scene.jpg" },
-    { "type": "text", "markdown": "Body copy for the page." },
-    { "type": "gallery", "layout": "justified", "images": ["street_scene.jpg", "statue.jpg"] }
+    {
+      "type": "hero",
+      "variant": "photo_adaptive",
+      "eyebrow": "Page folder",
+      "title": "Kept\ntogether",
+      "accent": "together",
+      "lede": "A page and its media in one folder, published as a unit. Asset paths are bare file names, so nothing has to be rewritten when the folder moves.",
+      "image": {
+        "src": "street_scene.jpg",
+        "alt": "Wet cobblestones at night, street lights thrown out of focus behind them",
+        "title": "Rome by night, 2016"
+      },
+      "actions": [],
+      "scroll_cue": true
+    },
+    {
+      "type": "text",
+      "markdown": "## How the folder is published\n\nThe page becomes `/post_i.html`. Everything beside it — images, audio, anything else — is copied to `/post_i/`, and every reference in this document is written out against that folder by the build, so a folder that has to take a suffix still finds its pictures.\n\nThe slug comes from the folder name, and shares one namespace with `input_markdown/` and `input_custom_html/`. Two inputs cannot claim the same URL — the build warns and adds a suffix.\n\nThis document is `post_i.json`. It is what the page builder reads and writes, and it is what the build renders. There is no HTML file in this folder."
+    },
+    {
+      "type": "gallery",
+      "layout": "justified",
+      "gap": "0.75rem",
+      "images": [
+        {
+          "src": "street_scene.jpg",
+          "alt": "Wet cobblestones at night, street lights thrown out of focus behind them",
+          "title": "Rome by night, 2016"
+        },
+        {
+          "src": "statue.jpg",
+          "alt": "A stone statue silhouetted against a bright hazy sky",
+          "title": "Padova, 2016"
+        }
+      ]
+    }
   ]
 }

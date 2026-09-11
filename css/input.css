@@ -4501,6 +4501,47 @@
     .block-two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.5rem; }
   }
 
+  /* -- Blocks rendered from a post's JSON -------------------------------------
+     eleventy_binary/lib/blocks/render.js emits every block as
+     <section class="shell block block-<type>">. The vertical rhythm the
+     hand-written library carries as an inline style on every block — pad the
+     BOTTOM only, never the top, so the gap above a block is always the previous
+     block's bottom padding — is this one rule, so the theme owns it.
+
+     The heading block is the documented exception: it pads its top, because it
+     is the first thing after a hero, and closes tight because the block under
+     it is what it is a heading for. */
+  .block { padding-bottom: clamp(3rem, 8vh, 4.5rem); }
+  .block-heading { padding-top: clamp(3rem, 8vh, 4.5rem); padding-bottom: 1rem; }
+  .block-heading .display-md { margin-top: 0.9rem; }
+  .block-heading .rule-grad { margin-top: 1.75rem; }
+
+  /* An optional masthead above a block's content, and the gap under it. */
+  .block-lede { margin-top: 0.9rem; font-size: var(--step--1); }
+  .block-title + .block-body,
+  .block-lede + .block-body { margin-top: 2rem; }
+
+  /* Questions read badly at the full shell width; the library caps them too. */
+  .block-faq { max-width: min(var(--shell-max), 60rem); }
+
+  /* The caption under a video or audio block: the mono micro face, but in
+     mixed case and muted, which is what the library set inline. */
+  .block-caption { letter-spacing: 0.08em; text-transform: none; color: var(--fg-muted); }
+
+  /* The download block's head row: name on the left, the pill on the right. */
+  .download-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
+  .download-head .display-sm { margin-top: 0.5rem; }
+  .download-note { margin-top: 1rem; color: var(--fg-muted); }
+
+  /* The feature block: a 3:4 plate beside a glass panel, centred on each other. */
+  .feature-row { align-items: center; gap: 3rem; }
+  .feature-plate { aspect-ratio: 3 / 4; }
+  .feature-panel { padding: clamp(1.75rem, 4vw, 3rem); }
+  .feature-panel .display-md { margin-top: 1rem; }
+  .feature-panel .feature-text { margin-top: 1.5rem; max-width: 46ch; }
+  .feature-panel .feature-text > * + * { margin-top: 1em; }
+  .feature-panel .feature-action { margin-top: 1.75rem; }
+
   /* -- Text beside media ------------------------------------------------------
      .block-two-col splits 50/50, which is right for two columns of prose and
      wrong for prose beside a video: a 16:9 frame at half the shell is small,

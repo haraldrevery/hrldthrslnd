@@ -218,6 +218,15 @@ export function readImageHeader(filePath) {
   }
 }
 
+/**
+ * Forget every measurement. For the editor server, which writes new files
+ * while it runs: a size cached as null for a picture that did not exist yet
+ * would otherwise stay null after the upload. The build never calls this.
+ */
+export function invalidateImageSizeCache() {
+  cache.clear();
+}
+
 export function imageSize(url, root = process.cwd()) {
   if (typeof url !== "string" || !url.startsWith("/")) return null;
 

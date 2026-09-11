@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page builder</title>
+<link rel="stylesheet" href="/css/main.css">
+<link rel="stylesheet" href="/editor.css">
+</head>
+<body class="ed">
+<header class="ed-top">
+  <span class="ed-brand" id="site-name">Page builder</span>
+  <label class="ed-field-inline">
+    <span class="micro">Post</span>
+    <select id="post-select"></select>
+  </label>
+  <button type="button" id="new-post" class="ed-btn">New</button>
+  <span class="ed-spacer"></span>
+  <button type="button" id="undo" class="ed-btn" title="Undo (Ctrl-Z)">Undo</button>
+  <button type="button" id="redo" class="ed-btn" title="Redo (Ctrl-Shift-Z)">Redo</button>
+  <button type="button" id="save" class="ed-btn ed-btn-primary" title="Save and keep a revision (Ctrl-S)">Save</button>
+  <button type="button" id="build" class="ed-btn">Build site</button>
+  <span id="status" class="ed-status micro"></span>
+</header>
+
+<div class="ed-main" id="main">
+  <aside class="ed-pane ed-left">
+    <details open class="ed-section"><summary class="micro">Page</summary><div id="meta"></div></details>
+    <details open class="ed-section"><summary class="micro">Files in this folder</summary>
+      <div id="assets"></div>
+      <label class="ed-upload">
+        <input type="file" id="upload" multiple>
+        <span class="ed-btn">Add files…</span>
+        <span class="ed-hint">Photographs are turned upright, capped in size, stripped of location data and given a _min counterpart. Nothing is ever overwritten.</span>
+      </label>
+      <div id="upload-log"></div>
+    </details>
+    <details class="ed-section"><summary class="micro">Revisions</summary><div id="revisions"></div></details>
+  </aside>
+
+  <section class="ed-pane ed-center">
+    <div id="blocks"></div>
+    <div class="ed-add" id="add-block"></div>
+  </section>
+
+  <aside class="ed-pane ed-right">
+    <div class="ed-checks" id="checks"></div>
+    <div class="ed-preview-head micro">Preview <span id="preview-url"></span></div>
+    <iframe id="preview" title="Preview" sandbox="allow-same-origin allow-scripts"></iframe>
+  </aside>
+</div>
+
+<dialog id="build-dialog" class="ed-dialog">
+  <h2 class="display-sm">Build</h2>
+  <label><input type="checkbox" id="build-drafts"> include drafts (preview build, do not deploy)</label>
+  <pre id="build-log" class="ed-log"></pre>
+  <div class="ed-dialog-actions">
+    <button type="button" id="build-run" class="ed-btn ed-btn-primary">Run site_generate</button>
+    <button type="button" id="build-close" class="ed-btn">Close</button>
+  </div>
+</dialog>
+
+<dialog id="new-dialog" class="ed-dialog">
+  <h2 class="display-sm">New post folder</h2>
+  <label class="ed-field"><span>Folder name</span><input id="new-folder" placeholder="my_trip_2026" pattern="[A-Za-z0-9][A-Za-z0-9_-]*"></label>
+  <p class="ed-hint">Becomes input_custom_post/&lt;name&gt;/ and the page /&lt;name&gt;.html. Letters, digits, _ and -.</p>
+  <label class="ed-field"><span>Title</span><input id="new-title" placeholder="My trip"></label>
+  <div class="ed-dialog-actions">
+    <button type="button" id="new-create" class="ed-btn ed-btn-primary">Create</button>
+    <button type="button" id="new-cancel" class="ed-btn">Cancel</button>
+  </div>
+</dialog>
+
+<script src="/editor.js"></script>
+</body>
+</html>

@@ -28,7 +28,11 @@ any more, a draft from a `--drafts` run — would otherwise stay published.
 ```
 --drafts      include pages marked draft: true (local preview only)
 --no-css      skip Tailwind, reuse the existing css/main.css
+--strict      do not publish a build the status check found errors in
 --check-only  do not build; inspect the existing _site and rewrite the report
+--check-post <folder>  validate one page-builder document, print JSON findings
+--json        print the status report as JSON on the last line
+--edit        start the page builder on 127.0.0.1:8484 (--port N to change)
 --quiet       suppress notes; warnings and errors are always shown
 --help
 ```
@@ -42,8 +46,19 @@ Exit code is non-zero only on **errors**. Warnings are information.
 | `build.mjs` | The five steps above, and the CLI |
 | `compile.mjs` / `compile.sh` | Produce the Linux and Windows binaries |
 | `vendor_assets.sh` | Copy KaTeX and glightbox out of node_modules into the repo |
-| `lib/eleventy_config.js` | The whole Eleventy configuration, shared by the binary and `eleventy.config.js` |
+| `lib/eleventy_config.js` | The whole Eleventy configuration, shared by the binary and `eleventy.config.js`; renders JSON posts as virtual templates |
 | `lib/markdown.js` | markdown-it: KaTeX, anchors, heading demotion, image figures, outline |
+| `lib/resolver.js` | The three file questions a renderer asks, as an interface: disk for the build, a table for tests |
+| `lib/media_html.js` | The `<img>`, lightbox anchor and player markup shared by markdown and blocks |
+| `lib/blocks/catalogue.js` | Every block type and its fields — the contract the validator, renderer and editor read |
+| `lib/blocks/validate.js` | A post document to findings, pure |
+| `lib/blocks/render.js` | A post document to the HTML inside `<main>`, pure over a resolver |
+| `lib/thumbnail.js` | The thumbnail and original-size encoders, and EXIF orientation applied to pixels |
+| `lib/exif.js` | EXIF reader and in-place GPS scrubber, no dependency |
+| `lib/editor/server.js` | `--edit`: the loopback HTTP server and its API |
+| `lib/editor/store.js` | The editor's only path to disk: atomic writes, revisions, never delete or overwrite |
+| `lib/editor/import_media.js` | What happens to an uploaded file: decode, orient, cap, scrub, thumbnail, check |
+| `editor/` | The editor page: index.html, editor.css, editor.js — embedded in the binary |
 | `lib/slugs.js` | One slug namespace across all three input folders, with conflict resolution |
 | `lib/images.js` | The `image/` → `image_min/` mirror |
 | `lib/codecs.js` | WASM codec bootstrap (see below) |
@@ -110,6 +125,21 @@ Eleventy ignores whatever the function returns. Directories and template formats
 must go through the UserConfig setters (`setInputDirectory`,
 `setIncludesDirectory`, …), not through a returned `dir` object. A returned
 `dir` fails silently and Eleventy looks for layouts in `_includes/`.
+
+## Virtual templates
+
+A JSON post has no template file for Eleventy to find. `eleventy_config.js`
+renders its blocks at configuration time and registers the result with
+`eleventyConfig.addTemplate()` at the path the registry reserved for it,
+`input_custom_post/<name>/<name>.json.html`. From then on it is an ordinary
+page: the directory data file applies, the drafts preprocessor sees it, and it
+joins collections like any template on disk. The registry keys the record under
+both its real path and its virtual path so the collections filter finds it.
+
+Note that Eleventy also reads `<name>/<name>.json` as a directory data file,
+because that is what the name pattern means to it. Harmless — the document's
+keys land in the page data and nothing reads them — but a document that is not
+valid JSON fails the build at that step as well as in the status check.
 
 ## The WASM image codecs
 

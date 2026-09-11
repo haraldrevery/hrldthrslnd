@@ -1,38 +1,63 @@
-# Page builder app — not built yet
+# Page builder
 
-The block editor described in `../page_builder_app.md` has not been implemented.
-This folder is a placeholder so the project layout matches the plan.
+The page builder is not a separate application. It is a mode of the site
+generator:
 
-## What stands in for it
+```bash
+./site_generate --edit            # opens http://127.0.0.1:8484
+./site_generate --edit --port 9000
+```
 
-`input_custom_post/` already exists as an input format, and the generator
-already handles it: a folder holding `post_x.html` plus its own media, published
-to `/post_x.html` with the assets copied to `/post_x/`. That is the format the
-app will read and write, so pages made by hand today will open in the app later.
+On Windows, `site_generate.exe --edit`. The generator prints the address and
+tries to open a browser; if none opens, paste the address into one.
 
-Until then, **[`../input_custom_html/block_test_page.html`](../input_custom_html/block_test_page.html)**
-is the substitute. It holds every block type the site can render — hero, heading,
-text with maths, three gallery layouts, video, audio, download with generated
-checksums, FAQ, feature panel, stat grid, index rows and raw HTML — each fenced
-with `COPY FROM HERE` / `COPY TO HERE` comments. Copy a block into a new file,
-add front matter, rebuild.
+There is nothing to install. The editor is three plain files —
+[`../eleventy_binary/editor/`](../eleventy_binary/editor/) — embedded in the
+binary and served on the loopback address. It runs the same validator, renderer,
+image codecs and checks the build runs, on the same files.
 
-`block_test_page_a.html` and `block_test_page_b.html` show the two hero
-treatments.
+## What it edits
 
-## What already exists for it
+A post folder whose page is a JSON document:
 
-The generator side of several app features is done and can be reused:
+```
+input_custom_post/my_trip/
+├── my_trip.json        <-- the page. The build renders it; the editor edits it.
+├── photo.jpg           <-- assets, referred to by bare name
+├── photo_min.jpg       <-- made on import (or by the build if missing)
+└── .revisions/         <-- every replaced version of the document; never published
+```
 
-- **`../eleventy_binary/lib/images.js`** — the `_min` thumbnail pipeline, WASM
-  MozJPEG, ≤ 80 kB budget, with the "you were missing this, I made one" warning.
-- **`../eleventy_binary/lib/downloads.js`** — SHA-256 and SHA-512 for download
-  blocks, computed from the shipped bytes at build time.
-- **`../eleventy_binary/lib/status_check.js`** — the front-matter, heading
-  structure, alt-text and `_min` completeness checks the app's green/amber/red
-  indicators are meant to surface, already written and already running.
-- **`../eleventy_binary/lib/imagesize.js`** — intrinsic dimensions from file
-  headers, no decode.
+The format is described in [`../page_builder_plan.md`](../page_builder_plan.md)
+and defined by [`../eleventy_binary/lib/blocks/catalogue.js`](../eleventy_binary/lib/blocks/catalogue.js).
+A document can be written by hand in any text editor, and
+`./site_generate --check-post my_trip` says what the editor would say about it.
 
-When the app is built, `compile.sh` belongs here and the Tauri project under
-`page_builder/`, per the layout in `../website.md`.
+## What it does to a photograph you add
+
+Turned upright from its EXIF orientation. If it is over the site's photograph
+budget or over 2800px on a side, re-encoded as a JPEG under both. Its GPS block
+is emptied and any GPS values in an XMP packet blanked; the rest of the file is
+untouched. A `_min` counterpart under 80 kB is made with the same MozJPEG
+settings the build uses. A title, description and date found in the EXIF are
+offered as suggestions for the picture's fields. Video, audio, GIF and SVG files
+are checked and passed through unchanged; the editor tells you what it saw.
+
+## What it will never do
+
+Delete a file, or overwrite one. An upload whose name is taken is saved under
+the next free name. Removing a picture from a page removes the reference; the
+file stays in the folder until you delete it yourself.
+
+## Safety of the document
+
+Every save is written to a temporary file and renamed into place. An explicit
+save (the Save button, Ctrl-S) keeps a copy of the version it replaced in
+`.revisions/`; autosave keeps one every fifteen minutes. Undo and redo work
+across every edit in the session.
+
+## Building
+
+The Build button runs `site_generate` as a separate process — exactly what you
+would run yourself — and shows its report. A build with drafts is marked as
+such and must not be deployed; the editor says so.

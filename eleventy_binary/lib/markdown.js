@@ -5,6 +5,13 @@
  * build time, headings carry stable anchors for the CSS-only outline panel, and
  * images are rewritten to load their compressed *_min counterpart with the full
  * resolution behind a glightbox link.
+ *
+ * Every file question — how big is this image, which thumbnail stands in for
+ * it, where does the file beside this note publish — goes through a resolver
+ * (see resolver.js). That is what lets the identical pipeline run inside the
+ * build, inside the editor's live preview, and in a test with no project on
+ * disk. Pass a project root and you get the disk resolver, which is what every
+ * caller did before the interface existed.
  */
 import markdownIt from "markdown-it";
 import anchorPlugin from "markdown-it-anchor";
@@ -15,9 +22,10 @@ import katexPluginModule from "@vscode/markdown-it-katex";
 
 import path from "node:path";
 
-import { headingSlug, escapeHtml, mediaKind, mediaType, extensionOf } from "./paths.js";
-import { imageSize, resolveThumbnail } from "./imagesize.js";
-import { publishedPathForSource, normaliseKey } from "./slugs.js";
+import { headingSlug, escapeHtml, mediaKind } from "./paths.js";
+import { normaliseKey } from "./slugs.js";
+import { asResolver } from "./resolver.js";
+import { imageTag, lightboxLink, lightboxable, playerTag, posterFor } from "./media_html.js";
 
 const katexPlugin = katexPluginModule.default?.default ?? katexPluginModule.default ?? katexPluginModule;
 const anchor = anchorPlugin.default ?? anchorPlugin;
@@ -122,7 +130,7 @@ function wrapTables(state) {
  * puts them in a single paragraph separated by softbreaks, which is exactly the
  * run an author means when they write pictures back to back.
  */
-function imageFigures(md, root) {
+function imageFigures(md, resolver) {
   return function (state) {
     if (state.inlineMode) return;
     const tokens = state.tokens;
@@ -139,8 +147,8 @@ function imageFigures(md, root) {
 
       const html =
         images.length === 1
-          ? renderFigure(images[0], md, root, state.env)
-          : renderGroup(images, md, root, state.env);
+          ? renderFigure(images[0], md, resolver, state.env)
+          : renderGroup(images, md, resolver, state.env);
 
       const replacement = new state.Token("html_block", "", 0);
       replacement.content = `${html}\n`;
@@ -185,14 +193,13 @@ function meaningfulChildren(inline) {
  * own. That is still an improvement on what a mixed run used to render as: a
  * paragraph of bare <img> tags and a download link.
  */
-function renderGroup(tokens, md, root, env) {
+function renderGroup(tokens, md, resolver, env) {
   const allStills = tokens.every((token) => mediaKind(token.attrGet("src") ?? "") === "image");
-  if (!allStills) return tokens.map((token) => renderFigure(token, md, root, env)).join("");
+  if (!allStills) return tokens.map((token) => renderFigure(token, md, resolver, env)).join("");
 
-  const cells = tokens.map((token) => renderCell(token, md, root, env)).join("");
+  const cells = tokens.map((token) => renderCell(token, md, resolver, env)).join("");
   return `<div class="gallery gallery-justified gallery-auto">${cells}</div>`;
 }
-
 
 /**
  * A markdown `src` as the site-absolute URL it will actually be served from.
@@ -214,7 +221,7 @@ function renderGroup(tokens, md, root, env) {
  * returned as written, which leaves it for the status check to report as the
  * broken link it is.
  */
-function resolveSrc(src, env, root) {
+function resolveSrc(src, env, resolver) {
   if (typeof src !== "string" || !src) return src;
   if (src.startsWith("/") || src.startsWith("#")) return src;
   // A scheme, or a protocol-relative URL: not ours to resolve.
@@ -234,7 +241,7 @@ function resolveSrc(src, env, root) {
 
   const noteDir = path.posix.dirname(normaliseKey(inputPath));
   const onDisk = path.posix.join(noteDir, decoded.split(/[?#]/)[0]);
-  return publishedPathForSource(onDisk, root) ?? src;
+  return resolver.publishedPathForSource(onDisk) ?? src;
 }
 
 /**
@@ -250,66 +257,8 @@ function altText(token, md) {
   return md.renderer.renderInlineAsText(token.children ?? [], md.options, {});
 }
 
-/**
- * The <img> for an image token, already pointing at its thumbnail.
- *
- * Intrinsic dimensions reserve the right space before the file loads, which
- * also keeps loading="lazy" from deadlocking on a zero-height image.
- */
-function imageTag(thumb, alt, title, size) {
-  return (
-    `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(alt)}"` +
-    (size ? ` width="${size.width}" height="${size.height}"` : "") +
-    ` loading="lazy" decoding="async"` +
-    (title ? ` title="${escapeHtml(title)}"` : "") +
-    ">"
-  );
-}
-
-/**
- * Wrap the thumbnail in the anchor glightbox opens.
- *
- * data-gallery groups the slider. Every image in a post shares one group, so
- * the arrows step through the post's pictures rather than through whatever else
- * happens to be on the page.
- */
-function lightboxLink(src, alt, title, inner) {
-  return (
-    `<a class="glightbox" href="${escapeHtml(src)}" data-gallery="post"` +
-    (title ? ` data-title="${escapeHtml(title)}"` : "") +
-    (alt ? ` data-description="${escapeHtml(alt)}"` : "") +
-    `>${inner}</a>`
-  );
-}
-
-/**
- * Whether a still image should get the lightbox anchor.
- *
- * The test used to be "the thumbnail differs from the source" — link out only
- * when there is a SEPARATE full-resolution file to link to. That reads as an
- * optimisation and is really a silent feature removal: an SVG, a GIF, an AVIF
- * and a WebP with no hand-made counterpart all resolve to themselves, so every
- * one of them rendered as a bare <img>. No zoom on click, and — because the
- * slider is built from the anchors — no place in the post's gallery group
- * either, so the arrows stepped straight past them. Nothing said so, and the
- * cell even keeps the hover scale `.art-plate:hover img` gives it, so it goes
- * on looking clickable.
- *
- * GLightbox was never the limit. Its own source-type test accepts
- * `jpeg|jpg|jpe|gif|png|apn|webp|avif|svg`, and it opens an animated GIF or a
- * vector the same way it opens a photograph.
- *
- * So the rule is about the URL, not the format: anything this site serves
- * itself is lightboxed. A remote or `data:` src is left alone — it is not ours
- * to open at full resolution, and putting one behind an anchor would pull the
- * vendor bundle onto a page for a picture the site does not own.
- */
-function lightboxable(src) {
-  return typeof src === "string" && src.startsWith("/");
-}
-
-function renderFigure(token, md, root, env) {
-  const src = resolveSrc(token.attrGet("src") ?? "", env, root);
+function renderFigure(token, md, resolver, env) {
+  const src = resolveSrc(token.attrGet("src") ?? "", env, resolver);
   const title = token.attrGet("title") ?? "";
   const alt = altText(token, md);
 
@@ -317,11 +266,11 @@ function renderFigure(token, md, root, env) {
   // the only way to write one. Without this it produced an <img> pointing at an
   // .mp4 — a silently blank box.
   const kind = mediaKind(src);
-  if (kind !== "image") return renderPlayer(kind, src, alt, title, root);
+  if (kind !== "image") return renderPlayer(kind, src, alt, title, resolver);
 
   // Only swap in a counterpart that was actually generated.
-  const thumb = resolveThumbnail(src, root);
-  const img = imageTag(thumb, alt, title, imageSize(thumb, root));
+  const thumb = resolver.resolveThumbnail(src);
+  const img = imageTag(thumb, alt, title, resolver.imageSize(thumb));
 
   // `src`, not `thumb`: the anchor always opens the file as written, which for
   // a photograph is the full-resolution original and for an SVG or GIF is the
@@ -344,13 +293,13 @@ function renderFigure(token, md, root, env) {
  * shape .gallery-justified lays out and the same markup the hand-written
  * gallery blocks in input_custom_html/ use.
  */
-function renderCell(token, md, root, env) {
-  const src = resolveSrc(token.attrGet("src") ?? "", env, root);
+function renderCell(token, md, resolver, env) {
+  const src = resolveSrc(token.attrGet("src") ?? "", env, resolver);
   const title = token.attrGet("title") ?? "";
   const alt = altText(token, md);
 
-  const thumb = resolveThumbnail(src, root);
-  const size = imageSize(thumb, root);
+  const thumb = resolver.resolveThumbnail(src);
+  const size = resolver.imageSize(thumb);
   const img = imageTag(thumb, alt, title, size);
   const media = lightboxable(src) ? lightboxLink(src, alt, title, img) : img;
 
@@ -364,67 +313,29 @@ function renderCell(token, md, root, env) {
 }
 
 /**
- * A <video> or <audio> element for a markdown media link.
- *
- * `preload="none"` on purpose: a post with several clips must not pull their
- * first frames on load. A poster frame is used when a *_min counterpart of the
- * same name exists beside the file, which is the convention the rest of the
- * pipeline already follows.
+ * A <video> or <audio> figure for a markdown media link. A poster frame is
+ * used when a *_min counterpart of the same name exists beside the file, which
+ * is the convention the rest of the pipeline already follows.
  */
-function renderPlayer(kind, src, alt, title, root) {
+function renderPlayer(kind, src, alt, title, resolver) {
   const caption = title || alt;
-  const type = mediaType(src);
-  const fallback =
-    `<p>Your browser cannot play this ${kind}. ` +
-    `<a href="${escapeHtml(src)}">Download the file</a>.</p>`;
+  const poster = kind === "video" ? posterFor(src, resolver) : "";
+  const player = playerTag(kind, src, { poster });
 
-  if (kind === "audio") {
-    return (
-      `<figure class="md-figure md-audio">` +
-      `<audio controls preload="none" src="${escapeHtml(src)}">${fallback}</audio>` +
-      (caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : "") +
-      `</figure>`
-    );
-  }
-
-  const poster = posterFor(src, root);
   return (
-    `<figure class="md-figure md-video">` +
-    `<video controls preload="none" playsinline` +
-    (poster ? ` poster="${escapeHtml(poster)}"` : "") +
-    `>` +
-    `<source src="${escapeHtml(src)}"${type ? ` type="${type}"` : ""}>` +
-    fallback +
-    `</video>` +
+    `<figure class="md-figure md-${kind}">` +
+    player +
     (caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : "") +
     `</figure>`
   );
 }
 
-/**
- * A poster frame beside the video, named like every other _min counterpart.
- *
- * Checked with imageSize() rather than resolveThumbnail(): the latter treats a
- * name that already ends in _min as final and hands it straight back, so it
- * would happily return a path to a file that does not exist.
- */
-function posterFor(src, root) {
-  // extensionOf(), not lastIndexOf("."): a dot in a DIRECTORY name is not the
-  // file's extension, so "/video.old/clip" was cut at the folder and asked
-  // about "/video_min.jpg" — a file in a different folder entirely, and one
-  // that could plausibly exist.
-  const ext = extensionOf(src);
-  if (!ext) return "";
-  const candidate = `${src.slice(0, src.length - ext.length)}_min.jpg`;
-  return imageSize(candidate, root) ? candidate : "";
-}
-
 /** Inline images (inside a sentence) still get the _min swap, without a figure. */
-function inlineImageRule(md, root) {
+function inlineImageRule(md, resolver) {
   const fallback = md.renderer.rules.image;
   md.renderer.rules.image = function (tokens, idx, options, env, self) {
     const token = tokens[idx];
-    const src = resolveSrc(token.attrGet("src"), env, root);
+    const src = resolveSrc(token.attrGet("src"), env, resolver);
     if (src) token.attrSet("src", src);
     // An inline (mid-sentence) media link cannot become a player without
     // breaking the paragraph, so it degrades to a plain download link.
@@ -433,9 +344,9 @@ function inlineImageRule(md, root) {
       return `<a href="${escapeHtml(src)}" class="link-underline">${label}</a>`;
     }
     if (src) {
-      const thumb = resolveThumbnail(src, root);
+      const thumb = resolver.resolveThumbnail(src);
       token.attrSet("src", thumb);
-      const size = imageSize(thumb, root);
+      const size = resolver.imageSize(thumb);
       if (size && !token.attrGet("width")) {
         token.attrSet("width", String(size.width));
         token.attrSet("height", String(size.height));
@@ -465,13 +376,14 @@ function externalLinkRule(md) {
 }
 
 /**
- * @param {string} root  project root the image paths resolve against. Passed in
- *   rather than read from process.cwd() at each call site, so the markdown
- *   pipeline and the rest of the config agree on one root — they did not, and a
- *   build run from anywhere but the project directory would have looked for
- *   thumbnails in two different places.
+ * @param {string|object} rootOrResolver  a project root, or a resolver from
+ *   resolver.js. A root string is what every caller passed before the resolver
+ *   existed and still works: it becomes the disk resolver for that root. The
+ *   editor and the tests pass a resolver instead.
  */
-export function createMarkdownLibrary(root = process.cwd()) {
+export function createMarkdownLibrary(rootOrResolver = process.cwd()) {
+  const resolver = asResolver(rootOrResolver);
+
   const md = markdownIt({
     html: true,
     linkify: true,
@@ -504,10 +416,14 @@ export function createMarkdownLibrary(root = process.cwd()) {
 
   md.core.ruler.push("collect_outline", collectOutline);
   md.core.ruler.push("wrap_tables", wrapTables);
-  md.core.ruler.push("image_figures", imageFigures(md, root));
+  md.core.ruler.push("image_figures", imageFigures(md, resolver));
 
-  inlineImageRule(md, root);
+  inlineImageRule(md, resolver);
   externalLinkRule(md);
+
+  // Exposed so a caller holding the library can render alongside it with the
+  // same view of the files — the block renderer does exactly that.
+  md.resolver = resolver;
 
   return md;
 }
