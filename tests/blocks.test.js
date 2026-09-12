@@ -263,10 +263,33 @@ describe("renderPost", () => {
     expect(html.match(/<details/g)).toHaveLength(2);
   });
 
-  test("feature puts the picture on the side asked for", () => {
-    const left = render([{ type: "feature", title: "T", image: { src: "photo.jpg", alt: "A" }, image_side: "left" }]).html;
+  test("the overlay feature lays the panel over the picture, at the picture's own proportions", () => {
+    const { html, warnings } = render([{ type: "feature", eyebrow: "E", title: "T", text: "Body", image: { src: "photo.jpg", alt: "A", caption: "C" }, action_label: "Go", action_href: "/x" }]);
+    expect(warnings).toEqual([]);
+    // The overlay is the default layout. photo_min.jpg measures 800 × 600, and the plate carries that ratio.
+    expect(html).toContain('<div class="feature-overlay feature-overlay-native">');
+    expect(html).toContain('<div class="feature-overlay-visual art-plate fill" style="--ar:1.3333">');
+    expect(html).toContain('<div class="feature-overlay-panel feature-panel glass-card panel-adaptive">');
+    expect(html.indexOf("feature-overlay-visual")).toBeLessThan(html.indexOf("feature-overlay-panel"));
+    expect(html).toContain('data-description="C"');
+    expect(html).not.toContain("feature-plate");
+
+    const right = render([{ type: "feature", title: "T", image: { src: "photo.jpg", alt: "A" }, image_side: "right" }]).html;
+    expect(right).toContain('<div class="feature-overlay feature-overlay-native feature-overlay-flip">');
+    // Flipped by the stylesheet; the picture stays first so the panel still paints over it.
+    expect(right.indexOf("feature-overlay-visual")).toBeLessThan(right.indexOf("feature-overlay-panel"));
+
+    // A picture that cannot be measured carries no ratio, and the stylesheet's 3:2 stands in.
+    const unmeasured = render([{ type: "feature", title: "T", image: { src: "/image/unknown.jpg", alt: "A" } }]);
+    expect(unmeasured.html).toContain('<div class="feature-overlay-visual art-plate fill">');
+    expect(unmeasured.warnings.some((w) => w.path === "blocks[0].image")).toBe(true);
+  });
+
+  test("the beside feature puts the picture on the side asked for", () => {
+    const left = render([{ type: "feature", layout: "beside", title: "T", image: { src: "photo.jpg", alt: "A" }, image_side: "left" }]).html;
+    expect(left).toContain('<div class="block-two-col feature-row">');
     expect(left.indexOf("feature-plate")).toBeLessThan(left.indexOf("feature-panel"));
-    const right = render([{ type: "feature", title: "T", image: { src: "photo.jpg", alt: "A" }, image_side: "right", action_label: "Go", action_href: "/x" }]).html;
+    const right = render([{ type: "feature", layout: "beside", title: "T", image: { src: "photo.jpg", alt: "A" }, image_side: "right", action_label: "Go", action_href: "/x" }]).html;
     expect(right.indexOf("feature-panel")).toBeLessThan(right.indexOf("feature-plate"));
     expect(right).toContain('<a class="btn btn-ghost" href="/x">Go</a>');
   });

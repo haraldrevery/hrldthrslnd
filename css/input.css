@@ -2664,6 +2664,75 @@
     .feature-overlay-panel::after { animation: none; }
   }
 
+  /* -- Feature overlay at the picture's own proportions -----------------------
+     What the page builder renders (render.js, renderFeature). The block above
+     gives its plate a fixed height and crops the picture to fit, which suits a
+     photograph chosen for it; a picture chosen in the editor can be any shape,
+     and a panorama cropped to 64vh loses most of itself. So this plate takes
+     its ratio from --ar, the measured width over height, the way a gallery
+     cell does, and nothing is cropped.
+
+     A ratio alone makes a portrait taller than the screen — the reason the
+     block above uses a height. So the width is the smaller of the room the
+     panel leaves and what the height cap allows at that ratio: a portrait
+     narrows rather than grows.
+
+     A narrower picture would leave a gap if the panel stayed pinned to the far
+     edge, so the two sit in a row with the panel pulled back over the picture
+     by the lap, and the pair is centred in the column. The overlap is then
+     --feature-overlay-lap whatever the picture's shape, which is the promise
+     the block above makes. The row also drops the block's own min-height and
+     padding: its height is the taller of the two pieces, and .block owns the
+     rhythm below it.
+
+     Every rule here is (0,2,0), so it wins over the block above — its phone
+     rules included — on specificity rather than on order. */
+  .feature-overlay-native {
+    --feature-plate-max-h: min(80vh, 44rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding-block: 0;
+  }
+  .feature-overlay-native .feature-overlay-visual {
+    flex: none;
+    width: min(
+      calc(100% - var(--feature-overlay-panel-w) + var(--feature-overlay-lap)),
+      calc(var(--feature-plate-max-h) * var(--ar, 1.5))
+    );
+    height: auto;
+    aspect-ratio: var(--ar, 3 / 2);
+  }
+  .feature-overlay-native .feature-overlay-panel {
+    flex: none;
+    margin-inline-start: calc(-1 * var(--feature-overlay-lap));
+  }
+
+  /* Picture on the right: the same row reversed, the panel lapping it from the
+     left. The picture stays first in the source, so the panel still paints over
+     it. */
+  .feature-overlay-native.feature-overlay-flip { flex-direction: row-reverse; }
+  .feature-overlay-flip .feature-overlay-panel {
+    margin-inline-start: 0;
+    margin-inline-end: calc(-1 * var(--feature-overlay-lap));
+  }
+
+  /* On a narrow screen the block above stacks picture and panel, the panel
+     stepping over the picture's lower edge. Same here, with the picture at its
+     own ratio and still under the height cap. */
+  @media (max-width: 60rem) {
+    .feature-overlay-native.feature-overlay-native { flex-direction: column; }
+    .feature-overlay-native .feature-overlay-visual {
+      width: min(100%, calc(var(--feature-plate-max-h) * var(--ar, 1.5)));
+    }
+    .feature-overlay-native .feature-overlay-panel,
+    .feature-overlay-flip .feature-overlay-panel {
+      width: min(94%, 30rem);
+      margin: -3rem 0 0;
+    }
+  }
+
   /* Gradient border without a wrapper element. */
   .border-flow {
     background:

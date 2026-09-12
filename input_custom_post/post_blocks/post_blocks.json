@@ -34,7 +34,8 @@
         "title": "Calle de Quintavale",
         "caption": "Calle de Quintavale, Venezia Italy (Ponte di Quintavale), 2024 February 18."
       },
-      "inscription": "eryry455y "
+      "inscription": "eryry455y ",
+      "plate": "aac"
     },
     {
       "type": "heading",
@@ -203,6 +204,7 @@
     },
     {
       "type": "feature",
+      "layout": "overlay",
       "eyebrow": "Featured — 01",
       "title": "One image, one argument",
       "text": "Use this when a run of text-and-image columns needs breaking up. The panel follows the colour scheme, so it reads as a solid card on the page in either one.",
@@ -211,7 +213,7 @@
         "alt": "Snow-streaked ridges seen from above through a break in the cloud",
         "title": "Mountains and clouds, 2016"
       },
-      "image_side": "left",
+      "image_side": "right",
       "action_label": "All entries",
       "action_href": "/blog.html"
     },
@@ -221,10 +223,15 @@
     },
     {
       "type": "feature",
-      "eyebrow": "",
-      "title": "",
-      "text": "",
-      "image": null,
+      "eyebrow": "asf",
+      "title": "Cool asf  sf",
+      "text": "$$\\sum x_i $$\n\nasfae fwef wef w",
+      "image": {
+        "src": "/image/summersunset2018w.jpg",
+        "alt": "",
+        "title": "",
+        "caption": ""
+      },
       "image_side": "left",
       "action_label": "",
       "action_href": ""

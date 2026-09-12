@@ -220,9 +220,19 @@ export const BLOCKS = [
   {
     type: "feature",
     label: "Feature",
-    description: "One picture beside a panel of catch text. Already two columns, so it cannot go in a row.",
+    description: "One picture and a panel of catch text, laid over the picture or set beside it. Already two columns, so it cannot go in a row.",
     inColumns: false,
     fields: [
+      {
+        name: "layout",
+        label: "Layout",
+        kind: "select",
+        default: "overlay",
+        options: [
+          { value: "overlay", label: "Over — the glass panel laid over the picture, which keeps its own proportions" },
+          { value: "beside", label: "Beside — a 3:4 plate next to a solid panel" },
+        ],
+      },
       { name: "eyebrow", label: "Eyebrow", kind: "text" },
       { name: "title", label: "Heading", kind: "text", required: true },
       { name: "text", label: "Text", kind: "markdown" },

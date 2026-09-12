@@ -170,6 +170,7 @@ every block. Readmes updated. Binary recompiled and verified.
 | 5 | done | `post_i` ported, `post_blocks` added, readmes updated, binary recompiled |
 | UI pass | done | canvas editing, bulk import and drop, library picker, one inspector; driven end to end in a headless browser |
 | Third pass | done | collage and salon hero treatments; title and caption from the file's XMP, IPTC or EXIF; 19 tests. See below |
+| Feature overlay | done | the feature block's "Over" layout: block_test_page's "Featured dispatch", at the picture's own proportions. See below |
 
 ---
 
@@ -310,5 +311,41 @@ picture's alt text.
   classes, but they are the reference the renderer was checked against.
 - `post_hero_collage` and `post_hero_salon` are drafts, and their pictures have
   no alt text yet.
-- `post_blocks.json`'s hero still points at `http://127.0.0.1:8484/…`, which
-  the checker reports as an error. Not touched here.
+- `post_blocks.json` has an empty feature block (no title, no picture), which
+  the checker reports as two errors. Not touched here.
+
+---
+
+## The feature block, laid over its picture
+
+The feature block gains a `layout`: **overlay**, the new default, is the
+"Featured dispatch" block from `block_test_page.html` — the glass panel laid
+over the picture — and **beside** is the 3:4 plate next to a solid panel it
+rendered before. `post_blocks.json`'s "Featured — 01" is pinned to `beside`, so
+it stays the twin of the hand-written block it mirrors.
+
+The hand-written dispatch crops its picture to a fixed height (a viewport
+fraction, 3:2 on a phone) and pins the panel to the far edge. That suits a
+photograph chosen for it, not one chosen in the editor, which can be any shape.
+So the builder's version keeps the picture's own proportions:
+
+- The plate carries the measured ratio as `--ar`, the way a gallery cell does,
+  and `.feature-overlay-native` in `css/input.css` gives it that aspect ratio.
+  Nothing is cropped.
+- A ratio alone makes a portrait taller than the screen, which is why the hand
+  block uses a height. The plate's width is the smaller of the room the panel
+  leaves and what a `min(80vh, 44rem)` height allows at that ratio, so a
+  portrait narrows instead of growing.
+- The picture and the panel sit in a row with the panel pulled back over the
+  picture by the lap, and the pair is centred, so the overlap holds however
+  narrow the picture ends up. `image_side: right` reverses the row; the picture
+  stays first in the source, so the panel still paints over it.
+- On a phone the two stack, the panel stepping over the picture's lower edge,
+  as in the hand block.
+
+Checked in a headless browser at 1440 and 390 wide against the hand block, with
+a 2.4:1 panorama, a 16:9 landscape and a 0.71 portrait. One trade-off: on a
+phone, the 3rem step over a panorama's lower edge covers about a third of what
+is a short strip.
+
+The beside layout still crops to 3:4, as the hand block does.

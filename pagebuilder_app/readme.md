@@ -41,6 +41,10 @@ published; the panel on the right edits whatever you click in it.
   unless you type one. The salon hangs one portrait, labels it "Plate I" unless
   you type another label, and engraves the author and the date in Roman
   numerals under it, unless you word that line yourself.
+- **Feature block.** *Over* lays a glass panel over the picture, which keeps its
+  own proportions: nothing is cropped, and a tall picture is narrowed to fit
+  the screen rather than cut. *Beside* is a 3:4 plate next to a solid panel.
+  Either way, "Picture on the" chooses the side.
 - **Page** tab: title, description, date, subjects, card image, draft, and the
   saved versions under History.
 - The badge in the top bar says what the build will say. Click it for the list;

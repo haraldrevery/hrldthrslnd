@@ -584,26 +584,47 @@ function renderFaq(block, ctx) {
   return body(head(block), items);
 }
 
+/**
+ * The feature: one picture and a panel of catch text, in either of the two
+ * layouts the hand-written library has.
+ *
+ *   overlay  "Featured dispatch" — the glass panel laid over the picture
+ *            (.feature-overlay). The library's plate is a fixed height cropped
+ *            to fit a picture chosen for it; a picture chosen in the editor can
+ *            be any shape, so here it keeps its own proportions, carried as
+ *            --ar the way a gallery cell carries it. .feature-overlay-native in
+ *            css/input.css is what honours it.
+ *   beside   the 3:4 plate next to a solid panel (.feature-row).
+ */
 function renderFeature(block, path, ctx) {
   const spec = BY_TYPE.get("feature");
   const side = choice(spec, block, "image_side");
+  const layout = choice(spec, block, "layout");
   const p = picture(block.image, ctx, "feature");
   if (!p.size) ctx.warn(`${path}.image`, `could not measure "${block.image?.src}"`);
 
-  const plate = `<div class="art-plate fill feature-plate">${p.html}</div>`;
   const action =
     text(block.action_label) && text(block.action_href)
       ? `<p class="feature-action"><a class="btn btn-ghost" href="${esc(text(block.action_href))}">${esc(text(block.action_label))}</a></p>\n`
       : "";
-  const panel =
-    `<div class="glass-card glass-card-solid panel-adaptive feature-panel">\n` +
+  const copy =
     (text(block.eyebrow) ? `<p class="eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
     `<h2 class="display-md">${esc(text(block.title))}</h2>\n` +
     (text(block.text) ? `<div class="feature-text">${ctx.md.render(String(block.text), { ...ctx.env })}</div>\n` : "") +
-    action +
-    `</div>`;
+    action;
 
-  return `<div class="block-two-col feature-row">\n${side === "right" ? `${panel}\n${plate}` : `${plate}\n${panel}`}\n</div>`;
+  if (layout === "beside") {
+    const plate = `<div class="art-plate fill feature-plate">${p.html}</div>`;
+    const panel = `<div class="glass-card glass-card-solid panel-adaptive feature-panel">\n${copy}</div>`;
+    return `<div class="block-two-col feature-row">\n${side === "right" ? `${panel}\n${plate}` : `${plate}\n${panel}`}\n</div>`;
+  }
+
+  // The picture stays first in the source either way, so the panel paints over
+  // it; the flip modifier moves it to the right visually.
+  const ratio = p.size && p.size.height > 0 ? +(p.size.width / p.size.height).toFixed(4) : null;
+  const plate = `<div class="feature-overlay-visual art-plate fill"${ratio ? ` style="--ar:${ratio}"` : ""}>${p.html}</div>`;
+  const panel = `<div class="feature-overlay-panel feature-panel glass-card panel-adaptive">\n${copy}</div>`;
+  return `<div class="feature-overlay feature-overlay-native${side === "right" ? " feature-overlay-flip" : ""}">\n${plate}\n${panel}\n</div>`;
 }
 
 function renderColumns(block, path, ctx) {
