@@ -1,0 +1,86 @@
+{
+  "format": 1,
+  "meta": {
+    "title": "Hero test — the salon",
+    "date": "2026-09-12",
+    "description": "The salon hero rendered from JSON: block_test_page_d's column of type beside one hung portrait, with the plate count and the engraved line worked out from the post itself.",
+    "tags": [
+      "test",
+      "reference"
+    ],
+    "category": [],
+    "image": "/image/2024/2024march16naviglio_interno.jpg",
+    "author": "Harald Revery",
+    "draft": true
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "variant": "salon",
+      "eyebrow": "Hero test — salon",
+      "title": "Italy in\ngilded light",
+      "accent": "gilded light",
+      "lede": "The salon treatment from block_test_page_d, chosen in the page builder. The plate number, the stamp and the engraved line are worked out from the post.",
+      "image": {
+        "src": "/image/2024/2024march16naviglio_interno.jpg",
+        "alt": "",
+        "title": "Padova",
+        "caption": "Naviglio Interno, Padova, Italy. 2024 March 16."
+      },
+      "inscription": "",
+      "actions": [
+        {
+          "label": "Enter the gallery",
+          "href": "#hero-end"
+        },
+        {
+          "label": "The hand-written salon",
+          "href": "/block_test_page_d.html"
+        }
+      ],
+      "scroll_cue": true
+    },
+    {
+      "type": "gallery",
+      "title": "February, by train",
+      "layout": "justified",
+      "gap": "0.75rem",
+      "images": [
+        {
+          "src": "/image/2024/2024calle_de_quintavale.jpg",
+          "alt": "",
+          "title": "Calle de Quintavale",
+          "caption": "Calle de Quintavale, Venezia Italy (Ponte di Quintavale), 2024 February 18."
+        },
+        {
+          "src": "/image/2024/2024milano.jpg",
+          "alt": "",
+          "title": "Milano",
+          "caption": "Outside the train station in Milano, February 17, 2024."
+        },
+        {
+          "src": "/image/2024/milano_street.jpg",
+          "alt": "",
+          "title": "Milano Street",
+          "caption": "16 Via Torino, Milano, Lombardiet Italy, 17 February 2024."
+        },
+        {
+          "src": "/image/2024/gorizia_sunset.jpg",
+          "alt": "",
+          "title": "Gorizia Sunset",
+          "caption": "Gorizia (Italy) 19 February 2024"
+        },
+        {
+          "src": "/image/2024/2024nova_gorica_street.jpg",
+          "alt": "",
+          "title": "Nova Gorica Street",
+          "caption": "Nova Gorica in Slovenia, 2024"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "markdown": "## What the hero worked out for itself\n\nThe stamp on the frame counts the plates on this page in Roman numerals. The caption under the frame names the portrait as plate I, from its own title. The engraved line at the foot is the author, this post's date in Roman numerals and its first subject; a salon can word it itself in the Engraved line field."
+    }
+  ]
+}

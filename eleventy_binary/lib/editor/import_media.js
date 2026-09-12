@@ -12,7 +12,7 @@
  * that, under its own rules.
  */
 import { initCodecs, decodeJpeg, encodeJpeg, decodePng, resize } from "../codecs.js";
-import { readExif, stripGps } from "../exif.js";
+import { readExif, describedAs, stripGps, embedXmp } from "../exif.js";
 import { encodeThumbnail, encodeOriginal, orientImage, MAX_ORIGINAL_EDGE } from "../thumbnail.js";
 import { extensionOf, isRaster, isDecodable, minFileName, VIDEO_EXT, AUDIO_EXT } from "../paths.js";
 
@@ -52,7 +52,8 @@ async function decode(bytes, name) {
  * @param {object} options.settings   site settings, for the budgets
  * @returns {Promise<{files: {name:string, bytes:Buffer}[], primary: string,
  *   kind: string, notices: {level:string, message:string, detail?:string}[],
- *   suggested: {title?:string, alt?:string}, width?: number, height?: number}>}
+ *   suggested: {title?:string, caption?:string, date?:string, author?:string},
+ *   width?: number, height?: number}>}
  */
 export async function importMedia({ name, bytes, settings }) {
   const safe = safeAssetName(name);
@@ -88,15 +89,21 @@ export async function importMedia({ name, bytes, settings }) {
 }
 
 async function importRaster({ safe, ext, bytes, settings, notices, say }) {
-  const suggested = {};
   const exif = ext === ".jpg" || ext === ".jpeg" ? readExif(bytes) : { present: false, hasGps: false, xmpGps: false };
 
-  if (exif.present) {
-    if (exif.xpTitle) suggested.title = exif.xpTitle;
-    if (exif.description && exif.description !== exif.xpTitle) suggested.alt = exif.description;
-    else if (exif.xpComment) suggested.alt = exif.xpComment;
-    if (exif.dateTimeOriginal) suggested.date = exif.dateTimeOriginal.slice(0, 10).replace(/:/g, "-");
-    if (exif.artist) suggested.author = exif.artist;
+  // The file's title goes to the picture's title and its description to the
+  // caption — never to the alt text. A caption is the photographer's line
+  // about the picture; alt text describes it for someone who cannot see it,
+  // and the one is not a stand-in for the other.
+  const described = describedAs(exif);
+  const suggested = {};
+  if (described.title) suggested.title = described.title;
+  if (described.caption) suggested.caption = described.caption;
+  if (exif.dateTimeOriginal) suggested.date = exif.dateTimeOriginal.slice(0, 10).replace(/:/g, "-");
+  if (described.creator) suggested.author = described.creator;
+  if (suggested.title || suggested.caption) {
+    const found = suggested.title && suggested.caption ? "title and caption" : suggested.title ? "title" : "caption";
+    say("note", `${found} read from the file`, [suggested.title, suggested.caption].filter(Boolean).map((s) => `“${s}”`).join(" — "));
   }
 
   if (!isDecodable(safe)) {
@@ -126,7 +133,10 @@ async function importRaster({ safe, ext, bytes, settings, notices, say }) {
     const encoded = await encodeOriginal(upright, { encodeJpeg, resize, maxBytes: budget });
     const stem = safe.slice(0, -ext.length);
     primary = `${stem}.jpg`;
-    original = Buffer.from(encoded.bytes);
+    // A fresh encode carries no metadata at all. The four lines a person wrote
+    // on purpose go back in as XMP, so the file still says what it is when it
+    // is picked from the library later; camera data and location do not.
+    original = embedXmp(Buffer.from(encoded.bytes), described);
     say(
       "note",
       `re-encoded to ${encoded.width}×${encoded.height} at q${encoded.quality}, ${Math.round(original.length / 1000)} kB`,
@@ -135,8 +145,12 @@ async function importRaster({ safe, ext, bytes, settings, notices, say }) {
         : `the file was ${Math.round(bytes.length / 1000)} kB; originals are kept under ${Math.round(budget / 1000)} kB`,
     );
     if (original.length > budget) say("warn", "still over the budget after re-encoding", "this picture resists compression; it ships as it is");
-    if (exif.hasGps || exif.xmpGps) say("note", "location data removed", "the re-encoded file carries no EXIF at all");
-    if (exif.present && !exif.hasGps) say("note", "EXIF dropped by the re-encode", "camera, date and description were read first and are offered as suggestions");
+    if (exif.hasGps || exif.xmpGps) say("note", "location data removed", "the re-encoded file carries no camera data and no location");
+    if (exif.present) {
+      const kept = ["title", "caption", "creator", "rights"].filter((key) => described[key]);
+      const listed = kept.length > 1 ? `${kept.slice(0, -1).join(", ")} and ${kept.at(-1)}` : kept[0];
+      say("note", "camera data dropped by the re-encode", kept.length ? `the ${listed} were written back into the new file as XMP` : "there was no title, caption, creator or rights line to keep");
+    }
   } else if (exif.hasGps || exif.xmpGps) {
     const scrubbed = stripGps(bytes);
     original = scrubbed.buffer;

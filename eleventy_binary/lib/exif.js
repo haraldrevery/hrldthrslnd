@@ -1,13 +1,28 @@
 /**
- * EXIF, read and scrubbed, without a dependency.
+ * Photograph metadata, read and scrubbed, without a dependency.
  *
- * Two jobs, both for JPEG files:
+ * Four jobs, all for JPEG files:
  *
- *   readExif()  the handful of tags this site can use — orientation, a
- *               description, the maker's name, dates — and whether the file
- *               carries a GPS block at all.
- *   stripGps()  a copy of the file with the GPS block emptied and any GPS
- *               values in an XMP packet blanked, and NOTHING ELSE touched.
+ *   readExif()     what this site can use from the three places a JPEG keeps
+ *                  its metadata — the EXIF block, the XMP packet and the IPTC
+ *                  record — and whether the file carries a GPS block at all.
+ *   describedAs()  from that, the one title, caption, creator and rights line
+ *                  a picture should be given, in the order the tools that
+ *                  wrote them expect to be believed.
+ *   stripGps()     a copy of the file with the GPS block emptied and any GPS
+ *                  values in an XMP packet blanked, and NOTHING ELSE touched.
+ *   embedXmp()     a freshly encoded JPEG with a minimal XMP packet put back:
+ *                  the title, caption, creator and rights that re-encoding
+ *                  would otherwise have thrown away. Nothing else — no camera
+ *                  data, no develop settings, no location.
+ *
+ * Where a title lives depends on what wrote it. Lightroom, Capture One,
+ * darktable and ExifTool write the title to XMP dc:title and IPTC ObjectName,
+ * and the caption to XMP dc:description, IPTC Caption-Abstract and usually
+ * EXIF ImageDescription. Windows Explorer writes its Title to XPTitle AND to
+ * ImageDescription, and its Comments to XPComment. Cameras write
+ * ImageDescription too, and what they write is "OLYMPUS DIGITAL CAMERA".
+ * describedAs() is where all of that is untangled, once.
  *
  * The scrub is in place, not a rewrite. A TIFF structure is a web of offsets,
  * and rebuilding it is how a metadata library silently drops the orientation
@@ -18,10 +33,10 @@
  * one that follows the pointer to it finds a valid, empty directory.
  *
  * Only JPEG is handled. A PNG can carry an eXIf chunk and a WebP an EXIF
- * chunk; both are rare from cameras and neither is scrubbed here — the import
+ * chunk; both are rare from cameras and neither is read here — the import
  * pipeline says so when it sees one rather than pretending.
  *
- * Every read is bounds-checked and every failure is "no EXIF", because a
+ * Every read is bounds-checked and every failure is "no metadata", because a
  * malformed header must never take an import down: the photograph is still a
  * photograph.
  */
@@ -37,6 +52,7 @@ const TAGS = {
   0x8769: "exifIfd",
   0x8825: "gpsIfd",
   0x9003: "dateTimeOriginal",
+  0x9286: "userComment",
   0x9c9b: "xpTitle",
   0x9c9c: "xpComment",
   0x9c9d: "xpAuthor",
@@ -44,16 +60,20 @@ const TAGS = {
   0x9c9f: "xpSubject",
 };
 
+/** IPTC-IIM record 2 datasets, by number. */
+const IPTC_TAGS = { 5: "iptcTitle", 80: "iptcByline", 116: "iptcCopyright", 120: "iptcCaption" };
+
 const TYPE_SIZE = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8 };
 
 const EXIF_HEADER = "Exif\0\0";
 const XMP_HEADER = "http://ns.adobe.com/xap/1.0/\0";
+const PHOTOSHOP_HEADER = "Photoshop 3.0\0";
 
 /**
- * Every APP1 segment in a JPEG, with its payload offsets.
+ * Every APPn segment in a JPEG, with its marker and payload offsets.
  * Stops at the first Start Of Scan: metadata never follows image data.
  */
-function app1Segments(buffer) {
+function appSegments(buffer) {
   const segments = [];
   if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) return segments;
 
@@ -69,11 +89,13 @@ function app1Segments(buffer) {
     if (length < 2) return segments;
     const start = offset + 4;
     const end = Math.min(offset + 2 + length, buffer.length);
-    if (marker === 0xe1) segments.push({ start, end });
+    if (marker >= 0xe0 && marker <= 0xef) segments.push({ marker, start, end });
     offset += 2 + length;
   }
   return segments;
 }
+
+const app1Segments = (buffer) => appSegments(buffer).filter((s) => s.marker === 0xe1);
 
 /** A little reader over one TIFF structure, endianness included. */
 function tiffReader(buffer, base, end) {
@@ -125,22 +147,159 @@ function ucs2(bytes) {
   return Buffer.from(even).toString("utf16le").replace(/\0+$/, "").trim();
 }
 
+/**
+ * EXIF UserComment: an 8-byte character-code prefix, then the text. UNICODE
+ * is UCS-2 in the file's own byte order; ASCII and the all-zero "undefined"
+ * code are read as UTF-8, which is what writers put there in practice. JIS is
+ * not worth a decoder here and reads as nothing.
+ */
+function userComment(bytes, le) {
+  if (!bytes || bytes.length <= 8) return "";
+  const code = bytes.toString("latin1", 0, 8).replace(/\0+$/, "");
+  const body = bytes.subarray(8);
+  if (code === "UNICODE") {
+    const even = Buffer.from(body.subarray(0, body.length - (body.length % 2)));
+    if (!le) even.swap16();
+    return even.toString("utf16le").replace(/\0+$/, "").trim();
+  }
+  if (code === "ASCII" || code === "") return body.toString("utf8").replace(/\0+$/, "").trim();
+  return "";
+}
+
+/* ------------------------------------------------------------------- XMP */
+
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+
+/** The text inside an XML fragment: tags dropped, entities decoded. */
+function xmlText(fragment) {
+  return String(fragment)
+    .replace(/<[^>]*>/g, "")
+    .replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (match, entity) => {
+      if (entity[0] !== "#") return ENTITIES[entity.toLowerCase()];
+      const code = entity[1] === "x" || entity[1] === "X" ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1), 10);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "";
+    })
+    .trim();
+}
+
+/**
+ * One XMP property's value, by its qualified name.
+ *
+ * dc:title, dc:description and dc:rights are language alternatives — an
+ * rdf:Alt of rdf:li, one per language — and the one to take is x-default,
+ * or the first when no item says. dc:creator is an ordered list; its first
+ * item is the author. A simple property can also be written as an attribute
+ * on rdf:Description, which is how some writers do everything.
+ *
+ * A regular expression rather than an XML parser, deliberately: the packet is
+ * machine-written, the four properties read here have fixed names, and a
+ * packet this cannot read gives "no title" rather than an exception.
+ */
+function xmpProperty(xmp, name) {
+  const element = new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`).exec(xmp);
+  if (element) {
+    const items = [...element[1].matchAll(/<rdf:li\b([^>]*)>([\s\S]*?)<\/rdf:li>/g)];
+    if (!items.length) return xmlText(element[1]);
+    const preferred = items.find(([, attributes]) => /xml:lang\s*=\s*["']x-default["']/i.test(attributes)) ?? items[0];
+    return xmlText(preferred[2]);
+  }
+  const attribute = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`).exec(xmp);
+  return attribute ? xmlText(attribute[1] ?? attribute[2]) : "";
+}
+
+/* ------------------------------------------------------------------ IPTC */
+
+/**
+ * The IPTC record inside a Photoshop APP13 segment: a run of 8BIM resource
+ * blocks, of which 0x0404 is IPTC-IIM. Each dataset is 0x1C, record,
+ * dataset, a two-byte length (or, with the top bit set, the width of an
+ * extended length that follows), then the bytes.
+ *
+ * Dataset 1:90 declares the character set; ESC % G is UTF-8. Undeclared text
+ * is read as UTF-8 when it decodes cleanly — most modern writers use it
+ * without saying so — and as Latin-1 when it does not.
+ */
+function readIptc(buffer, start, end, result) {
+  let at = start + PHOTOSHOP_HEADER.length;
+  while (at + 12 <= end && buffer.toString("latin1", at, at + 4) === "8BIM") {
+    const id = buffer.readUInt16BE(at + 4);
+    const nameLength = buffer[at + 6];
+    const sizeAt = at + 7 + nameLength + ((1 + nameLength) % 2);
+    if (sizeAt + 4 > end) return;
+    const size = buffer.readUInt32BE(sizeAt);
+    const dataAt = sizeAt + 4;
+    if (id === 0x0404) readIptcRecords(buffer, dataAt, Math.min(dataAt + size, end), result);
+    at = dataAt + size + (size % 2);
+  }
+}
+
+function readIptcRecords(buffer, start, end, result) {
+  const raw = {};
+  let utf8 = false;
+  let at = start;
+  while (at + 5 <= end && buffer[at] === 0x1c) {
+    const record = buffer[at + 1];
+    const dataset = buffer[at + 2];
+    let length = buffer.readUInt16BE(at + 3);
+    let dataAt = at + 5;
+    if (length & 0x8000) {
+      const width = length & 0x7fff;
+      if (width < 1 || width > 4 || dataAt + width > end) return;
+      length = buffer.readUIntBE(dataAt, width);
+      dataAt += width;
+    }
+    if (dataAt + length > end) return;
+    const bytes = buffer.subarray(dataAt, dataAt + length);
+    if (record === 1 && dataset === 90) utf8 = bytes.equals(Buffer.from([0x1b, 0x25, 0x47]));
+    const name = record === 2 ? IPTC_TAGS[dataset] : undefined;
+    if (name && raw[name] === undefined) raw[name] = bytes; // a repeated dataset: the first one
+    at = dataAt + length;
+  }
+  for (const [name, bytes] of Object.entries(raw)) {
+    const asUtf8 = bytes.toString("utf8");
+    const text = (utf8 || !asUtf8.includes("�") ? asUtf8 : bytes.toString("latin1")).replace(/\0+$/, "").trim();
+    if (text && result[name] === undefined) result[name] = text;
+  }
+}
+
+/* ------------------------------------------------------------------ read */
+
 const EMPTY = { present: false, hasGps: false, xmpGps: false };
 
 /**
  * @returns {{present:boolean, hasGps:boolean, xmpGps:boolean, orientation?:number,
  *   description?:string, artist?:string, copyright?:string, make?:string,
- *   model?:string, dateTime?:string, dateTimeOriginal?:string,
- *   xpTitle?:string, xpComment?:string, xpKeywords?:string}}
+ *   model?:string, dateTime?:string, dateTimeOriginal?:string, userComment?:string,
+ *   xpTitle?:string, xpComment?:string, xpAuthor?:string, xpKeywords?:string, xpSubject?:string,
+ *   xmpTitle?:string, xmpDescription?:string, xmpCreator?:string, xmpRights?:string,
+ *   iptcTitle?:string, iptcCaption?:string, iptcByline?:string, iptcCopyright?:string}}
+ *
+ * `present` means a file carries metadata of any of the three kinds.
  */
 export function readExif(buffer) {
   try {
     const result = { ...EMPTY };
-    for (const segment of app1Segments(buffer)) {
+    for (const segment of appSegments(buffer)) {
       const header = buffer.toString("latin1", segment.start, segment.start + Math.min(32, segment.end - segment.start));
+
+      if (segment.marker === 0xed) {
+        if (header.startsWith(PHOTOSHOP_HEADER)) {
+          const before = Object.keys(result).length;
+          readIptc(buffer, segment.start, segment.end, result);
+          if (Object.keys(result).length > before) result.present = true;
+        }
+        continue;
+      }
+      if (segment.marker !== 0xe1) continue;
+
       if (header.startsWith(XMP_HEADER)) {
         const xmp = buffer.toString("utf8", segment.start + XMP_HEADER.length, segment.end);
         if (/exif:GPS/i.test(xmp)) result.xmpGps = true;
+        const props = { xmpTitle: "dc:title", xmpDescription: "dc:description", xmpCreator: "dc:creator", xmpRights: "dc:rights" };
+        for (const [key, name] of Object.entries(props)) {
+          const value = xmpProperty(xmp, name);
+          if (value && result[key] === undefined) { result[key] = value; result.present = true; }
+        }
         continue;
       }
       if (!header.startsWith(EXIF_HEADER)) continue;
@@ -165,7 +324,10 @@ export function readExif(buffer) {
           }
           const value = readValue(buffer, r, entry);
           if (value == null) continue;
-          if (name.startsWith("xp")) {
+          if (name === "userComment") {
+            const text = userComment(value, r.le);
+            if (text) result.userComment = text;
+          } else if (name.startsWith("xp")) {
             const text = ucs2(value);
             if (text) result[name] = text;
           } else if (typeof value === "string") {
@@ -182,6 +344,46 @@ export function readExif(buffer) {
     return { ...EMPTY };
   }
 }
+
+/**
+ * What a camera writes when nobody has written anything. Matched against the
+ * whole value, so a real caption that happens to start with "Image" survives.
+ */
+const BOILERPLATE = /^(?:olympus digital camera|sony dsc|digital camera|kodak digital still camera|minolta digital camera|samsung digital camera|lg digital camera|digital still camera|default|untitled|image|picture|photo|dcim\b.*|created with .+|lead technologies.+)$/i;
+
+function meaningful(value) {
+  const text = String(value ?? "").replace(/[\0-\x1f\x7f]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!text || BOILERPLATE.test(text) || /^[\s.?_*-]+$/.test(text)) return "";
+  return text;
+}
+
+/**
+ * The title, caption, creator and rights a picture should be given, from what
+ * readExif() found.
+ *
+ * XMP first, IPTC second, EXIF last: the order the Metadata Working Group
+ * guidance gives, and the order in which a Lightroom or ExifTool edit reaches
+ * them. A caption that only repeats the title is not a caption — Windows puts
+ * its Title in ImageDescription as well — so the first candidate that says
+ * something different is taken, or none.
+ *
+ * @returns {{title:string, caption:string, creator:string, rights:string}}
+ */
+export function describedAs(exif) {
+  const first = (...values) => values.map(meaningful).find(Boolean) || "";
+  const title = first(exif?.xmpTitle, exif?.iptcTitle, exif?.xpTitle);
+  const caption = [exif?.xmpDescription, exif?.iptcCaption, exif?.description, exif?.xpComment, exif?.xpSubject, exif?.userComment]
+    .map(meaningful)
+    .find((value) => value && value !== title) || "";
+  return {
+    title,
+    caption,
+    creator: first(exif?.xmpCreator, exif?.iptcByline, exif?.artist, exif?.xpAuthor),
+    rights: first(exif?.xmpRights, exif?.iptcCopyright, exif?.copyright),
+  };
+}
+
+/* --------------------------------------------------------------- scrub */
 
 /**
  * A copy of the file with every GPS value removed.
@@ -248,6 +450,56 @@ function scrubXmp(buffer, start, end) {
   out = out.replace(/(<exif:GPS[A-Za-z]*>)([^<]*)(<\/exif:GPS[A-Za-z]*>)/g, blank);
   if (changed) buffer.write(out, start, "latin1");
   return changed;
+}
+
+/* ---------------------------------------------------------------- embed */
+
+const xmlEscape = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/**
+ * A JPEG with a minimal XMP packet inserted: dc:title, dc:description,
+ * dc:creator and dc:rights, whichever are given. For a file this pipeline has
+ * just encoded, which carries no metadata of its own — so there is nothing to
+ * merge with and nothing to scrub.
+ *
+ * The segment goes after SOI and the JFIF APP0 when there is one, where every
+ * reader looks for it. A packet too long for one segment (64 kB) is not
+ * written at all rather than split: four short strings never come near it.
+ *
+ * @returns {Buffer} the new file, or the input unchanged when there was
+ *   nothing to write or it is not a JPEG
+ */
+export function embedXmp(input, { title = "", caption = "", creator = "", rights = "" } = {}) {
+  const buffer = Buffer.from(input);
+  if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) return buffer;
+
+  const alt = (name, value) => `   <dc:${name}><rdf:Alt><rdf:li xml:lang="x-default">${xmlEscape(value)}</rdf:li></rdf:Alt></dc:${name}>\n`;
+  let props = "";
+  if (meaningful(title)) props += alt("title", meaningful(title));
+  if (meaningful(caption)) props += alt("description", meaningful(caption));
+  if (meaningful(creator)) props += `   <dc:creator><rdf:Seq><rdf:li>${xmlEscape(meaningful(creator))}</rdf:li></rdf:Seq></dc:creator>\n`;
+  if (meaningful(rights)) props += alt("rights", meaningful(rights));
+  if (!props) return buffer;
+
+  const packet =
+    `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>\n` +
+    `<x:xmpmeta xmlns:x="adobe:ns:meta/">\n` +
+    ` <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n` +
+    `  <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">\n` +
+    props +
+    `  </rdf:Description>\n` +
+    ` </rdf:RDF>\n` +
+    `</x:xmpmeta>\n` +
+    `<?xpacket end="w"?>`;
+  const payload = Buffer.concat([Buffer.from(XMP_HEADER, "latin1"), Buffer.from(packet, "utf8")]);
+  if (payload.length + 2 > 0xffff) return buffer;
+
+  let at = 2;
+  if (buffer[2] === 0xff && buffer[3] === 0xe0 && buffer.length >= 6) at = 4 + buffer.readUInt16BE(4);
+  if (at > buffer.length) return buffer;
+  const head = Buffer.from([0xff, 0xe1, 0, 0]);
+  head.writeUInt16BE(payload.length + 2, 2);
+  return Buffer.concat([buffer.subarray(0, at), head, payload, buffer.subarray(at)]);
 }
 
 export default readExif;

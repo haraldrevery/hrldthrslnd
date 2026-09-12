@@ -36,12 +36,16 @@ export function imageTag(thumb, alt, title, size, { loading = "lazy" } = {}) {
  * data-gallery groups the slider. Every image in a markdown post shares one
  * group so the arrows step through the post's pictures; a block names its own
  * group so a page of several galleries does not become one long slider.
+ *
+ * The slide's description is the picture's caption where it has one — the
+ * photographer's own line, imported from the file's metadata — and its alt
+ * text otherwise, which is all a markdown image carries.
  */
-export function lightboxLink(src, alt, title, inner, gallery = "post") {
+export function lightboxLink(src, alt, title, inner, gallery = "post", description = alt) {
   return (
     `<a class="glightbox" href="${escapeHtml(src)}" data-gallery="${escapeHtml(gallery)}"` +
     (title ? ` data-title="${escapeHtml(title)}"` : "") +
-    (alt ? ` data-description="${escapeHtml(alt)}"` : "") +
+    (description ? ` data-description="${escapeHtml(description)}"` : "") +
     `>${inner}</a>`
   );
 }
@@ -75,11 +79,11 @@ export function lightboxable(src) {
  * Returns the markup and the dimensions it found, because a gallery cell also
  * needs the ratio for its own layout.
  */
-export function pictureHtml(src, { alt = "", title = "", gallery = "post", loading = "lazy" }, resolver) {
+export function pictureHtml(src, { alt = "", title = "", gallery = "post", loading = "lazy", description = alt }, resolver) {
   const thumb = resolver.resolveThumbnail(src);
   const size = resolver.imageSize(thumb);
   const img = imageTag(thumb, alt, title, size, { loading });
-  const html = lightboxable(src) ? lightboxLink(src, alt, title, img, gallery) : img;
+  const html = lightboxable(src) ? lightboxLink(src, alt, title, img, gallery, description || alt) : img;
   return { html, size, thumb };
 }
 

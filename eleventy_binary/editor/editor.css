@@ -123,6 +123,9 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .seg-icons button { padding: 4px 8px; display: grid; place-items: center; }
 .seg-full { display: flex; width: 100%; }
 .seg-full button { flex: 1 1 0; }
+/* More choices than fit one row of the inspector: the buttons wrap. */
+.seg-wrap { flex-wrap: wrap; }
+.seg-wrap button { flex: 1 1 auto; }
 
 .save-state { color: var(--ui-muted); font-size: 12px; white-space: nowrap; min-width: 5.5em; text-align: right; }
 .save-state.is-error { color: var(--ui-danger); }

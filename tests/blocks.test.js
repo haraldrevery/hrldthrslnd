@@ -8,7 +8,7 @@
  */
 import { test, expect, describe } from "bun:test";
 
-import { BLOCKS, BY_TYPE, defaultBlock, COLUMN_TYPES } from "../eleventy_binary/lib/blocks/catalogue.js";
+import { BLOCKS, BY_TYPE, defaultBlock, COLUMN_TYPES, fieldApplies } from "../eleventy_binary/lib/blocks/catalogue.js";
 import { validatePost, assetRefs, verdict } from "../eleventy_binary/lib/blocks/validate.js";
 import { renderPost, assetUrl, pageData } from "../eleventy_binary/lib/blocks/render.js";
 import { createMarkdownLibrary } from "../eleventy_binary/lib/markdown.js";
@@ -307,5 +307,125 @@ describe("renderPost", () => {
       title: "T", date: "2026-01-02", description: "D", tags: ["a", "B"], category: [],
       draft: false, image: "/post_x/photo.jpg", author: "Me", updated: "2026-02-03",
     });
+  });
+
+  test("a gallery picture's caption is its lightbox description; alt stands in without one", () => {
+    const { html } = render([{ type: "gallery", images: [{ src: "photo.jpg", alt: "A", title: "T", caption: "C" }, { src: "tall.jpg", alt: "B" }] }]);
+    expect(html).toContain('data-title="T" data-description="C"');
+    expect(html).toContain('data-description="B"');
+  });
+});
+
+describe("hero treatments", () => {
+  const portrait = { src: "photo.jpg", alt: "A stair", title: "On the stairs", caption: "Plate 001 — a stairway." };
+  const landscape = { src: "tall.jpg", alt: "A beach", title: "Onshore", caption: "Waves." };
+  const below = [{ type: "text", markdown: "a" }, { type: "gallery", images: [{ src: "photo.jpg", alt: "A" }, { src: "tall.jpg", alt: "B" }] }];
+  // The hero alone: everything up to the sentinel it ends with.
+  const heroOf = (html) => html.slice(0, html.indexOf('<div class="hero-end"'));
+
+  test("fields declare the treatments that use them, and name only real ones", () => {
+    const hero = BY_TYPE.get("hero");
+    const options = hero.fields.find((f) => f.name === "variant").options.map((o) => o.value);
+    for (const f of hero.fields) {
+      for (const v of [...(f.variants ?? []), ...(f.requiredFor ?? [])]) expect(options).toContain(v);
+    }
+    const field = (name) => hero.fields.find((f) => f.name === name);
+    expect(fieldApplies(hero, field("image"), { variant: "stage" })).toBe(false);
+    expect(fieldApplies(hero, field("image"), {})).toBe(false); // the default is the stage
+    expect(fieldApplies(hero, field("image"), { variant: "salon" })).toBe(true);
+    expect(fieldApplies(hero, field("image_2"), { variant: "collage" })).toBe(true);
+    expect(fieldApplies(hero, field("image_2"), { variant: "salon" })).toBe(false);
+    expect(fieldApplies(hero, field("inscription"), { variant: "salon" })).toBe(true);
+  });
+
+  test("an unknown treatment is an error, not a quiet stage; other selects still only warn", () => {
+    const hero = validatePost(doc([{ type: "hero", variant: "cinema", title: "x" }]));
+    expect(hero.some((f) => f.level === "error" && f.path === "blocks[0].variant")).toBe(true);
+    const gallery = validatePost(doc([{ type: "gallery", layout: "grid", images: [{ src: "photo.jpg", alt: "a" }] }]));
+    expect(gallery.find((f) => f.path === "blocks[0].layout").level).toBe("warn");
+  });
+
+  test("the collage and the salon need their portrait; the collage wants its landscape", () => {
+    for (const variant of ["collage", "salon"]) {
+      const findings = validatePost(doc([{ type: "hero", variant, title: "x" }]));
+      expect(findings.some((f) => f.level === "error" && f.path === "blocks[0].image")).toBe(true);
+    }
+    const collage = validatePost(doc([{ type: "hero", variant: "collage", title: "x", image: portrait }]));
+    expect(collage.some((f) => f.level === "warn" && f.path === "blocks[0].image_2")).toBe(true);
+    expect(verdict(validatePost(doc([{ type: "hero", variant: "salon", title: "x", image: portrait }]), { assets: ["photo.jpg"] }))).not.toBe("error");
+  });
+
+  test("a field the treatment does not use is not checked, and names no file", () => {
+    const stage = { type: "hero", variant: "stage", title: "x", image: { src: "gone.jpg" }, image_2: { src: "gone.jpg" } };
+    const findings = validatePost(doc([stage]), { assets: ["photo.jpg"] });
+    expect(findings.filter((f) => f.path.startsWith("blocks[0]"))).toEqual([]);
+    expect(assetRefs(doc([stage])).map((r) => r.path)).toEqual(["meta.image"]);
+  });
+
+  test("the collage renders every piece the stylesheet finds by name, and fills them from the page", () => {
+    const { html, warnings } = render([
+      { type: "hero", variant: "collage", eyebrow: "E", title: "A page\nthat overlaps", accent: "overlaps", image: portrait, image_2: landscape },
+      ...below,
+    ]);
+    expect(warnings).toEqual([]);
+    const hero = heroOf(html);
+    for (const piece of [
+      "hero-stage collage-stage", "shell collage-shell", "collage", "collage-portrait", "collage-landscape",
+      "collage-panel hero-copy glass-card glass-card-solid panel-adaptive", "collage-block ink-panel panel-adaptive",
+      "collage-stamp paper-panel", "collage-rule",
+    ]) {
+      expect(hero).toContain(`class="${piece}"`);
+    }
+    expect(hero.match(/<h1\b/g)).toHaveLength(1);
+    // The portrait is the full-size file behind the lightbox, its caption the slide's description…
+    expect(hero).toContain('<a class="glightbox" href="/post_x/photo.jpg" data-gallery="hero" data-title="On the stairs" data-description="Plate 001 — a stairway.">');
+    expect(hero).toContain('<img src="/post_x/photo.jpg" alt="A stair" width="1600" height="1200" loading="eager"');
+    // …and the landscape, small on every screen, loads its counterpart.
+    expect(hero).toContain('<img src="/post_x/tall_min.jpg" alt="A beach" width="600" height="900" loading="eager"');
+    // Worked out from the page: two sections below, the caption, the date, the first subject, four plates.
+    expect(hero).toContain('<p class="display collage-count">02</p>');
+    expect(hero).toContain('<p class="collage-note">Plate 001 — a stairway.</p>');
+    expect(hero).toContain('<p class="display-sm collage-stamp-value">02.01.2026</p>');
+    expect(hero).toContain('<p class="micro collage-stamp-sub">a</p>');
+    expect(hero).toContain('<span class="micro">Sections 01 — 02</span>');
+    expect(hero).toContain('<span class="micro">2026 · 4 plates</span>');
+    expect(hero.match(/<span style="flex:\d+"><\/span>/g)).toHaveLength(2);
+    expect(html).toContain('<div class="hero-end" id="hero-end"></div>');
+  });
+
+  test("the salon hangs the portrait, counts the plates and engraves the date in Roman numerals", () => {
+    const { html, warnings } = renderPost(
+      doc([{ type: "hero", variant: "salon", title: "A quiet room\nin gilded light", accent: "gilded light", image: portrait }, ...below]),
+      { md, slug: "post_x", site: { author: "H. Revery" } },
+    );
+    expect(warnings).toEqual([]);
+    const hero = heroOf(html);
+    for (const piece of [
+      "hero-stage salon-stage", "block-two-col", "hero-copy", "hero-in salon-frame", "paper-panel salon-mount",
+      "art-plate fill salon-plate", "paper-panel salon-stamp", "micro hero-in salon-plate-caption", "hero-in salon-rule",
+    ]) {
+      expect(hero).toContain(`class="${piece}"`);
+    }
+    // Every piece is placed by a class, so the theme can reach it.
+    expect(hero).not.toContain("style=");
+    expect(hero).toContain('<span class="text-flow">gilded light</span>');
+    expect(hero).toContain('<p class="display-sm">III</p>');
+    expect(hero).toContain("Plate I — On the stairs");
+    expect(hero).toContain('<p class="micro">H. Revery · II.I.MMXXVI · a</p>');
+  });
+
+  test("the salon's engraved line is the block's own when it has one; the post's author beats the site's", () => {
+    const hero = { type: "hero", variant: "salon", title: "x", image: portrait };
+    expect(render([{ ...hero, inscription: "Set in <gold>" }]).html).toContain('<p class="micro">Set in &lt;gold&gt;</p>');
+    const own = renderPost(doc([hero], { author: "Me" }), { md, slug: "post_x", site: { author: "Site" } }).html;
+    expect(own).toContain('<p class="micro">Me · II.I.MMXXVI · a</p>');
+    // One plate is not a count worth hanging a stamp for.
+    expect(own).not.toContain("salon-stamp");
+  });
+
+  test("a stage hero ignores a picture left behind from another treatment", () => {
+    const { html } = render([{ type: "hero", variant: "stage", title: "x", image: portrait, image_2: landscape }]);
+    expect(html).not.toContain("photo.jpg");
+    expect(html).not.toContain("tall");
   });
 });

@@ -348,6 +348,7 @@ export function createConfig({
         md,
         slug: record.slug,
         inputPath: record.inputPath,
+        site: { author: settings.author },
       });
       for (const warning of warnings) {
         log.note("posts", `${record.inputPath} — ${warning.path}: ${warning.message}`, warning.detail);

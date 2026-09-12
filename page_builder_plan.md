@@ -169,6 +169,7 @@ every block. Readmes updated. Binary recompiled and verified.
 | 4 | done | `--edit`: `lib/editor/`, `editor/`; smoke-tested against every endpoint |
 | 5 | done | `post_i` ported, `post_blocks` added, readmes updated, binary recompiled |
 | UI pass | done | canvas editing, bulk import and drop, library picker, one inspector; driven end to end in a headless browser |
+| Third pass | done | collage and salon hero treatments; title and caption from the file's XMP, IPTC or EXIF; 19 tests. See below |
 
 ---
 
@@ -215,3 +216,99 @@ the canvas, with the text in the inspector, is the safe form of it.
 Deferred, deliberately: zip export (the folder is the project; a zip of a folder
 is a shell command), Windows shell integration for `--edit` (the URL is printed;
 open it), EXIF import of titles from XMP sidecars.
+
+---
+
+## Third pass: two more heroes, and pictures that name themselves
+
+Two requests: the hero compositions of `block_test_page_c.html` (the collage)
+and `block_test_page_d.html` (the salon) as treatments the editor can pick; and
+a picture's title and description filled in from the file when it is imported.
+
+### Fields say which treatment uses them
+
+Every hero field used to apply to every treatment, and "which treatments take a
+photograph" was written out in three places — the validator, the renderer and
+the editor. A collage needs a second picture a salon does not; a salon needs an
+engraved line a collage does not. So a field now carries `variants` (the
+treatments that use it) and `requiredFor` in the catalogue, and all three read
+that: `fieldApplies()` in the catalogue, restated as `fieldShown()` in the
+editor, which receives the catalogue as data. A field outside its treatment is
+hidden, not validated, and not an asset reference.
+
+### An unknown treatment is an error
+
+The renderer falls back to the default for a select value it does not know, and
+the validator only warned. For the hero that meant a post written with a newer
+treatment and built by an older `site_generate` was published as a plain stage.
+The variant field is now `strict`, and an unknown treatment is an error. That
+protects from this build on; a binary built before it still only warns, which is
+one more reason the binary is recompiled with every change here.
+
+### What the originals wrote by hand, the renderer works out
+
+Pages C and D are full of furniture typed for one page. Each piece was decided
+on its own:
+
+| Piece | Rendered from |
+|---|---|
+| Collage portrait and landscape | `image`, and a new `image_2`. The landscape is small on every screen, so it loads its `_min` |
+| Ink block | the number of sections below the hero, and the portrait's caption |
+| Stamp | the post's date as DD.MM.YYYY and its first subject |
+| Ruler | one segment per section, as long as the square root of its content; then the year and the number of pictures |
+| Salon accent | always gilded: `.salon-stage .text-flow` |
+| Salon stamp | the number of pictures on the page in Roman numerals, from two up |
+| Plate caption | "Plate I — " and the portrait's title, or its caption |
+| Engraved line | a new `inscription` field. Empty, it is the author · the date in Roman numerals · the first subject |
+
+The class names are a contract with the phone layouts in `css/input.css`, which
+find the pieces by name, not position. `tests/blocks.test.js` lists them.
+
+### Classes, not style attributes
+
+The hand pages place their pieces with 27 style attributes between them. Markup
+generated into every post cannot do that and still be retuned by the theme, so
+each is a class in `input.css`, beside the rules the hand pages already rely on,
+with the same values. The hand pages are unchanged: their inline styles say the
+same thing and still win. The ruler's segment lengths stay inline, because they
+are data about the page, the way `--ar` is on a gallery cell.
+
+### Which metadata field, from where
+
+Lightroom and ExifTool write a title to XMP `dc:title` and IPTC ObjectName, and
+a description to XMP `dc:description`, IPTC Caption-Abstract and usually EXIF
+ImageDescription. Windows Explorer writes its Title to XPTitle *and*
+ImageDescription. Cameras write ImageDescription too, with "OLYMPUS DIGITAL
+CAMERA" in it. `exif.js` now reads all three blocks, and `describedAs()` picks:
+XMP, then IPTC, then EXIF; boilerplate ignored; a caption that only repeats the
+title is no caption. Over the site's 195 originals that gives 97 titles and 96
+captions, all from XMP written by ExifTool.
+
+The title goes to the picture's title and the description to its caption —
+never its alt text, which describes the picture for someone who cannot see it
+and is not the same sentence as the photographer's. The caption is now the
+lightbox description (alt stands in without one), so the caption field is shown
+for every picture rather than only in waterfall galleries.
+
+### Read from the file, not remembered from the import
+
+The first version kept what it read in the editor's memory: gone on reload,
+never offered for a picture picked from the library, and lost for good when the
+import re-encoded the file, because a fresh encode carries no metadata at all.
+Now the server reads the title and caption from the head of each file whenever
+it lists a post folder or the site library, and a re-encoded import is given a
+minimal XMP packet back — title, caption, creator and rights, and nothing else:
+no camera data, no location. Replacing a picture no longer keeps the old
+picture's alt text.
+
+### Not done
+
+- Alt text is never filled in from metadata, on purpose.
+- XMP sidecar files (`.xmp` beside a raw file) are still not read. XMP embedded
+  in the JPEG is.
+- The hand pages C and D keep their inline styles; they could now use the
+  classes, but they are the reference the renderer was checked against.
+- `post_hero_collage` and `post_hero_salon` are drafts, and their pictures have
+  no alt text yet.
+- `post_blocks.json`'s hero still points at `http://127.0.0.1:8484/…`, which
+  the checker reports as an error. Not touched here.

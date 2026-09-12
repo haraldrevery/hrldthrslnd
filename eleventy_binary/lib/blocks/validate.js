@@ -17,7 +17,7 @@
  * Pure: no filesystem, no Eleventy. The same code runs in the build and in the
  * editor's browser page.
  */
-import { BLOCKS, BY_TYPE, FORMAT_VERSION, COLUMN_TYPES, META_FIELDS } from "./catalogue.js";
+import { BLOCKS, BY_TYPE, FORMAT_VERSION, COLUMN_TYPES, META_FIELDS, variantOf, fieldApplies } from "./catalogue.js";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -62,6 +62,8 @@ export function assetRefs(doc) {
     const spec = BY_TYPE.get(block.type);
     if (!spec) return;
     for (const field of spec.fields) {
+      // A field this variant does not render references nothing on the page.
+      if (!fieldApplies(spec, field, block)) continue;
       const value = block[field.name];
       const at = `${path}.${field.name}`;
       if (field.kind === "image" && value && typeof value === "object") push(`${at}.src`, value.src, "image");
@@ -229,12 +231,21 @@ function validateBlock(block, path, { error, warn, note }) {
     return null;
   }
 
+  const variant = variantOf(spec, block);
+  const variantLabel = () => {
+    const option = spec.fields.find((f) => f.name === "variant").options.find((o) => o.value === variant);
+    return option.label.split(" — ")[0].toLowerCase();
+  };
+
   for (const field of spec.fields) {
     const at = `${path}.${field.name}`;
     const value = block[field.name];
+    // Not part of the block as it is rendered, so nothing to check: a
+    // photograph left behind on a stage hero is not on the page.
+    if (!fieldApplies(spec, field, block)) continue;
     // A picture object with no src is an empty field, not a broken picture:
     // the editor materialises `{ src: "", alt: "" … }` for every image slot
-    // so its form has something to bind to, and a stage hero never fills it.
+    // so its form has something to bind to.
     const empty =
       value == null ||
       (typeof value === "string" && value.trim() === "") ||
@@ -246,12 +257,21 @@ function validateBlock(block, path, { error, warn, note }) {
       if (field.kind !== "blocks") error(at, `"${field.name}" is required`);
       continue;
     }
+    if (field.requiredFor?.includes(variant) && empty) {
+      error(at, `the ${variantLabel()} treatment needs ${field.kind === "image" ? "a picture" : `"${field.name}"`}`);
+      continue;
+    }
     if (empty) continue;
 
     switch (field.kind) {
       case "select":
         if (!field.options.some((o) => o.value === value)) {
-          warn(at, `"${value}" is not one of ${field.options.map((o) => o.value).join(", ")}`, `the renderer uses "${field.default}"`);
+          const known = field.options.map((o) => o.value).join(", ");
+          if (field.strict) {
+            error(at, `"${value}" is not a ${field.label.toLowerCase()} this build knows`, `known: ${known}. A post made with a newer site_generate needs that version to build`);
+          } else {
+            warn(at, `"${value}" is not one of ${known}`, `the renderer uses "${field.default}"`);
+          }
         }
         break;
       case "boolean":
@@ -298,8 +318,9 @@ function validateBlock(block, path, { error, warn, note }) {
   }
 
   if (spec.type === "hero") {
-    const photographic = block.variant === "photo" || block.variant === "photo_adaptive";
-    if (photographic && !(block.image && block.image.src)) error(`${path}.image`, "a photograph treatment needs a picture");
+    if (variant === "collage" && !(block.image_2 && String(block.image_2.src ?? "").trim())) {
+      warn(`${path}.image_2`, "the collage has no second picture", "the landscape corner at the top right stays empty");
+    }
     if (block.accent && typeof block.title === "string" && !block.title.includes(block.accent)) {
       warn(`${path}.accent`, `the accent "${block.accent}" does not appear in the title`, "nothing is highlighted");
     }

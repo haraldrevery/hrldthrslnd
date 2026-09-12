@@ -17,10 +17,10 @@
  * filesystem.
  */
 import { escapeHtml, mediaKind, extensionOf } from "../paths.js";
-import { pictureHtml, playerTag, posterFor, imageTag } from "../media_html.js";
+import { pictureHtml, playerTag, posterFor, imageTag, lightboxLink, lightboxable } from "../media_html.js";
 import { mergeSubjects } from "../subjects.js";
-import { BY_TYPE } from "./catalogue.js";
-import { isFolderRef, isSafeFolderRef } from "./validate.js";
+import { BY_TYPE, variantOf } from "./catalogue.js";
+import { isFolderRef, isSafeFolderRef, assetRefs } from "./validate.js";
 
 const esc = escapeHtml;
 
@@ -72,14 +72,18 @@ function cssLength(value, fallback) {
  *   to the markup, so the editor's canvas can find what was clicked. Only the
  *   editor's preview asks for this; the build never does, so nothing of the
  *   editor reaches the published site.
+ * @param {object} [options.site]  site-wide facts a composition may print:
+ *   `author`, used where the post's own meta names none
  * @returns {{html: string, warnings: {path:string, message:string, detail?:string}[]}}
  */
-export function renderPost(doc, { md, slug, inputPath = "", editable = false }) {
+export function renderPost(doc, { md, slug, inputPath = "", editable = false, site = {} }) {
   const warnings = [];
   const ctx = {
     md,
     resolver: md.resolver,
     slug,
+    doc,
+    site,
     env: inputPath ? { page: { inputPath } } : {},
     galleries: 0,
     editable,
@@ -149,7 +153,8 @@ function picture(img, ctx, gallery, { loading = "lazy" } = {}) {
   const url = assetUrl(img?.src, ctx.slug);
   const alt = text(img?.alt);
   const title = text(img?.title);
-  return { url, alt, title, caption: text(img?.caption), ...pictureHtml(url, { alt, title, gallery, loading }, ctx.resolver) };
+  const caption = text(img?.caption);
+  return { url, alt, title, caption, ...pictureHtml(url, { alt, title, gallery, loading, description: caption }, ctx.resolver) };
 }
 
 /* ------------------------------------------------------------------ hero */
@@ -181,48 +186,265 @@ function heroTitle(title, accent) {
     .join(' <br class="hero-break">');
 }
 
+/**
+ * The hero, in whichever treatment the block names.
+ *
+ * Stage and the two photo treatments are one composition on a different
+ * ground. The collage and the salon are compositions of their own, rendered
+ * from the hand-written originals in block_test_page_c.html and
+ * block_test_page_d.html. Their class names are a contract with
+ * css/input.css: the phone layouts find the pieces BY NAME, so a piece
+ * rendered here under another name is a piece a phone cannot rearrange.
+ * tests/blocks.test.js holds the list.
+ *
+ * What the originals carry as hand-written furniture — the section count, the
+ * date stamp, the ruler, the plate number, the engraved line — is worked out
+ * here from the post itself (see pageFacts), so a collage or a salon is filled
+ * in by choosing it. The one exception a person may want to word is the
+ * salon's engraved line, which is a field.
+ */
 function renderHero(block, path, ctx) {
-  const spec = BY_TYPE.get("hero");
-  const variant = choice(spec, block, "variant");
-  const photographic = variant !== "stage";
+  const variant = variantOf(BY_TYPE.get("hero"), block);
+  if (variant === "collage") return renderCollage(block, path, ctx);
+  if (variant === "salon") return renderSalon(block, path, ctx);
+  return renderStage(block, path, ctx, variant);
+}
 
+/** Eyebrow, h1, lede and buttons: the column of type every hero carries. */
+function heroCopy(block, indent) {
+  const pad = " ".repeat(indent);
+  const actions = list(block.actions)
+    .filter((a) => a && text(a.label) && text(a.href))
+    .map((a, i) => `<a class="btn${i === 0 ? "" : " btn-ghost"}" href="${esc(text(a.href))}">${esc(text(a.label))}</a>`)
+    .join(`\n${pad}  `);
+  return (
+    (text(block.eyebrow) ? `${pad}<p class="eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
+    `${pad}<h1 class="display">${heroTitle(block.title, block.accent)}</h1>\n` +
+    (text(block.lede) ? `${pad}<p class="lede">${esc(text(block.lede))}</p>\n` : "") +
+    (actions ? `${pad}<div class="hero-actions">\n${pad}  ${actions}\n${pad}</div>\n` : "")
+  );
+}
+
+/** The scroll cue, the end of the section, and the sentinel the cue lands on. */
+function heroClose(block) {
+  const cue = block.scroll_cue === false
+    ? ""
+    : `\n  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>`;
+  return `${cue}\n</section>\n<div class="hero-end" id="hero-end"></div>`;
+}
+
+function renderStage(block, path, ctx, variant) {
   const classes = ["hero-stage"];
   if (variant === "photo") classes.push("hero-stage-photo");
   if (variant === "photo_adaptive") classes.push("hero-stage-photo-adaptive");
 
   let media = "";
-  if (photographic && block.image?.src) {
+  if (variant !== "stage" && block.image?.src) {
     // The ORIGINAL, not the counterpart: a hero is the one place the
     // full-resolution file is the right file, and it loads eagerly because it
     // is above the fold by definition.
     const url = assetUrl(block.image.src, ctx.slug);
     const size = ctx.resolver.imageSize(url);
-    if (!size) ctx.warn("blocks[0].image", `could not measure "${block.image.src}"`, "the hero picture ships without width and height");
+    if (!size) ctx.warn(`${path}.image`, `could not measure "${block.image.src}"`, "the hero picture ships without width and height");
     media = `<div class="hero-media">${imageTag(url, text(block.image.alt), text(block.image.title), size, { loading: "eager" })}</div>`;
   } else {
     media = `<div class="editorial-grid" aria-hidden="true"></div>`;
   }
 
-  const actions = list(block.actions)
-    .filter((a) => a && text(a.label) && text(a.href))
-    .map((a, i) => `<a class="btn${i === 0 ? "" : " btn-ghost"}" href="${esc(text(a.href))}">${esc(text(a.label))}</a>`)
-    .join("\n      ");
-
-  const cue = block.scroll_cue === false
-    ? ""
-    : `\n  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>`;
-
   return (
     `<section class="${classes.join(" ")}"${ctx.mark(path, "hero")}>\n` +
     `  ${media}\n` +
     `  <div class="shell hero-copy">\n` +
-    (text(block.eyebrow) ? `    <p class="eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
-    `    <h1 class="display">${heroTitle(block.title, block.accent)}</h1>\n` +
-    (text(block.lede) ? `    <p class="lede">${esc(text(block.lede))}</p>\n` : "") +
-    (actions ? `    <div class="hero-actions">\n      ${actions}\n    </div>\n` : "") +
+    heroCopy(block, 4) +
     `  </div>` +
-    cue +
-    `\n</section>\n<div class="hero-end" id="hero-end"></div>`
+    heroClose(block)
+  );
+}
+
+/**
+ * A picture a composed hero hangs: behind a lightbox anchor, loaded eagerly
+ * because it is above the fold by definition. The full-size file by default —
+ * the portrait is near half a wide screen, past what a _min counterpart
+ * covers — and the counterpart for a piece that is small on every screen.
+ */
+function heroPlate(img, at, ctx, { thumbnail = false } = {}) {
+  const url = assetUrl(img.src, ctx.slug);
+  const alt = text(img.alt);
+  const title = text(img.title);
+  const description = text(img.caption) || alt;
+  if (thumbnail) {
+    const p = pictureHtml(url, { alt, title, gallery: "hero", loading: "eager", description }, ctx.resolver);
+    if (!p.size) ctx.warn(at, `could not measure "${img.src}"`, "the picture ships without width and height");
+    return p.html;
+  }
+  const size = ctx.resolver.imageSize(url);
+  if (!size) ctx.warn(at, `could not measure "${img.src}"`, "the picture ships without width and height");
+  const tag = imageTag(url, alt, title, size, { loading: "eager" });
+  return lightboxable(url) ? lightboxLink(url, alt, title, tag, "hero", description) : tag;
+}
+
+const DATE_PARTS = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * What a composed hero can say about the page it opens without being told:
+ * the sections below it, the pictures in it, its date, its first subject and
+ * its author. Read from the document, so it is right on the day it is built.
+ */
+function pageFacts(ctx) {
+  const doc = ctx.doc ?? {};
+  const meta = doc.meta ?? {};
+  const sections = list(doc.blocks).filter((b) => b && BY_TYPE.has(b.type) && !BY_TYPE.get(b.type).hero);
+  const plates = assetRefs(doc).filter((ref) => ref.path !== "meta.image" && mediaKind(assetUrl(ref.src, ctx.slug)) === "image").length;
+  const parts = DATE_PARTS.exec(text(meta.date));
+  const date = parts ? { year: Number(parts[1]), month: Number(parts[2]), day: Number(parts[3]) } : null;
+  const [subject = ""] = mergeSubjects(meta.tags, meta.category);
+  const author = text(meta.author) || text(ctx.site?.author);
+  return { sections, plates, date, subject, author };
+}
+
+const ROMAN = [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+
+function roman(n) {
+  if (!Number.isInteger(n) || n < 1 || n > 3999) return String(n);
+  let out = "";
+  for (const [value, numeral] of ROMAN) {
+    while (n >= value) { out += numeral; n -= value; }
+  }
+  return out;
+}
+
+const pad2 = (n) => String(n).padStart(2, "0");
+
+/**
+ * The collage ruler's track: one segment per section below the hero, its
+ * length the square root of how much the section holds, so the ruler is a
+ * map of the page rather than a decoration. Past twelve the rest merge into
+ * one veiled tail, which is what .seg-rest is for. The flex values are data,
+ * not design, so they are the one style attribute here — the way --ar is on
+ * a gallery cell.
+ */
+function rulerTrack(sections) {
+  const MAX = 12;
+  const weights = sections.map((b) => Math.sqrt(JSON.stringify(b).length));
+  const shown = weights.length > MAX ? weights.slice(0, MAX - 1) : weights;
+  const rest = weights.slice(shown.length).reduce((a, b) => a + b, 0);
+  const top = Math.max(...shown, 1);
+  const flex = (w) => Math.min(24, Math.max(3, Math.round((w / top) * 22)));
+  const spans = shown.map((w) => `<span style="flex:${flex(w)}"></span>`);
+  if (rest) spans.push(`<span class="seg-rest" style="flex:${flex(rest)}"></span>`);
+  if (!spans.length) spans.push(`<span class="seg-rest" style="flex:1"></span>`);
+  return spans.join(`<span class="seg-gap"></span>`);
+}
+
+/**
+ * The collage: block_test_page_c.html's five overlapping pieces. The
+ * portrait is the hero's photograph and the landscape its second picture;
+ * the glass panel carries the type. The ink block counts the sections and
+ * prints the portrait's caption, the stamp is the post's date and first
+ * subject, and the ruler maps the sections below.
+ */
+function renderCollage(block, path, ctx) {
+  const facts = pageFacts(ctx);
+  const portrait = block.image?.src ? block.image : null;
+  const landscape = block.image_2?.src ? block.image_2 : null;
+  const count = pad2(facts.sections.length);
+  const note = text(portrait?.caption);
+  const { date } = facts;
+  const tail = [date ? String(date.year) : "", facts.plates ? `${facts.plates} plate${facts.plates === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ");
+
+  return (
+    `<section class="hero-stage collage-stage"${ctx.mark(path, "hero")}>\n` +
+    `  <div class="editorial-grid" aria-hidden="true"></div>\n` +
+    `  <div class="shell collage-shell">\n` +
+    `    <div class="collage">\n` +
+    (portrait
+      ? `      <div class="collage-portrait"${ctx.markImage(`${path}.image`)}>\n` +
+        `        <figure class="art-plate fill">${heroPlate(portrait, `${path}.image`, ctx)}</figure>\n` +
+        `      </div>\n`
+      : "") +
+    (landscape
+      ? `      <div class="collage-landscape"${ctx.markImage(`${path}.image_2`)}>\n` +
+        `        <figure class="art-plate fill">${heroPlate(landscape, `${path}.image_2`, ctx, { thumbnail: true })}</figure>\n` +
+        `      </div>\n`
+      : "") +
+    `      <div class="collage-panel hero-copy glass-card glass-card-solid panel-adaptive">\n` +
+    heroCopy(block, 8) +
+    `      </div>\n` +
+    `      <div class="collage-block ink-panel panel-adaptive">\n` +
+    `        <p class="micro">Sections</p>\n` +
+    `        <div>\n` +
+    `          <p class="display collage-count">${count}</p>\n` +
+    (note ? `          <p class="collage-note">${esc(note)}</p>\n` : "") +
+    `        </div>\n` +
+    `      </div>\n` +
+    (date
+      ? `      <div class="collage-stamp paper-panel">\n` +
+        `        <p class="micro collage-stamp-label">Dated</p>\n` +
+        `        <p class="display-sm collage-stamp-value">${pad2(date.day)}.${pad2(date.month)}.${date.year}</p>\n` +
+        (facts.subject ? `        <p class="micro collage-stamp-sub">${esc(facts.subject)}</p>\n` : "") +
+        `      </div>\n`
+      : "") +
+    `      <div class="collage-rule">\n` +
+    `        <span class="micro">${facts.sections.length ? `Sections 01 — ${count}` : "Sections 00"}</span>\n` +
+    `        <div class="scrubber" aria-hidden="true">${rulerTrack(facts.sections)}</div>\n` +
+    (tail ? `        <span class="micro">${esc(tail)}</span>\n` : "") +
+    `      </div>\n` +
+    `    </div>\n` +
+    `  </div>` +
+    heroClose(block)
+  );
+}
+
+/**
+ * The salon: block_test_page_d.html's column of type beside one portrait
+ * hung on a mount. The accent is gilded by the stylesheet (.salon-stage
+ * .text-flow); the stamp counts the post's plates in Roman numerals, the
+ * caption names the portrait as plate I, and the engraved line is the
+ * block's own when it has one — otherwise the author, the date in Roman
+ * numerals and the first subject.
+ */
+function renderSalon(block, path, ctx) {
+  const facts = pageFacts(ctx);
+  const portrait = block.image?.src ? block.image : null;
+  const plateLine = text(portrait?.title) || text(portrait?.caption);
+  const { date } = facts;
+  const inscription =
+    text(block.inscription) ||
+    [facts.author, date ? `${roman(date.day)}.${roman(date.month)}.${roman(date.year)}` : "", facts.subject].filter(Boolean).join(" · ");
+
+  return (
+    `<section class="hero-stage salon-stage"${ctx.mark(path, "hero")}>\n` +
+    `  <div class="editorial-grid" aria-hidden="true"></div>\n` +
+    `  <div class="shell">\n` +
+    `    <div class="block-two-col">\n` +
+    `      <div class="hero-copy">\n` +
+    heroCopy(block, 8) +
+    `      </div>\n` +
+    `      <div>\n` +
+    (portrait
+      ? `        <div class="hero-in salon-frame"${ctx.markImage(`${path}.image`)}>\n` +
+        `          <div class="paper-panel salon-mount" aria-hidden="true"></div>\n` +
+        `          <figure class="art-plate fill salon-plate">${heroPlate(portrait, `${path}.image`, ctx)}</figure>\n` +
+        (facts.plates > 1
+          ? `          <div class="paper-panel salon-stamp">\n` +
+            `            <p class="micro">Plates</p>\n` +
+            `            <p class="display-sm">${roman(facts.plates)}</p>\n` +
+            `          </div>\n`
+          : "") +
+        `        </div>\n` +
+        (plateLine ? `        <p class="micro hero-in salon-plate-caption">Plate I — ${esc(plateLine)}</p>\n` : "")
+      : "") +
+    `      </div>\n` +
+    `    </div>\n` +
+    `    <div class="hero-in salon-rule">\n` +
+    `      <span class="hairline" aria-hidden="true"></span>\n` +
+    (inscription
+      ? `      <p class="micro">${esc(inscription)}</p>\n` +
+        `      <span class="hairline" aria-hidden="true"></span>\n`
+      : "") +
+    `    </div>\n` +
+    `  </div>` +
+    heroClose(block)
   );
 }
 

@@ -1235,6 +1235,59 @@
     margin-top: clamp(1.75rem, 5vh, 3.25rem);
     margin-bottom: var(--hero-cue-lane);
   }
+  .salon-stage .block-two-col {
+    align-items: center;
+    gap: clamp(2.5rem, 6vw, 5rem);
+  }
+  .salon-stage .text-flow {
+    --flow-image: var(--grad-heat);
+  }
+  .salon-stage .salon-frame {
+    --hero-in-beat: 2;
+    position: relative;
+    width: 100%;
+    max-width: 34rem;
+    margin-inline: auto;
+  }
+  .salon-frame > .salon-mount {
+    position: absolute;
+    inset: 0;
+    transform: translate(clamp(0.6rem, 1.4vw, 1.4rem), clamp(0.6rem, 1.4vw, 1.4rem));
+  }
+  .salon-frame > .salon-plate {
+    position: relative;
+    height: clamp(15rem, 48vh, 28rem);
+    margin: 0;
+  }
+  .salon-frame > .salon-stamp {
+    position: absolute;
+    top: -1.1rem;
+    right: -1.1rem;
+    padding: 0.8rem 1.1rem;
+    text-align: center;
+  }
+  .salon-stamp > .micro {
+    color: var(--fg-faint);
+  }
+  .salon-stamp > .display-sm {
+    margin-top: 0.3rem;
+  }
+  .salon-stage .salon-plate-caption {
+    --hero-in-beat: 4;
+    margin-top: clamp(1.5rem, 3vh, 2rem);
+    text-align: center;
+    color: var(--fg-faint);
+  }
+  .salon-stage .salon-rule {
+    --hero-in-beat: 6;
+  }
+  .salon-rule > .hairline {
+    flex: 1;
+  }
+  .salon-rule > .micro {
+    color: var(--fg-faint);
+    text-align: center;
+  }
   @media (max-width: 47.999rem), (max-height: 30rem) {
     .salon-stage .eyebrow, .salon-stage .lede, .salon-stage .hero-actions, .salon-plate-caption, .salon-rule {
       display: none;
@@ -2876,6 +2929,27 @@
   }
   .collage-stamp {
     padding: 0.9rem 1.1rem;
+  }
+  .collage-block .collage-count {
+    font-size: clamp(2.4rem, 4vw, 3.6rem);
+  }
+  .collage-block .collage-note {
+    margin-top: 0.6rem;
+    font-size: var(--step--1);
+  }
+  .collage-stamp > .collage-stamp-label {
+    color: var(--fg-muted);
+  }
+  .collage-stamp > .collage-stamp-value {
+    margin-top: 0.35rem;
+  }
+  .collage-stamp > .collage-stamp-sub {
+    margin-top: 0.5rem;
+    color: var(--fg-faint);
+  }
+  .collage-rule > .micro {
+    color: var(--fg-faint);
+    white-space: nowrap;
   }
   .collage-shell {
     position: relative;

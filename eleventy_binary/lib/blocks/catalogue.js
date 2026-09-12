@@ -30,11 +30,25 @@
  * `hero: true` marks the one block that may open a page and may appear nowhere
  * else. `inColumns: false` keeps a block out of a two-column row: a hero owns
  * the viewport, a feature block is already two columns, and columns do not nest.
+ *
+ * A block whose fields depend on its `variant` says so on the field, not in
+ * the code that reads it:
+ *
+ *   variants     the variants that use this field. Elsewhere the editor hides
+ *                it, the validator skips it and the renderer ignores it — a
+ *                photograph left behind on a stage hero is not on the page.
+ *   requiredFor  the variants that cannot render without it.
+ *   strict       on a select: a value this build does not know is an error,
+ *                not a fallback. A hero treatment added by a newer build must
+ *                not be published by an older one as a plain stage.
  */
 
 export const FORMAT_VERSION = 1;
 
 const IMAGE_FIELDS = "src, alt, title and caption";
+
+/** The hero treatments that are built around a photograph. */
+const PHOTOGRAPHIC = ["photo", "photo_adaptive", "collage", "salon"];
 
 export const BLOCKS = [
   {
@@ -49,10 +63,13 @@ export const BLOCKS = [
         label: "Treatment",
         kind: "select",
         default: "stage",
+        strict: true,
         options: [
           { value: "stage", label: "Stage — type on the site's ground, no photograph" },
           { value: "photo", label: "Photo, dark — full bleed, always light type on a darkened picture" },
           { value: "photo_adaptive", label: "Photo, adaptive — full bleed, follows the reader's colour scheme" },
+          { value: "collage", label: "Collage — a portrait, a landscape and the masthead on a glass panel, overlapping" },
+          { value: "salon", label: "Salon — the type beside one portrait hung on a mount, in gilded light" },
         ],
       },
       { name: "eyebrow", label: "Eyebrow", kind: "text", help: "The small label above the title." },
@@ -74,7 +91,23 @@ export const BLOCKS = [
         name: "image",
         label: "Photograph",
         kind: "image",
-        help: "The ground for the two photograph treatments; ignored by the stage.",
+        variants: PHOTOGRAPHIC,
+        requiredFor: PHOTOGRAPHIC,
+        help: "The ground for the photo treatments; the portrait in the collage and the salon. Its caption and title are printed beside it there.",
+      },
+      {
+        name: "image_2",
+        label: "Second picture",
+        kind: "image",
+        variants: ["collage"],
+        help: "The landscape at the top right of the collage. Without it that corner stays empty.",
+      },
+      {
+        name: "inscription",
+        label: "Engraved line",
+        kind: "text",
+        variants: ["salon"],
+        help: "The line at the foot of the salon. Left empty it reads: author · the date in Roman numerals · the first subject.",
       },
       { name: "actions", label: "Buttons", kind: "actions", help: "The first is solid, the rest are ghost buttons." },
       { name: "scroll_cue", label: "Scroll cue", kind: "boolean", default: true },
@@ -205,6 +238,21 @@ export const BLOCKS = [
 ];
 
 export const BY_TYPE = new Map(BLOCKS.map((block) => [block.type, block]));
+
+/**
+ * The variant a block is rendered as: its own when that is one of the
+ * options, the default otherwise. Null for a block without variants.
+ */
+export function variantOf(spec, block) {
+  const field = spec.fields.find((f) => f.name === "variant");
+  if (!field) return null;
+  return field.options.some((o) => o.value === block?.variant) ? block.variant : field.default;
+}
+
+/** Whether a field is part of the block as it is rendered — see `variants`. */
+export function fieldApplies(spec, field, block) {
+  return !field.variants || field.variants.includes(variantOf(spec, block));
+}
 
 /** The block types that may sit inside a two-column row. */
 export const COLUMN_TYPES = BLOCKS.filter((b) => b.inColumns !== false).map((b) => b.type);

@@ -24,6 +24,7 @@ import path from "node:path";
 import { getRegistry, invalidateRegistry, walkFiles } from "../slugs.js";
 import { invalidateImageSizeCache, readImageHeader } from "../imagesize.js";
 import { isRaster, isMinName, extensionOf, minFileName, VIDEO_EXT, AUDIO_EXT } from "../paths.js";
+import { readExif, describedAs } from "../exif.js";
 
 const FOLDER_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
 const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
@@ -175,8 +176,15 @@ export function createPost(root, folder, doc) {
   return { folder };
 }
 
-/** The files in a post folder that a page can refer to, with what the editor shows. */
-export function listAssets(root, folder) {
+/**
+ * The files in a post folder that a page can refer to, with what the editor shows.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.described]  also read each picture's title and
+ *   caption from its own metadata (see describeFile). Off for the validator's
+ *   listing, which runs on every keystroke and needs only the names.
+ */
+export function listAssets(root, folder, { described = false } = {}) {
   const dir = folderDir(root, folder);
   if (!fs.existsSync(dir)) throw new StoreError(404, `no post folder input_custom_post/${folder}/`);
   const files = walkFiles(dir).filter((relative) => relative !== `${folder}.json` && !relative.endsWith(".tmp"));
@@ -189,7 +197,7 @@ export function listAssets(root, folder) {
     const kind = isRaster(relative) || ext === ".gif" || ext === ".svg" ? "image" : VIDEO_EXT.has(ext) ? "video" : AUDIO_EXT.has(ext) ? "audio" : "file";
     const size = kind === "image" ? readImageHeader(full) : null;
     const min = isRaster(relative) && !isMinName(relative) ? path.posix.join(path.posix.dirname(relative), minFileName(path.posix.basename(relative))).replace(/^\.\//, "") : null;
-    return {
+    const entry = {
       name: relative,
       bytes: stats.size,
       kind,
@@ -198,7 +206,36 @@ export function listAssets(root, folder) {
       isMin: isMinName(relative),
       hasMin: min ? set.has(min) : null,
     };
+    return described && kind === "image" && !entry.isMin ? { ...entry, ...describeFile(full) } : entry;
   });
+}
+
+/** Every APP segment sits before the image data, and four full ones are 256 kB. */
+const METADATA_HEAD = 512 * 1024;
+
+/**
+ * The title and caption a picture carries in its own metadata — describedAs()
+ * in exif.js decides which of the file's fields those are — as the keys worth
+ * adding to a listing, or none.
+ *
+ * Read from the file every time rather than remembered from its import, so a
+ * reload of the editor, a pick from the library and a file copied into the
+ * folder by hand all get the same answer. Only the head of the file is read.
+ */
+export function describeFile(file) {
+  if (!/\.jpe?g$/i.test(file)) return {};
+  let fd = null;
+  try {
+    fd = fs.openSync(file, "r");
+    const head = Buffer.alloc(Math.min(fs.fstatSync(fd).size, METADATA_HEAD));
+    fs.readSync(fd, head, 0, head.length, 0);
+    const { title, caption } = describedAs(readExif(head));
+    return { ...(title ? { title } : {}), ...(caption ? { caption } : {}) };
+  } catch {
+    return {};
+  } finally {
+    if (fd !== null) fs.closeSync(fd);
+  }
 }
 
 /**

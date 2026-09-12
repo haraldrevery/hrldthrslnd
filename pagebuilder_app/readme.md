@@ -34,6 +34,11 @@ published; the panel on the right edits whatever you click in it.
   post's files or from the site-wide folders (`image/`, `svg/`, `gif/` …).
 - **Files** tab: everything in the post folder, with what is on the page and
   what is not. Select several and "Add to page", or drag them onto the page.
+- **Hero treatments.** Select the hero and pick Stage, Photo (dark or
+  adaptive), Collage or Salon. The collage takes two pictures — drop one onto
+  each, or two at once — and works out its section count, date stamp and ruler
+  from the page. The salon hangs one portrait and engraves the author and the
+  date in Roman numerals under it, unless you word that line yourself.
 - **Page** tab: title, description, date, subjects, card image, draft, and the
   saved versions under History.
 - The badge in the top bar says what the build will say. Click it for the list;
@@ -70,9 +75,20 @@ Turned upright from its EXIF orientation. If it is over the site's photograph
 budget or over 2800px on a side, re-encoded as a JPEG under both. Its GPS block
 is emptied and any GPS values in an XMP packet blanked; the rest of the file is
 untouched. A `_min` counterpart under 80 kB is made with the same MozJPEG
-settings the build uses. A title, description and date found in the EXIF are
-offered as suggestions for the picture's fields. Video, audio, GIF and SVG files
-are checked and passed through unchanged; the editor tells you what it saw.
+settings the build uses. Video, audio, GIF and SVG files are checked and passed
+through unchanged; the editor tells you what it saw.
+
+A title and a description written into the file become the picture's title and
+caption — never its alt text, which is yours to write. They are read from XMP
+first, where Lightroom and ExifTool put them, then IPTC, then EXIF; camera
+boilerplate such as "OLYMPUS DIGITAL CAMERA" is ignored. When a picture has to
+be re-encoded, its title, caption, creator and copyright are written back into
+the new file, so they are still there when it is picked from the library later.
+Pictures from the site-wide folders are titled the same way when you pick them.
+
+From Lightroom, export with Metadata set to *All Except Camera & Camera Raw
+Info*, with *Remove Location Info* ticked. *Copyright Only* and *Copyright &
+Contact Info Only* leave the title and caption behind.
 
 ## What it will never do
 

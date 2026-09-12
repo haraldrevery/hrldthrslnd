@@ -6,7 +6,7 @@
  * a much worse test: it would pass or fail for reasons nobody can read.
  */
 import { test, expect, describe } from "bun:test";
-import { readExif, stripGps } from "../eleventy_binary/lib/exif.js";
+import { readExif, describedAs, stripGps, embedXmp } from "../eleventy_binary/lib/exif.js";
 import { orientImage, makeImage } from "../eleventy_binary/lib/thumbnail.js";
 
 /**
@@ -89,6 +89,37 @@ function jpeg(tiffBytes, xmp = null) {
   return Buffer.concat(segments);
 }
 
+/** One JPEG marker segment around a payload. */
+function segment(marker, payload) {
+  const head = Buffer.from([0xff, marker, 0, 0]);
+  head.writeUInt16BE(payload.length + 2, 2);
+  return Buffer.concat([head, payload]);
+}
+
+/** SOI, the given segments, a stub frame and EOI. */
+function jpegWith(...segments) {
+  return Buffer.concat([Buffer.from([0xff, 0xd8]), ...segments, Buffer.from([0xff, 0xda, 0x00, 0x02, 0xff, 0xd9])]);
+}
+
+const xmpSegment = (xmp) => segment(0xe1, Buffer.concat([Buffer.from("http://ns.adobe.com/xap/1.0/\0", "latin1"), Buffer.from(xmp, "utf8")]));
+
+/**
+ * A Photoshop APP13 segment holding one IPTC-IIM resource. Datasets are
+ * [record, dataset, value] with value a string (written as UTF-8) or bytes.
+ */
+function app13(datasets) {
+  const records = Buffer.concat(datasets.map(([record, dataset, value]) => {
+    const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
+    const head = Buffer.from([0x1c, record, dataset, 0, 0]);
+    head.writeUInt16BE(bytes.length, 3);
+    return Buffer.concat([head, bytes]);
+  }));
+  // "8BIM", resource 0x0404, an empty Pascal name padded to two bytes, the size.
+  const resource = Buffer.concat([Buffer.from("8BIM", "latin1"), Buffer.from([0x04, 0x04, 0x00, 0x00]), Buffer.alloc(4), records, Buffer.alloc(records.length % 2)]);
+  resource.writeUInt32BE(records.length, 8);
+  return segment(0xed, Buffer.concat([Buffer.from("Photoshop 3.0\0", "latin1"), resource]));
+}
+
 const gpsIfd = [
   { tag: 0x0001, value: "N" },
   { tag: 0x0002, type: 5, value: Buffer.alloc(24, 0x11) }, // three rationals
@@ -135,6 +166,104 @@ describe("readExif", () => {
     expect(readExif(fixture().subarray(0, 20)).hasGps).toBe(false);
     expect(readExif(fixture().subarray(0, 40)).hasGps).toBe(false);
     expect(readExif(Buffer.alloc(0)).present).toBe(false);
+  });
+});
+
+describe("titles and captions", () => {
+  // As ExifTool writes it, and Lightroom near enough: single quotes, numeric
+  // entities, a second language ahead of x-default, UTF-8 throughout.
+  const LIGHTROOM = `<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    <rdf:Description rdf:about='' xmlns:dc='http://purl.org/dc/elements/1.1/'>
+      <dc:creator><rdf:Seq><rdf:li>Harald Revery</rdf:li></rdf:Seq></dc:creator>
+      <dc:description><rdf:Alt><rdf:li xml:lang='x-default'>A rainy night in Cortina d&#39;Ampezzo, 2024</rdf:li></rdf:Alt></dc:description>
+      <dc:rights><rdf:Alt><rdf:li xml:lang='x-default'>Harald Mark Thirslund</rdf:li></rdf:Alt></dc:rights>
+      <dc:title><rdf:Alt><rdf:li xml:lang='sv'>Säfsen i januari</rdf:li><rdf:li xml:lang='x-default'>Cortina &amp; Säfsen</rdf:li></rdf:Alt></dc:title>
+    </rdf:Description></rdf:RDF></x:xmpmeta>`;
+
+  test("XMP as Lightroom and ExifTool write it: x-default, entities and UTF-8", () => {
+    const exif = readExif(jpegWith(xmpSegment(LIGHTROOM)));
+    expect(exif.present).toBe(true);
+    expect(describedAs(exif)).toEqual({
+      title: "Cortina & Säfsen",
+      caption: "A rainy night in Cortina d'Ampezzo, 2024",
+      creator: "Harald Revery",
+      rights: "Harald Mark Thirslund",
+    });
+  });
+
+  test("IPTC, declared UTF-8 or not, and Latin-1 when the bytes are not UTF-8", () => {
+    const utf8 = readExif(jpegWith(app13([[1, 90, Buffer.from([0x1b, 0x25, 0x47])], [2, 5, "Galdhøpiggen"], [2, 120, "Two people on the glacier."], [2, 80, "H"]])));
+    expect(utf8.present).toBe(true);
+    expect(describedAs(utf8)).toMatchObject({ title: "Galdhøpiggen", caption: "Two people on the glacier.", creator: "H" });
+    expect(readExif(jpegWith(app13([[2, 5, "Säfsen"]]))).iptcTitle).toBe("Säfsen");
+    expect(readExif(jpegWith(app13([[2, 5, Buffer.from("S\xe4fsen", "latin1")]]))).iptcTitle).toBe("Säfsen");
+  });
+
+  test("XMP is believed over IPTC, and IPTC over EXIF", () => {
+    const exifBlock = segment(0xe1, Buffer.concat([
+      Buffer.from("Exif\0\0", "latin1"),
+      tiff([{ tag: 0x010e, value: "exif caption" }, { tag: 0x9c9b, type: 7, value: Buffer.from("exif title\0", "utf16le") }]),
+    ]));
+    const file = jpegWith(
+      exifBlock,
+      app13([[2, 5, "iptc title"], [2, 120, "iptc caption"]]),
+      xmpSegment('<x:xmpmeta><rdf:Description><dc:title><rdf:Alt><rdf:li xml:lang="x-default">xmp title</rdf:li></rdf:Alt></dc:title></rdf:Description></x:xmpmeta>'),
+    );
+    expect(describedAs(readExif(file))).toMatchObject({ title: "xmp title", caption: "iptc caption" });
+    expect(describedAs(readExif(jpegWith(exifBlock)))).toMatchObject({ title: "exif title", caption: "exif caption" });
+  });
+
+  test("a caption that only repeats the title is none; camera boilerplate is nothing", () => {
+    // Windows Explorer writes its Title to ImageDescription as well as XPTitle.
+    const windows = readExif(jpeg(tiff([
+      { tag: 0x010e, value: "Lake" },
+      { tag: 0x9c9b, type: 7, value: Buffer.from("Lake\0", "utf16le") },
+      { tag: 0x9c9c, type: 7, value: Buffer.from("Swimming\0", "utf16le") },
+    ])));
+    expect(describedAs(windows)).toMatchObject({ title: "Lake", caption: "Swimming" });
+    const same = readExif(jpegWith(app13([[2, 5, "Styggebreen glacier"], [2, 120, "Styggebreen glacier"]])));
+    expect(describedAs(same)).toMatchObject({ title: "Styggebreen glacier", caption: "" });
+    const camera = readExif(jpeg(tiff([{ tag: 0x010e, value: "OLYMPUS DIGITAL CAMERA         " }])));
+    expect(describedAs(camera)).toMatchObject({ title: "", caption: "" });
+  });
+
+  test("an EXIF UserComment is the last resort for a caption, in either byte order", () => {
+    for (const le of [true, false]) {
+      const text = Buffer.from("A comment\0", "utf16le");
+      if (!le) text.swap16();
+      const comment = Buffer.concat([Buffer.from("UNICODE\0", "latin1"), text]);
+      const exif = readExif(jpeg(tiff([{ tag: 0x8769, value: { ifd: [{ tag: 0x9286, type: 7, value: comment }] } }], { le })));
+      expect(describedAs(exif).caption).toBe("A comment");
+    }
+  });
+
+  test("a broken IPTC record is no IPTC, not an exception", () => {
+    const truncated = app13([[2, 5, "Title"]]).subarray(0, 30);
+    expect(() => readExif(jpegWith(segment(0xed, truncated.subarray(4))))).not.toThrow();
+    expect(describedAs(readExif(jpegWith(segment(0xed, truncated.subarray(4))))).title).toBe("");
+  });
+});
+
+describe("embedXmp", () => {
+  const JFIF = segment(0xe0, Buffer.from("JFIF\0\x01\x01\0\0\x01\0\x01\0\0", "latin1"));
+
+  test("puts title, caption, creator and rights back after the JFIF header, readable as written", () => {
+    const before = jpegWith(JFIF);
+    const fields = { title: "Säfsen & <co>", caption: 'A "quoted" caption', creator: "Harald Revery", rights: "Harald Mark Thirslund" };
+    const after = embedXmp(before, fields);
+    expect([after[0], after[1], after[2], after[3]]).toEqual([0xff, 0xd8, 0xff, 0xe0]); // SOI, and JFIF still first
+    expect(after[2 + JFIF.length]).toBe(0xff);
+    expect(after[3 + JFIF.length]).toBe(0xe1);
+    const read = readExif(after);
+    expect(describedAs(read)).toEqual(fields);
+    expect(read.hasGps || read.xmpGps).toBe(false);
+  });
+
+  test("nothing worth writing, or not a JPEG, gives the file back unchanged", () => {
+    const before = jpegWith(JFIF);
+    expect(Buffer.compare(embedXmp(before, {}), before)).toBe(0);
+    expect(Buffer.compare(embedXmp(before, { title: "OLYMPUS DIGITAL CAMERA" }), before)).toBe(0);
+    expect(embedXmp(Buffer.from("not a jpeg"), { title: "x" }).toString()).toBe("not a jpeg");
   });
 });
 

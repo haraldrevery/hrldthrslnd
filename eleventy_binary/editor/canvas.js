@@ -321,7 +321,10 @@
     const files = Array.from(e.dataTransfer.files || []);
     const assets = (e.dataTransfer.getData("text/x-assets") || "").split("\n").filter(Boolean);
     if (!files.length && !assets.length) return;
-    send({ type: "drop", path: into ? into.dataset.block : null, index, files, assets });
+    // Which picture inside the block the drop landed on, for a block with more
+    // than one picture slot (the collage hero).
+    const image = into ? e.target.closest("[data-image]")?.dataset.image ?? null : null;
+    send({ type: "drop", path: into ? into.dataset.block : null, index, files, assets, image });
   });
 
   decorate();

@@ -122,11 +122,23 @@
     canvasReady: false,
     canvasSheets: "",
     canvasScroll: 0,
-    suggestions: {}, // asset name -> { alt, title } read from EXIF on import
+    described: {}, // site-library URL -> { title, caption } from the file's own metadata
     filesSel: new Set(),
   };
   const spec = (type) => state.site.catalogue.find((b) => b.type === type);
   const isDirty = () => state.version !== state.savedVersion;
+
+  /**
+   * Whether a field is part of the block as it renders: the catalogue's
+   * `variants`, read the way fieldApplies() in catalogue.js reads it. The
+   * catalogue arrives here as data, so the rule is restated, not imported.
+   */
+  function fieldShown(s, f, block) {
+    if (!f.variants) return true;
+    const v = s.fields.find((x) => x.name === "variant");
+    const current = v && v.options.some((o) => o.value === block.variant) ? block.variant : v?.default;
+    return f.variants.includes(current);
+  }
 
   /* ---------------------------------------------------------------- paths */
   function parsePath(path) {
@@ -397,9 +409,15 @@
   }
 
   /* ========================================================= media import */
+  /**
+   * A new picture object for a file, described by the file itself: its title
+   * and caption as the server read them from its metadata. Never its alt
+   * text — that describes the picture for someone who cannot see it, and is
+   * the author's to write.
+   */
   function pictureFor(src) {
-    const s = state.suggestions[src] || {};
-    return { src, alt: s.alt || "", title: s.title || "", caption: "" };
+    const d = assetInfo(src) || state.described[src] || {};
+    return { src, alt: "", title: d.title || "", caption: d.caption || "" };
   }
   const galleryable = (src) => kindOf(src) === "image" || kindOf(src) === "video";
 
@@ -422,16 +440,17 @@
     progress.close();
 
     const ok = results.filter((r) => r.primary);
-    for (const r of ok) if (r.suggested) state.suggestions[r.primary] = r.suggested;
     const failed = results.filter((r) => !r.primary);
     // One line a person can read, from the notices the import pipeline wrote;
     // the file-by-file version is behind Details.
     const count = (test) => results.filter((r) => r.notices.some((n) => test(n))).length;
+    const described = count((n) => /read from the file$/.test(n.message));
     const resized = count((n) => /^re-encoded/.test(n.message));
     const located = count((n) => /location data removed/.test(n.message));
     const renamed = count((n) => /^saved as/.test(n.message));
     const attention = count((n) => n.level === "warn" || n.level === "error");
     const parts = [
+      described && `${described} titled from the file`,
       resized && `${resized} resized to the site's limits`,
       located && `location data removed from ${located}`,
       renamed && `${renamed} renamed so nothing was overwritten`,
@@ -489,18 +508,28 @@
   }
 
   /** A drop on the canvas: files from the desktop, or names from the library. */
-  async function handleDrop({ path, index, files, assets }) {
+  async function handleDrop({ path, index, files, assets, image }) {
     let srcs = Array.from(assets || []);
     if (files && files.length) srcs = srcs.concat(await importFiles(files));
     if (!srcs.length) return;
     const target = path ? getAt(state.doc, path) : undefined;
-    const firstPic = srcs.find((s) => kindOf(s) === "image");
+    const pics = srcs.filter((s) => kindOf(s) === "image");
+    const firstPic = pics[0];
 
     if (target && target.type === "gallery") return addToGallery(path, srcs);
     if (target && (target.type === "hero" || target.type === "feature") && firstPic) {
       mutate(() => {
-        target.image = pictureFor(firstPic);
-        if (target.type === "hero" && target.variant === "stage") target.variant = "photo_adaptive";
+        if (target.type !== "hero") { target.image = pictureFor(firstPic); return; }
+        const heroSpec = spec("hero");
+        if (!fieldShown(heroSpec, heroSpec.fields.find((f) => f.name === "image"), target)) target.variant = "photo_adaptive";
+        if (target.variant !== "collage") { target.image = pictureFor(firstPic); return; }
+        // The collage has two picture slots. A drop aimed at one fills that
+        // one; two pictures at once fill both; one picture fills the second
+        // slot when only the portrait is set, and the portrait otherwise.
+        const aimed = /\.image_2$/.test(image || "") ? "image_2" : /\.image$/.test(image || "") ? "image" : null;
+        if (aimed) target[aimed] = pictureFor(firstPic);
+        else if (pics.length > 1) { target.image = pictureFor(pics[0]); target.image_2 = pictureFor(pics[1]); }
+        else target[target.image?.src && !target.image_2?.src ? "image_2" : "image"] = pictureFor(firstPic);
       }, { inspector: false });
       select(path);
       toast(`Picture set on the ${spec(target.type).label.toLowerCase()}`);
@@ -693,7 +722,7 @@
     const main = [];
     const more = [];
     for (const f of s.fields) {
-      if (s.type === "hero" && f.name === "image" && block.variant === "stage") continue;
+      if (!fieldShown(s, f, block)) continue;
       (rare.has(f.name) ? more : main).push(field(f, block, `${path}.${f.name}`));
     }
     if (more.length) main.push(h("details", { class: "more" }, h("summary", {}, "More options"), ...more));
@@ -775,7 +804,7 @@
       }
       case "select": {
         const current = f.options.some((o) => o.value === value) ? value : f.default;
-        const seg = h("div", { class: "seg seg-full", role: "group", "data-path": path },
+        const seg = h("div", { class: `seg seg-full${f.options.length > 3 ? " seg-wrap" : ""}`, role: "group", "data-path": path },
           f.options.map((o) => {
             const [short] = o.label.split(" — ");
             return h("button", { type: "button", "aria-pressed": String(o.value === current), title: o.label, onclick: () => mutate(() => { target[key] = o.value; }) }, short);
@@ -892,7 +921,9 @@
 
   function imageSlot(target, key, path) {
     const img = target[key] && typeof target[key] === "object" ? target[key] : null;
-    const set = (src) => mutate(() => { target[key] = src ? { ...(img || {}), ...pictureFor(src), alt: (img && img.alt) || pictureFor(src).alt } : null; });
+    // A new picture is described by its own file, not by the one it replaces:
+    // the old alt text, title and caption were about a different photograph.
+    const set = (src) => mutate(() => { target[key] = src ? (img && img.src === src ? img : pictureFor(src)) : null; });
     const choose = async () => { const [src] = await openLibrary({ multiple: false, accept: "image", title: "Choose a picture" }); if (src) set(src); };
     const upload = async () => { const files = await pickFiles({ multiple: false, accept: ACCEPT.image }); const [src] = await importFiles(files); if (src) set(src); };
 
@@ -919,21 +950,22 @@
     return h("div", {}, slot, h("div", { style: { marginTop: "10px" } }, pictureFields(img, path)));
   }
 
-  /** alt, title, caption for one picture object. */
-  function pictureFields(img, path, { caption = false } = {}) {
-    const suggestion = state.suggestions[img.src];
+  /**
+   * alt, title, caption for one picture object. Title and caption arrive
+   * filled from the file's own metadata; alt text is always the author's.
+   */
+  function pictureFields(img, path) {
     const alt = autoGrow(bindText(h("textarea", { class: "textarea", rows: 2, value: img.alt ?? "", "data-path": `${path}.alt`, placeholder: "What the picture shows, for someone who cannot see it" }), img, "alt"));
     return h("div", {},
       h("div", { class: "f", "data-path": `${path}.alt` },
         h("div", { class: "f-head" }, h("span", { class: "f-label" }, "Alt text"), h("span", { class: "f-help", title: "Read aloud by screen readers and used by image search. Describe the picture; do not repeat the caption." }, "?")),
-        alt,
-        suggestion && suggestion.alt && suggestion.alt !== img.alt ? h("button", { type: "button", class: "suggest", onclick: () => { img.alt = suggestion.alt; alt.value = suggestion.alt; changed(); commit(); } }, `Use the camera's description: “${suggestion.alt.slice(0, 50)}”`) : null),
+        alt),
       h("div", { class: "f", "data-path": `${path}.title` },
-        h("div", { class: "f-head" }, h("span", { class: "f-label" }, "Title"), h("span", { class: "f-help", title: "The heading on the lightbox slide." }, "?")),
+        h("div", { class: "f-head" }, h("span", { class: "f-label" }, "Title"), h("span", { class: "f-help", title: "The heading on the lightbox slide. Filled from the file's own title where it has one." }, "?")),
         bindText(h("input", { class: "input", value: img.title ?? "", "data-path": `${path}.title` }), img, "title")),
-      caption ? h("div", { class: "f", "data-path": `${path}.caption` },
-        h("div", { class: "f-head" }, h("span", { class: "f-label" }, "Caption"), h("span", { class: "f-help", title: "Shown under the picture in the waterfall layout." }, "?")),
-        bindText(h("input", { class: "input", value: img.caption ?? "", "data-path": `${path}.caption` }), img, "caption")) : null,
+      h("div", { class: "f", "data-path": `${path}.caption` },
+        h("div", { class: "f-head" }, h("span", { class: "f-label" }, "Caption"), h("span", { class: "f-help", title: "The lightbox description, the line under the picture in the waterfall layout, and the note beside a collage's portrait. Filled from the file's own description where it has one." }, "?")),
+        bindText(h("input", { class: "input", value: img.caption ?? "", "data-path": `${path}.caption` }), img, "caption")),
     );
   }
 
@@ -963,7 +995,6 @@
     const images = target[key];
     const blockPath = path.replace(/\.images$/, "");
     const active = state.sel && state.sel.path === blockPath ? state.sel.image : null;
-    const waterfall = target.layout === "waterfall";
 
     const grid = h("div", { class: "pics-grid", "data-path": path });
     let dragFrom = null;
@@ -1036,13 +1067,13 @@
             h("span", { style: { flex: "1 1 auto" } }),
             h("button", { type: "button", class: "btn btn-sm", onclick: async () => {
               const [src] = await openLibrary({ multiple: false, accept: "media", title: "Replace this picture" });
-              if (src) mutate(() => { img.src = src; });
+              if (src) mutate(() => { Object.assign(img, pictureFor(src)); });
             } }, "Replace…"),
             h("button", { type: "button", class: "btn btn-sm btn-ghost btn-danger", onclick: () => {
               mutate(() => images.splice(active, 1), { inspector: false });
               select(blockPath, images.length ? Math.min(active, images.length - 1) : null);
             } }, "Remove")),
-          pictureFields(img, at, { caption: waterfall }))));
+          pictureFields(img, at))));
     }
     return box;
   }
@@ -1197,6 +1228,8 @@
         if (source === "site") {
           try { listing = await api.get(`/api/library?dir=${encodeURIComponent(dir)}`); }
           catch (error) { listing = { dirs: [], files: [], error: error.message }; }
+          // Remembered so a picture picked from here arrives titled — see pictureFor().
+          for (const f of listing.files) if (f.title || f.caption) state.described[f.url] = { title: f.title, caption: f.caption };
         }
         draw();
       }

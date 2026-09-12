@@ -42,7 +42,7 @@ import { renderPost } from "../blocks/render.js";
 import { importMedia } from "./import_media.js";
 import {
   StoreError, listPosts, readPost, writePost, createPost, listAssets, writeAsset,
-  freeName, revisionsOf, readRevision, assertFolderName,
+  freeName, revisionsOf, readRevision, assertFolderName, describeFile,
 } from "./store.js";
 
 const MIME = {
@@ -137,6 +137,7 @@ export async function startEditor({ root, port = 8484 }) {
         bytes: fs.statSync(path.join(full, entry.name)).size,
         width: size?.width ?? null,
         height: size?.height ?? null,
+        ...(kind === "image" ? describeFile(path.join(full, entry.name)) : {}),
       });
     }
     return { dir: clean, parent: segments.length > 1 ? segments.slice(0, -1).join("/") : "", dirs, files };
@@ -148,7 +149,7 @@ export async function startEditor({ root, port = 8484 }) {
     const slug = record?.slug ?? folder;
     // Rendered with the editor's paths on every block, and the canvas overlay
     // appended. Neither exists in a build: this markup is for the iframe only.
-    const { html, warnings } = renderPost(doc, { md, slug, inputPath: `input_custom_post/${folder}/${folder}.json`, editable: true });
+    const { html, warnings } = renderPost(doc, { md, slug, inputPath: `input_custom_post/${folder}/${folder}.json`, editable: true, site: { author: settings.author } });
     const page =
       `<!doctype html>\n<html lang="${settings.language}">\n<head>\n<meta charset="utf-8">\n` +
       `<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Preview</title>\n` +
@@ -244,7 +245,7 @@ export async function startEditor({ root, port = 8484 }) {
       if (!action && method === "GET") {
         const { doc } = readPost(root, folder);
         const record = getRegistry(root).all.find((r) => r.kind === "custom_post" && r.folder === folder);
-        return json({ folder, slug: record?.slug ?? folder, doc, assets: listAssets(root, folder), revisions: revisionsOf(root, folder), check: checkDocument(doc, folder) });
+        return json({ folder, slug: record?.slug ?? folder, doc, assets: listAssets(root, folder, { described: true }), revisions: revisionsOf(root, folder), check: checkDocument(doc, folder) });
       }
       if (!action && method === "PUT") {
         const { doc, revision } = await body();
@@ -260,7 +261,7 @@ export async function startEditor({ root, port = 8484 }) {
         const { html, warnings, slug } = previewDocument(doc, folder);
         return json({ html, warnings, slug });
       }
-      if (action === "assets" && method === "GET") return json({ assets: listAssets(root, folder) });
+      if (action === "assets" && method === "GET") return json({ assets: listAssets(root, folder, { described: true }) });
       if (action === "assets" && method === "POST") {
         const form = await req.formData();
         const results = [];
@@ -283,7 +284,7 @@ export async function startEditor({ root, port = 8484 }) {
           }
           results.push({ original: entry.name, primary: primaryName, written, kind: imported.kind, notices: imported.notices, suggested: imported.suggested });
         }
-        return json({ results, assets: listAssets(root, folder) });
+        return json({ results, assets: listAssets(root, folder, { described: true }) });
       }
       if (action === "revisions" && parts[4] && method === "GET") {
         return json({ doc: readRevision(root, folder, parts[4]) });
