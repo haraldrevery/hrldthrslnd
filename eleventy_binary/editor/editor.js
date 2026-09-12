@@ -787,7 +787,7 @@
     const value = target[key];
     switch (f.kind) {
       case "text":
-        return fieldShell(f, path, bindText(h("input", { class: "input", type: "text", value: value ?? "", "data-path": path }), target, key));
+        return fieldShell(f, path, bindText(h("input", { class: "input", type: "text", value: value ?? "", placeholder: f.placeholder ?? "", "data-path": path }), target, key));
       case "date":
         return fieldShell(f, path, bindText(h("input", { class: "input", type: "date", value: value ?? "", "data-path": path }), target, key));
       case "textarea":

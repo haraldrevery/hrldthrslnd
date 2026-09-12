@@ -2,7 +2,7 @@
   "format": 1,
   "meta": {
     "title": "Block test post",
-    "date": "2026-09-11",
+    "date": "2014-07-11",
     "description": "Every block the page builder can render, rendered from one JSON document. The data-driven twin of block_test_page.html.",
     "tags": [
       "test",
@@ -15,28 +15,26 @@
   "blocks": [
     {
       "type": "hero",
-      "variant": "photo",
-      "eyebrow": "Reference — 02",
-      "title": "Block\ntest\npost",
-      "accent": "test",
+      "variant": "salon",
+      "eyebrow": "Coolea",
+      "title": "Wwetwet",
+      "accent": "REverrryyy",
       "lede": "Every block type the builder knows, rendered from JSON by the build. If a block renders wrong, it is visible here.",
-      "actions": [
-        {
-          "label": "The hand-written twin",
-          "href": "/block_test_page.html"
-        },
-        {
-          "label": "All entries",
-          "href": "/blog.html"
-        }
-      ],
+      "actions": [],
       "scroll_cue": true,
       "image": {
-        "src": "http://127.0.0.1:8484/post_blocks/2024christian_halden_fredriksten_fortress1_min.jpg",
+        "src": "/image/2016just_mountains.jpg",
+        "alt": "rgerkk",
+        "title": "ereryk",
+        "caption": "reyy"
+      },
+      "image_2": {
+        "src": "/image/2024/2024calle_de_quintavale.jpg",
         "alt": "",
-        "title": "",
-        "caption": ""
-      }
+        "title": "Calle de Quintavale",
+        "caption": "Calle de Quintavale, Venezia Italy (Ponte di Quintavale), 2024 February 18."
+      },
+      "inscription": "eryry455y "
     },
     {
       "type": "heading",
@@ -220,6 +218,55 @@
     {
       "type": "raw_html",
       "html": "<div class=\"download-block\"><p class=\"eyebrow\">Verbatim output</p><p class=\"micro\" style=\"color:var(--fg-muted);\">Literal braces survive: {{ this }} and {% that %} reach the browser as typed.</p></div>"
+    },
+    {
+      "type": "feature",
+      "eyebrow": "",
+      "title": "",
+      "text": "",
+      "image": null,
+      "image_side": "left",
+      "action_label": "",
+      "action_href": ""
+    },
+    {
+      "type": "gallery",
+      "title": "",
+      "lede": "",
+      "layout": "uniform",
+      "gap": "0.75rem",
+      "images": [
+        {
+          "src": "/image/2016just_mountains.jpg",
+          "alt": "",
+          "title": "",
+          "caption": ""
+        },
+        {
+          "src": "/image/2016moremountains.jpg",
+          "alt": "",
+          "title": "",
+          "caption": ""
+        },
+        {
+          "src": "/image/2016mountains_and_clouds.jpg",
+          "alt": "",
+          "title": "",
+          "caption": ""
+        },
+        {
+          "src": "/image/2016nicemountains.jpg",
+          "alt": "",
+          "title": "",
+          "caption": ""
+        },
+        {
+          "src": "/image/2016romestreets.jpg",
+          "alt": "",
+          "title": "",
+          "caption": ""
+        }
+      ]
     }
   ]
 }

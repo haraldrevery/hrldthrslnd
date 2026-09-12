@@ -423,6 +423,20 @@ describe("hero treatments", () => {
     expect(own).not.toContain("salon-stamp");
   });
 
+  test("the collage's stamp line and the salon's plate label are the block's own when set", () => {
+    const collage = heroOf(render([{ type: "hero", variant: "collage", title: "x", image: portrait, image_2: landscape, stamp: "Var. 02" }]).html);
+    expect(collage).toContain('<p class="micro collage-stamp-sub">Var. 02</p>');
+
+    const salon = heroOf(render([{ type: "hero", variant: "salon", title: "x", image: portrait, plate: "Fig. 3" }]).html);
+    expect(salon).toContain('<p class="micro hero-in salon-plate-caption">Fig. 3 — On the stairs</p>');
+    expect(salon).not.toContain("Plate I");
+
+    // A typed label stands alone when the portrait has no title; the default does not.
+    const untitled = { src: "photo.jpg", alt: "A" };
+    expect(heroOf(render([{ type: "hero", variant: "salon", title: "x", image: untitled, plate: "Fig. 3" }]).html)).toContain('salon-plate-caption">Fig. 3</p>');
+    expect(heroOf(render([{ type: "hero", variant: "salon", title: "x", image: untitled }]).html)).not.toContain("salon-plate-caption");
+  });
+
   test("a stage hero ignores a picture left behind from another treatment", () => {
     const { html } = render([{ type: "hero", variant: "stage", title: "x", image: portrait, image_2: landscape }]);
     expect(html).not.toContain("photo.jpg");

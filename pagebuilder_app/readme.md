@@ -37,8 +37,10 @@ published; the panel on the right edits whatever you click in it.
 - **Hero treatments.** Select the hero and pick Stage, Photo (dark or
   adaptive), Collage or Salon. The collage takes two pictures — drop one onto
   each, or two at once — and works out its section count, date stamp and ruler
-  from the page. The salon hangs one portrait and engraves the author and the
-  date in Roman numerals under it, unless you word that line yourself.
+  from the page; the line under the stamp's date is the post's first subject
+  unless you type one. The salon hangs one portrait, labels it "Plate I" unless
+  you type another label, and engraves the author and the date in Roman
+  numerals under it, unless you word that line yourself.
 - **Page** tab: title, description, date, subjects, card image, draft, and the
   saved versions under History.
 - The badge in the top bar says what the build will say. Click it for the list;

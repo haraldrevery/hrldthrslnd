@@ -200,8 +200,9 @@ function heroTitle(title, accent) {
  * What the originals carry as hand-written furniture — the section count, the
  * date stamp, the ruler, the plate number, the engraved line — is worked out
  * here from the post itself (see pageFacts), so a collage or a salon is filled
- * in by choosing it. The one exception a person may want to word is the
- * salon's engraved line, which is a field.
+ * in by choosing it. The pieces a person may want to word — the collage's
+ * stamp line, the salon's plate label and its engraved line — are fields that
+ * fall back to the worked-out text when left empty.
  */
 function renderHero(block, path, ctx) {
   const variant = variantOf(BY_TYPE.get("hero"), block);
@@ -340,8 +341,9 @@ function rulerTrack(sections) {
  * The collage: block_test_page_c.html's five overlapping pieces. The
  * portrait is the hero's photograph and the landscape its second picture;
  * the glass panel carries the type. The ink block counts the sections and
- * prints the portrait's caption, the stamp is the post's date and first
- * subject, and the ruler maps the sections below.
+ * prints the portrait's caption, the stamp is the post's date over the
+ * block's stamp line (the first subject when it has none), and the ruler maps
+ * the sections below.
  */
 function renderCollage(block, path, ctx) {
   const facts = pageFacts(ctx);
@@ -350,6 +352,7 @@ function renderCollage(block, path, ctx) {
   const count = pad2(facts.sections.length);
   const note = text(portrait?.caption);
   const { date } = facts;
+  const stampLine = text(block.stamp) || facts.subject;
   const tail = [date ? String(date.year) : "", facts.plates ? `${facts.plates} plate${facts.plates === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ");
 
   return (
@@ -381,7 +384,7 @@ function renderCollage(block, path, ctx) {
       ? `      <div class="collage-stamp paper-panel">\n` +
         `        <p class="micro collage-stamp-label">Dated</p>\n` +
         `        <p class="display-sm collage-stamp-value">${pad2(date.day)}.${pad2(date.month)}.${date.year}</p>\n` +
-        (facts.subject ? `        <p class="micro collage-stamp-sub">${esc(facts.subject)}</p>\n` : "") +
+        (stampLine ? `        <p class="micro collage-stamp-sub">${esc(stampLine)}</p>\n` : "") +
         `      </div>\n`
       : "") +
     `      <div class="collage-rule">\n` +
@@ -399,14 +402,18 @@ function renderCollage(block, path, ctx) {
  * The salon: block_test_page_d.html's column of type beside one portrait
  * hung on a mount. The accent is gilded by the stylesheet (.salon-stage
  * .text-flow); the stamp counts the post's plates in Roman numerals, the
- * caption names the portrait as plate I, and the engraved line is the
- * block's own when it has one — otherwise the author, the date in Roman
- * numerals and the first subject.
+ * caption is the block's plate label (“Plate I” when it has none) and the
+ * portrait's title, and the engraved line is the block's own when it has
+ * one — otherwise the author, the date in Roman numerals and the first
+ * subject.
  */
 function renderSalon(block, path, ctx) {
   const facts = pageFacts(ctx);
   const portrait = block.image?.src ? block.image : null;
-  const plateLine = text(portrait?.title) || text(portrait?.caption);
+  const plateName = text(portrait?.title) || text(portrait?.caption);
+  // The default label only makes sense in front of a name; a label the author
+  // typed stands on its own.
+  const plateLine = [text(block.plate) || (plateName ? "Plate I" : ""), plateName].filter(Boolean).join(" — ");
   const { date } = facts;
   const inscription =
     text(block.inscription) ||
@@ -432,7 +439,7 @@ function renderSalon(block, path, ctx) {
             `          </div>\n`
           : "") +
         `        </div>\n` +
-        (plateLine ? `        <p class="micro hero-in salon-plate-caption">Plate I — ${esc(plateLine)}</p>\n` : "")
+        (plateLine ? `        <p class="micro hero-in salon-plate-caption">${esc(plateLine)}</p>\n` : "")
       : "") +
     `      </div>\n` +
     `    </div>\n` +

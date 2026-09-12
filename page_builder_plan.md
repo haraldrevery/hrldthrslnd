@@ -254,11 +254,11 @@ on its own:
 |---|---|
 | Collage portrait and landscape | `image`, and a new `image_2`. The landscape is small on every screen, so it loads its `_min` |
 | Ink block | the number of sections below the hero, and the portrait's caption |
-| Stamp | the post's date as DD.MM.YYYY and its first subject |
+| Stamp | the post's date as DD.MM.YYYY, over a new `stamp` field. Empty, it is the first subject |
 | Ruler | one segment per section, as long as the square root of its content; then the year and the number of pictures |
 | Salon accent | always gilded: `.salon-stage .text-flow` |
 | Salon stamp | the number of pictures on the page in Roman numerals, from two up |
-| Plate caption | "Plate I — " and the portrait's title, or its caption |
+| Plate caption | a new `plate` field (empty, "Plate I"), then " — " and the portrait's title, or its caption |
 | Engraved line | a new `inscription` field. Empty, it is the author · the date in Roman numerals · the first subject |
 
 The class names are a contract with the phone layouts in `css/input.css`, which

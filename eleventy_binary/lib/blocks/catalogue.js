@@ -19,6 +19,9 @@
  *   html        raw HTML, emitted verbatim
  *   boolean     a checkbox
  *   select      one of `options`
+ *
+ * A text field may carry a `placeholder`: what the renderer prints when the
+ * field is left empty, shown greyed in the empty field.
  *   image       one picture: { src, alt, title, caption }
  *   images      a list of pictures, each as above
  *   file        one asset path — a video, a clip, a download
@@ -101,6 +104,22 @@ export const BLOCKS = [
         kind: "image",
         variants: ["collage"],
         help: "The landscape at the top right of the collage. Without it that corner stays empty.",
+      },
+      {
+        name: "stamp",
+        label: "Stamp line",
+        kind: "text",
+        variants: ["collage"],
+        placeholder: "The post's first subject",
+        help: "The small line under the date on the collage's stamp. Left empty it is the post's first subject.",
+      },
+      {
+        name: "plate",
+        label: "Plate label",
+        kind: "text",
+        variants: ["salon"],
+        placeholder: "Plate I",
+        help: "The label before the portrait's title under the frame. Left empty it reads “Plate I”.",
       },
       {
         name: "inscription",
