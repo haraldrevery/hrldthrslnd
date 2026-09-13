@@ -5827,10 +5827,10 @@ html[data-width="18"]  { --reading-width: 18%; }
      already carries the depth on its own; the colour only reinforces it, so
      nothing is lost where the hues are hard to tell apart. Four levels is as
      deep as prose ever earns; past that the last colour repeats. */
-  .prose li::marker          { color: var(--c-magenta); }
-  .prose li li::marker       { color: var(--c-violet); }
-  .prose li li li::marker    { color: var(--c-azure); }
-  .prose li li li li::marker { color: var(--c-teal); }
+  .prose li::marker          { color: var(--c-teal); }
+  .prose li li::marker       { color: var(--c-orange); }
+  .prose li li li::marker    { color: var(--c-magenta); }
+  .prose li li li li::marker { color: var(--c-lemon); }
   .prose li + li { margin-top: 0.4em; }
   .prose li > ul, .prose li > ol { margin-top: 0.4em; }
 

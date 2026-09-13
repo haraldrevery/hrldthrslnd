@@ -3591,16 +3591,16 @@ html[data-width="18"] {
     list-style: decimal;
   }
   .prose li::marker {
-    color: var(--c-magenta);
+    color: var(--c-teal);
   }
   .prose li li::marker {
-    color: var(--c-violet);
+    color: var(--c-orange);
   }
   .prose li li li::marker {
-    color: var(--c-azure);
+    color: var(--c-magenta);
   }
   .prose li li li li::marker {
-    color: var(--c-teal);
+    color: var(--c-lemon);
   }
   .prose li + li {
     margin-top: 0.4em;
