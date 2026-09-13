@@ -284,8 +284,10 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .empty-state strong { display: block; color: var(--ui-text); font-size: 14px; margin-bottom: 4px; }
 .empty-state .btn { margin-top: 12px; }
 
-.col-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.col-slot { border: 1px solid var(--ui-line); border-radius: var(--ui-radius-sm); padding: 10px; background: var(--ui-bg); display: grid; gap: 8px; align-content: start; }
+/* minmax(0, …): a 1fr track grows to a nowrap summary, and a long text block
+   pushed the second card and its Edit button out of the inspector. */
+.col-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.col-slot { border: 1px solid var(--ui-line); border-radius: var(--ui-radius-sm); padding: 10px; background: var(--ui-bg); display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; }
 .col-slot.is-empty { border-style: dashed; }
 .col-slot-label { font-size: 11px; color: var(--ui-faint); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
 

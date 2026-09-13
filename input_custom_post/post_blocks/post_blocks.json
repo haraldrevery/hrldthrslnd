@@ -15,7 +15,7 @@
   "blocks": [
     {
       "type": "hero",
-      "variant": "collage",
+      "variant": "salon",
       "eyebrow": "Reference — 02",
       "title": "Block\ntest",
       "accent": "test",
@@ -215,29 +215,24 @@
       "download": true
     },
     {
-      "type": "columns",
+      "type": "download",
+      "eyebrow": "WAV — audio",
+      "title": "silence_test.wav",
+      "src": "/audio/silence_test.wav",
+      "note": "The size and both digests are filled in at build time from the bytes that shipped."
+    },
+    {
+      "type": "faq",
+      "title": "Questions",
+      "open_first": true,
       "items": [
         {
-          "type": "download",
-          "eyebrow": "WAV — audio",
-          "title": "silence_test.wav",
-          "src": "/audio/silence_test.wav",
-          "note": "The size and both digests are filled in at build time from the bytes that shipped."
+          "question": "Does this work without JavaScript?",
+          "answer": "Yes. It is a native `<details>` element. The plus turns into a minus and the gradient fills the ring, all in CSS."
         },
         {
-          "type": "faq",
-          "title": "Questions",
-          "open_first": true,
-          "items": [
-            {
-              "question": "Does this work without JavaScript?",
-              "answer": "Yes. It is a native `<details>` element. The plus turns into a minus and the gradient fills the ring, all in CSS."
-            },
-            {
-              "question": "Can an answer hold markdown?",
-              "answer": "It can: lists, links, *emphasis* and $E = mc^2$ all work inside it."
-            }
-          ]
+          "question": "Can an answer hold markdown?",
+          "answer": "It can: lists, links, *emphasis* and $E = mc^2$ all work inside it."
         }
       ]
     },

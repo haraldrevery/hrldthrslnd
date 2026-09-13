@@ -61,6 +61,7 @@
     image: '<rect x="3" y="4" width="14" height="12" rx="1.5"/><circle cx="7.5" cy="8.5" r="1.5"/><path d="m3.5 15 4.5-4.5 3 3 2-2 3.5 3.5"/>',
     folder: '<path d="M3 6a1.5 1.5 0 0 1 1.5-1.5H8l2 2h5.5A1.5 1.5 0 0 1 17 8v6.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z"/>',
     swap: '<path d="M4 7h12l-3-3M16 13H4l3 3"/>',
+    split: '<rect x="3.5" y="3.5" width="13" height="5" rx="1"/><rect x="3.5" y="11.5" width="13" height="5" rx="1"/>',
   };
   const icon = (name) => svg(ICON[name]);
   const iconButton = (name, title, onclick, opts = {}) =>
@@ -327,6 +328,9 @@
           // Worked out from the catalogue, so a new block with a picture field
           // is a drop target without the canvas being told its name.
           takesPictures: state.site.catalogue.filter((b) => b.fields.some((f) => f.kind === "image" || f.kind === "images")).map((b) => b.type),
+          // Which blocks may share a row, so "Two columns" is offered only
+          // where joinBlocks() would accept it.
+          columnTypes: state.site.columnTypes,
         });
         tellCanvas({ type: "scroll", y: state.canvasScroll });
         tellCanvasSelection(false);
@@ -339,6 +343,8 @@
       case "move": moveBlock(m.from, m.to); break;
       case "duplicate": duplicateBlock(m.path); break;
       case "remove": removeBlock(m.path); break;
+      case "join": joinBlocks(m.index); break;
+      case "split": splitRow(m.index); break;
       case "add-at": openPalette({ index: m.index }); break;
       case "drop": handleDrop(m); break;
       case "key": handleKey({ key: m.key, mod: m.mod, shift: m.shift, typing: false }); break;
@@ -420,6 +426,41 @@
     }, { inspector: false });
     select(isNested(path) ? path.replace(/\.items\[\d+\]$/, "") : null);
     toast(`${label} removed`, { action: { label: "Undo", fn: undo } });
+  }
+
+  /** Whether a block may sit in a two-column row: the catalogue's list, as the server sent it. */
+  const columnable = (block) => Boolean(block) && state.site.columnTypes.includes(block.type);
+
+  /**
+   * The block at `index` and the one under it, side by side in one row, left
+   * then right. They go into the row as they are — the same objects, nothing
+   * copied or reset — so splitting the row gives them back unchanged.
+   */
+  function joinBlocks(index) {
+    const blocks = state.doc.blocks;
+    const [left, right] = [blocks[index], blocks[index + 1]];
+    if (!columnable(left) || !columnable(right)) return;
+    mutate(() => { blocks.splice(index, 2, { ...defaultBlock("columns"), items: [left, right] }); }, { inspector: false });
+    select(`blocks[${index}]`);
+    toast(`${spec(left.type).label} and ${spec(right.type).label.toLowerCase()} set side by side`, { action: { label: "Undo", fn: undo } });
+  }
+
+  /**
+   * A two-column row back into single blocks, one under the other, the left
+   * column first. An empty column leaves nothing behind. Everything else in
+   * the row comes out — a third item, or a block that may not sit in a
+   * column, from a file edited by hand, included: the canvas shows neither,
+   * and a split must not drop what nobody can see. The checks say what is
+   * wrong with them.
+   */
+  function splitRow(index) {
+    const row = state.doc.blocks[index];
+    if (!row || row.type !== "columns") return;
+    const items = (Array.isArray(row.items) ? row.items : []).filter((b) => b != null);
+    if (!items.length) { toast("Both columns are empty; remove the row instead"); return; }
+    mutate(() => { state.doc.blocks.splice(index, 1, ...items); }, { inspector: false });
+    select(`blocks[${index}]`);
+    toast(items.length === 1 ? "Split; the empty column is gone" : `Split into ${items.length} blocks`, { action: { label: "Undo", fn: undo } });
   }
 
   /* ========================================================= media import */
@@ -772,8 +813,9 @@
     });
     return h("div", {},
       h("div", { class: "col-slots" }, slots),
-      h("div", { style: { marginTop: "10px" } },
-        h("button", { type: "button", class: "btn btn-sm", onclick: () => mutate(() => block.items.reverse()) }, icon("swap"), "Swap columns")),
+      h("div", { style: { marginTop: "10px", display: "flex", gap: "6px", flexWrap: "wrap" } },
+        h("button", { type: "button", class: "btn btn-sm", onclick: () => mutate(() => block.items.reverse()) }, icon("swap"), "Swap columns"),
+        h("button", { type: "button", class: "btn btn-sm", onclick: () => splitRow(topIndexOf(path)) }, icon("split"), "Split into two blocks")),
       h("p", { class: "f-note" }, "The two stack on a phone, left column first. Click a column on the canvas to edit it directly."),
     );
   }

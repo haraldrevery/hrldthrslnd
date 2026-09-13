@@ -117,6 +117,22 @@ describe("validatePost", () => {
     expect(nested.some((f) => f.path === "blocks[0].items[1]" && f.level === "error")).toBe(true);
   });
 
+  // The editor's "Two columns" and "Split columns" move a block between the
+  // page and a row as the same object. That is only lossless while no block
+  // is judged by where it stands: whatever a column-safe block is on its own,
+  // it must be in a column, finding for finding.
+  test("a column-safe block is checked the same on its own and in a row", () => {
+    const strip = (findings, prefix) =>
+      findings.filter((f) => f.path.startsWith(prefix)).map((f) => `${f.level}:${f.path.slice(prefix.length)}:${f.message}`).sort();
+    const filled = { type: "text", markdown: "a" };
+    for (const type of COLUMN_TYPES) {
+      const block = defaultBlock(type);
+      const alone = strip(validatePost(doc([block, filled])), "blocks[0]");
+      const inRow = strip(validatePost(doc([{ type: "columns", items: [block, filled] }])), "blocks[0].items[0]");
+      expect(inRow).toEqual(alone);
+    }
+  });
+
   test("a picture without alt is a warning; alt equal to the caption too", () => {
     const findings = validatePost(
       doc([{ type: "gallery", images: [{ src: "photo.jpg" }, { src: "photo.jpg", alt: "Same", caption: "Same" }] }]),

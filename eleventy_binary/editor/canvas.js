@@ -9,7 +9,9 @@
  *   hover     outlines the block under the pointer
  *   click     selects a block, or a picture in a gallery
  *   toolbar   on the selected block: drag grip, up, down, duplicate, remove
- *   insert    a "+" under the selected block, and "Add block" at the end
+ *   insert    a "+" under the selected block, and "Add block" at the end;
+ *             beside the "+", "Two columns" where this block and the one
+ *             below may share a row, or "Split columns" under a row
  *   drop      files from the desktop or pictures from the editor's library,
  *             onto a block or between blocks
  *
@@ -39,6 +41,9 @@
 
   let labels = {};
   let emptyLabel = "Empty column";
+  // The types that may share a two-column row: the catalogue's, by way of the
+  // editor. Empty until it has said, so nothing is offered on a guess.
+  let joinable = new Set();
   let selected = null; // { path, image }
   let hovered = null;
 
@@ -59,10 +64,12 @@
     .cv-toolbar .cv-grip { cursor: grab; letter-spacing: -2px; }
     .cv-toolbar .cv-label { padding: 0 8px 0 6px; font-weight: 600; font-size: 11.5px; }
     .cv-toolbar .cv-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.18); margin: 0 3px; }
-    .cv-insert { position: absolute; z-index: 2147483000; transform: translate(-50%, -50%); }
+    .cv-insert { position: absolute; z-index: 2147483000; transform: translate(-50%, -50%); display: flex; gap: 6px; }
     .cv-insert button, .cv-end button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 14px;
       background: #4f6bff; color: #fff; font: 600 12px system-ui, sans-serif; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
     .cv-insert button:hover, .cv-end button:hover { background: #3d58ea; }
+    .cv-insert button.cv-alt { background: #1d1f25; }
+    .cv-insert button.cv-alt:hover { background: #33363f; }
     .cv-end { display: flex; justify-content: center; padding: 28px 0 56px; }
     .cv-end button { background: transparent; color: #4f6bff; box-shadow: none; border: 1.5px dashed rgba(79,107,255,0.6); }
     .cv-end button:hover { background: rgba(79,107,255,0.1); }
@@ -137,12 +144,14 @@
     const y = Math.min(Math.max(top + 10, window.scrollY + 10), top + rect.height - toolbar.offsetHeight - 10);
     toolbar.style.top = `${Math.max(y, top + 4)}px`;
     toolbar.style.left = `${Math.max(rect.right + window.scrollX - toolbar.offsetWidth - 10, 8)}px`;
-    if (TOP_LEVEL.test(selected.path)) {
-      insert.hidden = false;
-      insert.style.top = `${top + rect.height}px`;
-      insert.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
-    } else {
-      insert.hidden = true;
+    // Under the top-level block — the row, when a column in it is selected:
+    // a block is inserted after the row, and it is the row that splits.
+    const row = byPath(`blocks[${indexOf(selected.path)}]`);
+    insert.hidden = !row || !insert.childElementCount;
+    if (row) {
+      const r = row === el ? rect : row.getBoundingClientRect();
+      insert.style.top = `${r.bottom + window.scrollY}px`;
+      insert.style.left = `${r.left + window.scrollX + r.width / 2}px`;
     }
   }
 
@@ -174,7 +183,16 @@
         button("⧉", "Duplicate", () => send({ type: "duplicate", path: selected.path })));
     }
     if (type !== "empty") toolbar.append(button("✕", top ? "Remove block" : "Clear this column", () => send({ type: "remove", path: selected.path })));
-    if (top) insert.append(button("+  Add block", "Insert a block below this one", () => send({ type: "add-at", index: i + 1 })));
+    insert.append(button("+  Add block", top ? "Insert a block below this one" : "Insert a block below this row", () => send({ type: "add-at", index: i + 1 })));
+    // The editor checks both again against the document before acting.
+    const below = blocks[i + 1]?.dataset.blockType;
+    let arrange = null;
+    if (blocks[i]?.dataset.blockType === "columns") {
+      arrange = button("▤  Split columns", "Split this row into its two blocks, one under the other", () => send({ type: "split", index: i }));
+    } else if (top && joinable.has(type) && joinable.has(below)) {
+      arrange = button("▥  Two columns", `Set this block and the ${(labels[below] || below).toLowerCase()} below it side by side`, () => send({ type: "join", index: i }));
+    }
+    if (arrange) { arrange.className = "cv-alt"; insert.append(arrange); }
   }
 
   function select(path, image, { announce = true } = {}) {
@@ -224,6 +242,7 @@
       labels = m.labels || {};
       emptyLabel = m.empty || emptyLabel;
       if (Array.isArray(m.takesPictures)) takesPictures = new Set(m.takesPictures);
+      if (Array.isArray(m.columnTypes)) joinable = new Set(m.columnTypes);
       decorate();
     }
     else if (m.type === "update") { main().innerHTML = m.html; decorate(); }

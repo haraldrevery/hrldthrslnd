@@ -642,3 +642,57 @@ The validator now matches the accent the way `titleLines` does — trimmed,
 within one line of the title. It used to compare the untrimmed accent with the
 whole title, so `" in layers"` warned although the page highlighted it, and an
 accent spanning a line break passed although nothing was highlighted.
+
+---
+
+## Side by side, and back
+
+Asked for: a button beside "Add block" that sets two neighbouring blocks side
+by side as one two-column row, and one that splits a row back into two blocks.
+
+- **Where.** The pill under the selected block gains a second, dark button.
+  "Two columns" appears when the selected block and the one below may both sit
+  in a column — `COLUMN_TYPES`, handed to the canvas with the labels the way
+  `takesPictures` is. "Split columns" appears under a row, including when a
+  column inside it is selected, which is how a row is usually selected. The
+  pill therefore now sits under the row when a column is selected, and its
+  "Add block" inserts after the row; before, it disappeared. The inspector's
+  row panel gains "Split into two blocks" beside "Swap columns".
+- **Nothing is copied.** Joining moves the two block objects into `items` as
+  they are; splitting moves them back. A join then a split leaves the file byte
+  for byte as it was. Each is one undo step.
+- **A split does not drop what nobody can see.** An empty column leaves nothing
+  behind. A third item, or a block that may not sit in a column — possible only
+  in a file edited by hand, and drawn as an empty slot or not at all — comes
+  out with the rest, and the checks say what is wrong with it. A row with both
+  columns empty is not split; remove it.
+- **The editor decides.** The canvas offers a button from what it has drawn;
+  `joinBlocks()` and `splitRow()` check the document again before acting.
+- **A contract test**: every column-safe block gives the same findings alone
+  and in a row. That is the premise of moving a block unchanged; a rule that
+  judged a block by where it stands would break it.
+- The row panel's column cards overflowed the inspector when a summary was
+  long (`1fr` tracks), hiding the second Edit button. Now `minmax(0, 1fr)`.
+
+Checked in a headless browser against a copy of the project, 21 checks: the
+offer where allowed and nowhere else (the hero, a feature, the block above an
+existing row), the join, the split from the canvas with a column selected, the
+round trip on disk, undo and redo, the split from the inspector, the pill at
+phone width, and no console errors.
+
+### Not done, and worth knowing
+
+- Only the block below is offered as a partner; to join with the block above,
+  select that one.
+- A row is always 50/50. Blocks keep their own markup in a column but lose the
+  `.block-<type>` rules of their section: a heading drops `.block-heading`'s
+  top padding and sits higher than a text block beside it. That is how rows
+  have always rendered — it is one click away now.
+- Rows hold exactly two and do not nest. Both are written into the catalogue
+  (`count: 2`), the validator, the renderer's `slice(0, 2)`, `.block-two-col`
+  and six path patterns in the editor and canvas (`.items[n]`, one level).
+- The two functions live in editor.js, which has no unit tests; the headless
+  run is their only check. The editor also restates `defaultBlock()`, and the
+  two already differ for a row: `[null, null]` in the editor, `[]` in the
+  catalogue.
+- `site_generate --edit` has this only once the binary is recompiled.
