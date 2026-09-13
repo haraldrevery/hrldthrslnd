@@ -2928,11 +2928,23 @@
     padding-left: 1.5rem;
     max-width: 44ch;
   }
-  .stat-grid-cols-2 {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(13rem, 40%)), 1fr));
+  .stat-grid-fit {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(var(--tile-min, 13rem), calc(100% / var(--cols, 3) - 1px))), 1fr));
   }
-  .stat-grid-cols-3 {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(13rem, 30%)), 1fr));
+  .block-tile_grid .eyebrow + .block-title {
+    margin-top: 1.25rem;
+  }
+  .tile-grid .tile-label {
+    color: var(--fg-faint);
+  }
+  .tile-grid .tile-title {
+    margin-top: 0.55rem;
+    overflow-wrap: anywhere;
+  }
+  .tile-grid .tile-text {
+    margin-top: 0.55rem;
+    font-size: var(--step--1);
+    color: var(--fg-muted);
   }
   @media (min-width: 48rem) {
     .bleed-pair-wide {

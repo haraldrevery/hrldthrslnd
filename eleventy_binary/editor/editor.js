@@ -628,7 +628,8 @@
       case "faq": return `${(block.items || []).length} question${(block.items || []).length === 1 ? "" : "s"}`;
       case "feature": return t(block.title) || "untitled";
       case "stage_notes": return `${(block.notes || []).length} note${(block.notes || []).length === 1 ? "" : "s"}${block.title ? ` · ${t(block.title)}` : ""}`;
-      case "stage_wash": return `${(block.tiles || []).length} tile${(block.tiles || []).length === 1 ? "" : "s"}${block.title ? ` · ${t(block.title)}` : ""}`;
+      case "stage_wash":
+      case "tile_grid": return `${(block.tiles || []).length} tile${(block.tiles || []).length === 1 ? "" : "s"}${block.title ? ` · ${t(block.title)}` : ""}`;
       case "raw_html": return "HTML";
       case "columns": return (block.items || []).map((b) => (b && spec(b.type) ? spec(b.type).label : "empty")).join(" + ");
       default: return t(block.title) || block.type;

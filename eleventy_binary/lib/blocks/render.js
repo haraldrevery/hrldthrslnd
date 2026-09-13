@@ -24,6 +24,7 @@ import { mergeSubjects } from "../subjects.js";
 import { BY_TYPE, variantOf } from "./catalogue.js";
 import { isFolderRef, isSafeFolderRef, assetRefs } from "./validate.js";
 import { cssLength, parseRatio } from "./units.js";
+import { tileLayout, tileLabel } from "./measure.js";
 
 const esc = escapeHtml;
 
@@ -156,6 +157,7 @@ function renderInner(block, path, ctx) {
     case "feature": return renderFeature(block, path, ctx);
     case "stage_notes": return renderStageNotes(block);
     case "stage_wash": return renderStageWash(block);
+    case "tile_grid": return renderTileGrid(block);
     case "raw_html": return String(block.html ?? "");
     case "columns": return renderColumns(block, path, ctx);
     default:
@@ -736,7 +738,7 @@ function renderStageWash(block) {
     paragraphs(tile.text, "stat-tile-text") +
     `</div>`,
   );
-  const grid = tiles.length ? `<div class="stat-grid stat-grid-glass stat-grid-cols-${columns}">\n${tiles.join("\n")}\n</div>` : "";
+  const grid = tiles.length ? `<div class="stat-grid stat-grid-glass stat-grid-fit" style="--cols:${columns}">\n${tiles.join("\n")}\n</div>` : "";
   const quote = text(block.quote)
     ? `<blockquote class="bleed-quote">${esc(text(block.quote)).replace(/\r?\n/g, "<br>")}</blockquote>`
     : "";
@@ -744,6 +746,30 @@ function renderStageWash(block) {
   if (quote && grid) body = `<div class="block-two-col bleed-pair${columns === "3" ? " bleed-pair-wide" : ""} bleed-body">\n${quote}\n${grid}\n</div>`;
   else if (quote || grid) body = `<div class="bleed-body">\n${quote || grid}\n</div>`;
   return bleedHead(block, "display") + body;
+}
+
+/**
+ * The tile grid: block_test_page.html's "Extended readout". Three to twelve
+ * numbered tiles on the .stat-grid hairlines, three to six across. measure.js
+ * works the count out from how much the tiles say, or takes the block's own,
+ * along with the narrowest a tile may get before a narrower screen gives up a
+ * column. Both are data about the page, so they travel as custom properties,
+ * the way --ar does on a gallery cell; .stat-grid-fit reads them.
+ */
+function renderTileGrid(block) {
+  const tiles = records(block, "tiles");
+  const headHtml = (text(block.eyebrow) ? `<p class="eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") + head(block);
+  if (!tiles.length) return headHtml.trimEnd();
+  const { columns, tileMin } = tileLayout(tiles, choice(BY_TYPE.get("tile_grid"), block, "tile_columns"));
+  const cells = tiles.map((tile, i) =>
+    `<div>\n` +
+    `<p class="micro tile-label">${esc(tileLabel(tile, i))}</p>\n` +
+    (text(tile.title) ? `<p class="display-sm tile-title">${esc(text(tile.title))}</p>\n` : "") +
+    paragraphs(tile.text, "tile-text") +
+    `</div>`,
+  );
+  const grid = `<div class="stat-grid stat-grid-fit tile-grid" style="--cols:${columns};--tile-min:${tileMin}rem">\n${cells.join("\n")}\n</div>`;
+  return body(headHtml, grid);
 }
 
 function renderColumns(block, path, ctx) {

@@ -29,6 +29,12 @@ published; the panel on the right edits whatever you click in it.
   are added to it. Onto a hero or a feature, the first one becomes its picture.
   Anywhere else, they become a new gallery at that spot. Any number at once;
   a progress bar shows each one being imported.
+- **Tile grid.** Three to twelve numbered tiles on hairlines — a label, a
+  heading and a line or two each. *Columns* on Auto works out three to six
+  across from how much the tiles say, choosing a count that leaves no tile
+  alone on the last row of a wide screen: six short tiles are one row of six,
+  six long ones two rows of three, eight are 4 + 4. Pick 3, 4, 5 or 6 to set
+  it yourself. Narrower screens give up columns rather than squeeze the text.
 - **Uniform gallery ratio and height.** With the Uniform layout chosen, *Ratio*
   crops every picture to one shape — type 3:2, 4:5, 16:9 or anything between
   1:5 and 5:1, or pick one from the list — and *Row height* is the smallest a

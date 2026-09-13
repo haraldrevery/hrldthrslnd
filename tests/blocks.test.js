@@ -13,6 +13,7 @@ import { BLOCKS, BY_TYPE, defaultBlock, COLUMN_TYPES, fieldApplies } from "../el
 import { validatePost, assetRefs, verdict } from "../eleventy_binary/lib/blocks/validate.js";
 import { renderPost, assetUrl, pageData } from "../eleventy_binary/lib/blocks/render.js";
 import { cssLength, parseRatio } from "../eleventy_binary/lib/blocks/units.js";
+import { tileLayout, tileNeed, balancedColumns } from "../eleventy_binary/lib/blocks/measure.js";
 import { createMarkdownLibrary } from "../eleventy_binary/lib/markdown.js";
 import { memoryResolver } from "../eleventy_binary/lib/resolver.js";
 
@@ -556,12 +557,12 @@ describe("full-width blocks", () => {
     expect(both).toContain('<section class="block-bleed block-stage_wash photo-stage photo-stage-adaptive">');
     expect(both).toContain('<h2 class="display bleed-title">Fog is a<br><span class="text-flow">blend mode</span></h2>');
     expect(both).toContain('<div class="block-two-col bleed-pair bleed-body">\n<blockquote class="bleed-quote">Fog &lt;does&gt;<br>this.</blockquote>');
-    expect(both).toContain('<div class="stat-grid stat-grid-glass stat-grid-cols-2">');
+    expect(both).toContain('<div class="stat-grid stat-grid-glass stat-grid-fit" style="--cols:2">');
     expect(both).toContain('<div>\n<p class="micro">K1</p>\n<p class="stat-tile-text">V1</p>\n</div>');
     const alone = render([{ type: "stage_wash", title: "x", image: ground, tiles: [{ text: "No label" }] }]).html;
     expect(alone).not.toContain("block-two-col");
     expect(alone).not.toContain("blockquote");
-    expect(alone).toContain('<div class="bleed-body">\n<div class="stat-grid stat-grid-glass stat-grid-cols-2">\n<div>\n<p class="stat-tile-text">No label</p>\n</div>');
+    expect(alone).toContain('<div class="bleed-body">\n<div class="stat-grid stat-grid-glass stat-grid-fit" style="--cols:2">\n<div>\n<p class="stat-tile-text">No label</p>\n</div>');
   });
 
   test("the wash's tiles are two or three to a row; three beside a quote take the wider share", () => {
@@ -569,13 +570,13 @@ describe("full-width blocks", () => {
     expect(wash({})).toContain('<div class="block-two-col bleed-pair bleed-body">');
     const three = wash({ tile_columns: "3" });
     expect(three).toContain('<div class="block-two-col bleed-pair bleed-pair-wide bleed-body">');
-    expect(three).toContain('<div class="stat-grid stat-grid-glass stat-grid-cols-3">');
+    expect(three).toContain('<div class="stat-grid stat-grid-glass stat-grid-fit" style="--cols:3">');
     // With no quote there is no pair to widen.
     const alone = wash({ tile_columns: "3", quote: "" });
-    expect(alone).toContain('<div class="bleed-body">\n<div class="stat-grid stat-grid-glass stat-grid-cols-3">');
+    expect(alone).toContain('<div class="bleed-body">\n<div class="stat-grid stat-grid-glass stat-grid-fit" style="--cols:3">');
     expect(alone).not.toContain("bleed-pair");
     // A count this build does not know is a warning, and two stands in.
-    expect(wash({ tile_columns: "4" })).toContain("stat-grid-cols-2");
+    expect(wash({ tile_columns: "4" })).toContain('style="--cols:2"');
     const findings = validatePost(doc([{ type: "stage_wash", title: "x", image: ground, tiles: tiles(1), tile_columns: "4" }]));
     expect(findings.find((f) => f.path === "blocks[0].tile_columns").level).toBe("warn");
   });
@@ -596,6 +597,77 @@ describe("full-width blocks", () => {
     const { html, warnings } = render([{ type: "stage_notes", title: "x", image: { src: "/image/unknown.jpg" }, notes: notes(1) }]);
     expect(html).toContain('<img src="/image/unknown.jpg" alt="" loading="lazy" decoding="async">');
     expect(warnings[0].path).toBe("blocks[0].image");
+  });
+});
+
+describe("tile grid", () => {
+  // block_test_page.html's "Extended readout", word for word.
+  const HAND = [
+    ["Ground", "Blueprint grid", ".editorial-grid, promoted from wallpaper to the design itself."],
+    ["Accent", "Cool spectrum", "--grad-cool re-inks the masthead word; the dots mix its own pigments."],
+    ["Surface", "Glass console", "One .paper-panel, blurred, bordered and dressed as an instrument."],
+    ["Voice", "Mono throughout", "The readout speaks in Harald Revery Mono at --step--2, all caps."],
+    ["Motion", "One rule, pulsing", ".rule-grad pans the spectrum; everything else on the stage is still."],
+    ["Scheme", "Both, always", "Every colour is a token; switch the system setting and the console follows."],
+  ].map(([label, title, text]) => ({ label, title, text }));
+  const short = (n) => Array.from({ length: n }, (_, i) => ({ label: `L${i}`, title: `Tile ${i}`, text: "A short line." }));
+  const medium = (n) => Array.from({ length: n }, (_, i) => ({ label: "Medium", title: `Tile ${i}`, text: "word ".repeat(30).trim() }));
+  const long = (n) => Array.from({ length: n }, (_, i) => ({ label: "Long", title: `Tile ${i}`, text: "word ".repeat(40).trim() }));
+
+  test("the count comes from how much the tiles say, and leaves no tile alone on a wide screen", () => {
+    const cols = (tiles, choice) => tileLayout(tiles, choice).columns;
+    expect(cols(HAND)).toBe(6); // the hand block itself is 5 + 1 at a 1440 window
+    expect(cols(long(6))).toBe(3);
+    expect(cols(short(8))).toBe(4);
+    expect(cols(short(7))).toBe(4);
+    expect(cols(short(5))).toBe(5);
+    expect(cols(medium(10))).toBe(5);
+    expect(cols(short(12))).toBe(6);
+    expect(cols(short(9))).toBe(3);
+    expect(cols(short(3))).toBe(3);
+    expect(cols(short(2))).toBe(2); // fewer than three tiles: one row of them
+  });
+
+  test("balancing keeps three to six and prefers no empty cells, the most columns on a tie", () => {
+    expect(balancedColumns(6, 5)).toBe(3);
+    expect(balancedColumns(6, 2)).toBe(3);
+    expect(balancedColumns(11, 6)).toBe(6);
+  });
+
+  test("a long heading word widens the tile; the minimum always lets the chosen count fit", () => {
+    expect(tileNeed({ title: "Internationalisation" }, 0)).toBeGreaterThan(280);
+    const wide = tileLayout([...short(5), { title: "Internationalisation" }]);
+    expect(wide).toMatchObject({ columns: 3, tileMin: 18 });
+    // The author's six, on text too long for six, still fits six in the reference window…
+    const forced = tileLayout(long(6), "6");
+    expect(forced.columns).toBe(6);
+    expect(forced.tileMin * 16 * 6).toBeLessThanOrEqual(1360);
+    // …and a count past the tiles is the tiles.
+    expect(tileLayout(short(4), "6").columns).toBe(4);
+  });
+
+  test("renders the hand block's shape, numbered, with the grid's count on it", () => {
+    const { html, warnings } = render([{ type: "tile_grid", eyebrow: "Extended readout", title: "The page, in six instruments", lede: "L", tiles: HAND }]);
+    expect(warnings).toEqual([]);
+    expect(html).toContain('<section class="shell block block-tile_grid">');
+    expect(html).toContain('<p class="eyebrow">Extended readout</p>\n<h2 class="display-md block-title">The page, in six instruments</h2>');
+    expect(html).toContain('<div class="stat-grid stat-grid-fit tile-grid" style="--cols:6;--tile-min:13rem">');
+    expect(html).toContain('<div>\n<p class="micro tile-label">01 · Ground</p>\n<p class="display-sm tile-title">Blueprint grid</p>\n<p class="tile-text">.editorial-grid, promoted from wallpaper to the design itself.</p>\n</div>');
+    expect(html.match(/tile-label/g)).toHaveLength(6);
+    expect(render([{ type: "tile_grid", tile_columns: "3", tiles: HAND }]).html).toContain('style="--cols:3;--tile-min:13rem"');
+    const bare = render([{ type: "tile_grid", tiles: [{ title: "A" }, { title: "B" }, { title: "C" }] }]).html;
+    expect(bare).toContain('<p class="micro tile-label">01</p>');
+    expect(bare).toContain('<section class="shell block block-tile_grid">\n<div class="stat-grid');
+  });
+
+  test("three to twelve tiles, each with a heading, and never in a column", () => {
+    const check = (tiles, extra = {}) => validatePost(doc([{ type: "tile_grid", tiles, ...extra }]));
+    expect(check(short(2)).some((f) => f.level === "error" && f.path === "blocks[0].tiles")).toBe(true);
+    expect(check(short(13)).some((f) => f.level === "error" && f.path === "blocks[0].tiles")).toBe(true);
+    expect(verdict(check(short(12)))).not.toBe("error");
+    expect(check([...short(2), { label: "x" }]).map((f) => f.message)).toContain("tile 3 has no heading");
+    expect(check(short(3), { tile_columns: "7" }).find((f) => f.path === "blocks[0].tile_columns").level).toBe("warn");
+    expect(COLUMN_TYPES).not.toContain("tile_grid");
   });
 });
 
@@ -683,6 +755,7 @@ describe("the stylesheet", () => {
       { type: "gallery", layout: "uniform", images: [img("photo.jpg"), img("/svg/mark.svg")] },
       { type: "gallery", layout: "uniform", ratio: "3:2", height: "12rem", images: [img("photo.jpg")] },
       { type: "stage_wash", title: "T", image: img("photo.jpg", ""), quote: "q", tile_columns: "3", tiles: [{ label: "l", text: "x" }] },
+      { type: "tile_grid", eyebrow: "E", title: "T", lede: "L", tiles: [1, 2, 3].map((n) => ({ label: `l${n}`, title: `t${n}`, text: "x" })) },
       { type: "gallery", layout: "waterfall", images: [img("photo.jpg")] },
       { type: "video", eyebrow: "E", title: "V", src: "clip.mp4", meta: ["1:00"], caption: "c" },
       { type: "audio", eyebrow: "E", title: "A", src: "/audio/a.wav", meta: ["0:01"], caption: "c" },

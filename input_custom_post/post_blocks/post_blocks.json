@@ -303,6 +303,45 @@
       ]
     },
     {
+      "type": "tile_grid",
+      "eyebrow": "Extended readout",
+      "title": "The page, in six instruments",
+      "lede": "The console's rows, carried down the page and widened. Each tile is one fact about this document; each hairline is drawn by the grid, not by the tiles.",
+      "tile_columns": "auto",
+      "tiles": [
+        {
+          "label": "Ground",
+          "title": "Blueprint grid",
+          "text": ".editorial-grid, promoted from wallpaper to the design itself."
+        },
+        {
+          "label": "Accent",
+          "title": "Cool spectrum",
+          "text": "--grad-cool re-inks the masthead word; the dots mix its own pigments."
+        },
+        {
+          "label": "Surface",
+          "title": "Glass console",
+          "text": "One .paper-panel, blurred, bordered and dressed as an instrument."
+        },
+        {
+          "label": "Voice",
+          "title": "Mono throughout",
+          "text": "The readout speaks in Harald Revery Mono at --step--2, all caps."
+        },
+        {
+          "label": "Motion",
+          "title": "One rule, pulsing",
+          "text": ".rule-grad pans the spectrum; everything else on the stage is still."
+        },
+        {
+          "label": "Scheme",
+          "title": "Both, always",
+          "text": "Every colour is a token; switch the system setting and the console follows."
+        }
+      ]
+    },
+    {
       "type": "raw_html",
       "html": "<div class=\"download-block\"><p class=\"eyebrow\">Verbatim output</p><p class=\"micro\" style=\"color:var(--fg-muted);\">Literal braces survive: {{ this }} and {% that %} reach the browser as typed.</p></div>"
     },
@@ -388,8 +427,8 @@
           "text": " weg weg  wet sd "
         },
         {
-          "label": "",
-          "text": ""
+          "label": "aasfq",
+          "text": "ffewf"
         },
         {
           "label": "wefwfe3",
@@ -400,8 +439,8 @@
     },
     {
       "type": "stage_notes",
-      "eyebrow": "",
-      "title": "",
+      "eyebrow": "aaa",
+      "title": "ad",
       "image": {
         "src": "/image/2016romestreets.jpg",
         "alt": "",
@@ -423,6 +462,35 @@
           "label": "weg",
           "title": "gwg",
           "text": "gwg"
+        }
+      ]
+    },
+    {
+      "type": "tile_grid",
+      "eyebrow": "",
+      "title": "",
+      "lede": "",
+      "tile_columns": "auto",
+      "tiles": [
+        {
+          "label": "weeggww",
+          "title": "wegw",
+          "text": "ergergerg"
+        },
+        {
+          "label": "",
+          "title": "ergerg",
+          "text": ""
+        },
+        {
+          "label": " 3twet",
+          "title": "wewet",
+          "text": "wewewe"
+        },
+        {
+          "label": "wetwrt",
+          "title": "ewert",
+          "text": "weet"
         }
       ]
     }

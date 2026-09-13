@@ -420,8 +420,9 @@ the renderer, so a hand-written field of four or five gets it too; one to
 three are unchanged.
 
 The originals' 20-odd style attributes are classes in `css/input.css`
-(`.block-bleed`, `.bleed-*`, `.stat-grid-cols-2`/`-3` since the fifth pass,
-`.stat-tile-text`, `.note-card`, `.note-text`), with the same values.
+(`.block-bleed`, `.bleed-*`, `.stat-grid-cols-2`/`-3` in the fifth pass and
+`.stat-grid-fit` since the seventh, `.stat-tile-text`, `.note-card`,
+`.note-text`), with the same values.
 
 ### Smaller changes made on the way
 
@@ -557,5 +558,63 @@ uniform grid; centring it would take different cell sizes or gaps.
 
 The field is labelled "Row height" now. The key in the JSON is still `height`,
 so nothing saved changes.
+
+---
+
+## Seventh pass: the tile grid, and columns chosen by the text
+
+Asked for: block_test_page.html's "The page, in six instruments" (the
+"Extended readout" tiles) as a block, splitting into three to six columns by
+how much the tiles say.
+
+### Why the count has to know the tiles
+
+The hand block is `repeat(auto-fit, minmax(15rem, 1fr))`: as many tiles as
+fit. Measured, its six tiles are five and one alone at a 1440 window, six in
+a row at 1920, and 3 + 3 at 1024 and 820. A grid that only knows the space
+cannot avoid the lone tile; one that knows how many tiles there are can.
+
+### The rule (lib/blocks/measure.js)
+
+1. Each tile's width is estimated from its characters: the label on one line,
+   no heading word broken, the heading in two lines, the text in about five.
+   The widths per character were measured once on the live page (heading 12.4,
+   label 11.2, text 7.4 px, 40px of padding) and live in one table there.
+2. The grid's tile is the widest of them, at least 13rem; that says how many
+   fit in the column of a 1440 window (1360px).
+3. Of three up to that many — never more than six, never more than the
+   tiles — the count that leaves the fewest empty cells in the last row wins,
+   the larger on a tie.
+
+| Tiles | Wide screen |
+|---|---|
+| 6 short (the hand block) | 6 across (the hand block: 5 + 1) |
+| 6 of about 200 characters | 3 + 3 |
+| 8 short | 4 + 4 |
+| 7 short | 4 + 3 |
+| 5 short | 5 across |
+| 10 medium | 5 + 5 |
+
+The author can set 3, 4, 5 or 6 instead of Auto; that count is taken as it
+is. The grid carries `--cols` and `--tile-min` as custom properties — data
+about the page, like `--ar` — and one rule, `.stat-grid-fit`, lays it out:
+a track is the larger of `--tile-min` and a `--cols`-th of the grid, so a wide
+screen gets the count and a narrower one gives up columns rather than squeeze
+the text. Balanced on wide screens, by choice: at in-between widths a lone
+tile is possible (six short tiles are 4 + 2 at 1024). Balancing at every
+width would take container queries and a ladder of rules per count.
+
+The wash's `.stat-grid-cols-2` and `-3` are replaced by the same rule with
+`--cols` 2 or 3; the widths they give are the same to the pixel.
+
+### Smaller things
+
+- Tile headings are `.display-sm`, which has no word-breaking rule; a word
+  longer than a tile now breaks (`overflow-wrap: anywhere`) rather than cross
+  the hairline. measure.js avoids that in the first place by keeping the
+  longest heading word on one line.
+- The block stays out of two-column rows: the estimate assumes the full
+  column.
+- Numbers are the renderer's, as on the field notes: "01 · Ground".
 
 `post_blocks.json` gains a 4:5 gallery at 16rem beside the square one.

@@ -4705,14 +4705,25 @@
     padding-left: 1.5rem;
     max-width: 44ch;
   }
-  /* The wash's tile columns: at most two, or three, tiles to a row, as the
-     block says; fewer where the room runs out, one on a phone; and a row of
-     fewer tiles than that spreads across the grid. The percentage caps the
-     count — three 40% tracks do not fit, nor four 30% ones — and 13rem is the
-     narrowest a tile gets before one fewer fits. auto-fit, never auto-fill:
-     .stat-grid's outer rules need the first row full. */
-  .stat-grid-cols-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(13rem, 40%)), 1fr)); }
-  .stat-grid-cols-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(13rem, 30%)), 1fr)); }
+  /* A tile grid's columns, the wash's and the tile grid block's alike: at most
+     --cols tiles to a row, fewer where a tile would be narrower than
+     --tile-min, one on a phone, and a row of fewer tiles than --cols spreads
+     across the grid. Both are data about the page, written on the grid by the
+     renderer — the tile grid works --cols out from its text, see measure.js.
+     A track is the larger of --tile-min and a --cols-th of the grid, less a
+     pixel so that --cols of them fit and one more does not. auto-fit, never
+     auto-fill: .stat-grid's outer rules need the first row full. */
+  .stat-grid-fit {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(var(--tile-min, 13rem), calc(100% / var(--cols, 3) - 1px))), 1fr));
+  }
+  /* The tile grid block: block_test_page.html's "Extended readout", its
+     inline styles as classes. measure.js keeps a heading's longest word on
+     one line, but a word longer than a tile breaks rather than cross the
+     hairline. */
+  .block-tile_grid .eyebrow + .block-title { margin-top: 1.25rem; }
+  .tile-grid .tile-label { color: var(--fg-faint); }
+  .tile-grid .tile-title { margin-top: 0.55rem; overflow-wrap: anywhere; }
+  .tile-grid .tile-text { margin-top: 0.55rem; font-size: var(--step--1); color: var(--fg-muted); }
   /* Three tiles beside a quote need more than half the row: the quote, capped
      at 44ch anyway, gives up a fifth. Two columns only from 48rem, as
      .block-two-col itself, so a phone still stacks. */
