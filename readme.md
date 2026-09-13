@@ -647,9 +647,30 @@ absent rather than visible-and-dead. Everything else is CSS only:
 - pagination
 - FAQ accordions (`<details>`)
 - card and row hover effects
+- finding things: where the search field would be, the bar shows a link to the
+  full index instead (below)
 
 KaTeX is typeset during the build, so mathematics is fully rendered with no
 script at all.
+
+### The full index
+
+`/full_index.html` is the whole site as one flat list — the standing pages
+(About, Contact, Legal …) first, then every entry newest first with its date,
+description and all of its subjects — for a reader who searches with the
+browser's find-in-page because the search field needs scripting. The footer
+links it from every page (`footer_nav` in `site_settings.json`), and the bar
+shows a link to it in the search field's place whenever the field is not there.
+
+It is written for Ctrl+F: nothing on it is collapsed or animated in, because
+find-in-page can miss either. It is paginated at `index_per_page` rows — 200 by
+default, about a kilobyte each — and later pages are `/full_index_page_2.html`
+onward. Keep that number high: find-in-page only searches the page that is
+loaded. The page is indexable and in the sitemap, where it doubles as an HTML
+sitemap that puts every entry two clicks from anywhere.
+
+The standing pages are derived, not listed: any titled page in `eleventy_njk/`
+that is not paginated and not `noindex` appears on its own.
 
 The two stylesheets and two scripts that only some pages need are added
 automatically, based on what each page's markup actually contains — you never
@@ -729,8 +750,9 @@ all of this out beside the markup it applies to.
 ## Settings
 
 `site_settings.json` holds the name, short name, description, URL, language,
-posts per page, navigation (label, link, order), default image, the folders
-copied into the site, and the asset size budgets the status check enforces.
+posts per page, rows per page of the full index (`index_per_page`), navigation
+(label, link, order), default image, the folders copied into the site, and the
+asset size budgets the status check enforces.
 
 `language` is the two-letter code that goes into `<html lang>` and the feed.
 `date_locale` is separate, and is the full BCP-47 tag used to render dates on

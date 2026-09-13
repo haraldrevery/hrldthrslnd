@@ -188,6 +188,15 @@ describe("buildRegistry — names the built-in pages own", () => {
     expect(registry.bySlug.has("blog_2")).toBe(true);
   });
 
+  test("full_index is reserved even though its permalink is computed elsewhere", () => {
+    const root = project({ "input_markdown/full_index.md": post("mine") });
+    const registry = quietly(() => buildRegistry(root));
+    expect(registry.bySlug.has("full_index")).toBe(false);
+    // The renamed page takes the collision suffix — which is why the index's
+    // own later pages are /full_index_page_N.html: this URL has to be free.
+    expect(registry.bySlug.get("full_index_2").permalink).toBe("/full_index_2.html");
+  });
+
   test("status_check is NOT reserved — that name is protected the other way", () => {
     // writeStatusPage() refuses to overwrite a page it did not write, so an
     // author who claims this URL keeps it and loses the report. Reserving it

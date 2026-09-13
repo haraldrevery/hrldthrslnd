@@ -571,6 +571,7 @@
   .icon-download { --icon: url("/svg/download.svg"); }
   .icon-menu { --icon: url("/svg/menu.svg"); }
   .icon-cross { --icon: url("/svg/cross.svg"); }
+  .icon-magnifier { --icon: url("/svg/magnifier.svg"); }
 
   /* -- Links --------------------------------------------------------------- */
   /* The rule is a background image grown from 0% to 100% width, not a
@@ -3133,6 +3134,34 @@
     transition: width var(--dur-mid) var(--ease-liquid);
   }
   .index-row:hover::before, .index-row:focus-within::before { width: 3px; }
+
+  /* -- Index entries: the full index's rows ------------------------------------
+     .index-row with a description and every subject under the title, for
+     full_index.njk. Two columns rather than the base row's three: the third is
+     sized `auto` for a short run of tags, and a row carrying every subject a
+     post has would widen it until it squeezed the title. The subjects go under
+     the description instead, in the title's own column.
+
+     Tighter than the base row, which is sized for a handful of rows where this
+     list runs to hundreds. No entrance animation, on purpose: a match that
+     find-in-page lands on has to be visible already. See full_index.njk.      */
+  .index-list { border-bottom: var(--hairline-width) solid var(--hairline); }
+  .index-row-entry { padding-block: 1.1rem; }
+  /* 9rem, not the base row's 7rem: an ISO date in tracked uppercase Mono runs
+     to about 7.5rem, so 7rem broke "2026-09-06" after its second hyphen while
+     "2026-09-01", a narrower glyph short, still fitted — a ragged column. */
+  @media (min-width: 48rem) {
+    .index-row-entry { grid-template-columns: 9rem 1fr; }
+  }
+  .index-row-date { color: var(--fg-faint); white-space: nowrap; }
+  .index-row-title { font-size: var(--step-1); }
+  .index-row-desc {
+    margin-top: 0.35rem;
+    max-width: 70ch;
+    color: var(--fg-muted);
+    font-size: var(--step--1);
+  }
+  .index-row-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
 
   /* -- Catalogue rows: the long form of an index row ---------------------------
      .index-row is the site's compact list — date, title, tags — and it is what
@@ -6273,6 +6302,35 @@ html[data-width="18"]  { --reading-width: 18%; }
 @layer components {
   .search { display: none; }
   html.js-search .search { display: block; }
+
+  /* The full index stands in the search field's place for as long as there is
+     no field, so this is the same flag read the other way: shown by default,
+     withdrawn once search_bar.js has an index to search. A browser whose script
+     ran but could not fetch the index never sets the flag either, and keeps the
+     link — rightly, since it has no search. See nav.njk. */
+  html.js-search .nav-index-link { display: none; }
+  /* In the bar, closed off from the primary links by the same short hairline
+     the search field ends on, so "Full index" does not run straight into the
+     home link's "Index" and the bar reads the same with either one showing.
+     The drawer stacks its links and needs no divider. */
+  .nav-desktop-only .nav-index-link { position: relative; padding-right: 1.25rem; }
+  .nav-desktop-only .nav-index-link::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: var(--hairline-width);
+    height: 1.5rem;
+    background: var(--hairline);
+    pointer-events: none;
+  }
+  .nav-index-link .icon {
+    width: 0.9em;
+    height: 0.9em;
+    margin-right: 0.5em;
+    vertical-align: -0.1em;
+  }
 
   /* Screen-reader-only text. */
   .sr-only {

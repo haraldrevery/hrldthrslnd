@@ -36,16 +36,35 @@
 </article>
 {% endmacro %}
 
-{# Compact index row, for the "recent" list on the front page. #}
+{# Index row, for the full index (full_index.njk): the date, then the title
+   with the description and every subject beneath it. Takes a post or one of
+   the standing pages; a page has no date or subjects and simply shows none.
+
+   Every subject, not the first three a card shows. This row exists for
+   find-in-page, and a subject left off it is one the reader cannot find.
+
+   Only the title is a link. A card makes its whole face clickable through
+   .card-link::after; a row here is text a reader may want to select and copy,
+   and an overlay would take that away. #}
 {% macro row(post) %}
-<article class="index-row">
-  <time class="micro" datetime="{{ post.data.date | isoDate }}"
-        style="color:var(--fg-faint);">{{ post.data.date | isoDate }}</time>
-  <h3 style="font-size:var(--step-1);">
-    <a class="card-link link-underline" href="{{ post.url }}">{{ post.data.title }}</a>
-  </h3>
-  <p class="micro" style="color:var(--fg-muted);">
-    {% for tag in post.data.tags | tagLabel | limit(2) %}{{ tag }}{% if not loop.last %} · {% endif %}{% endfor %}
-  </p>
+{%- set iso = post.data.date | isoDate -%}
+{%- set subjects = (post.data.tags or []) | tagLabel -%}
+<article class="index-row index-row-entry">
+  {#- Emitted even when empty: it is the first grid column, and leaving it out
+      would pull the title into the date's place. -#}
+  <p class="micro index-row-date">{% if iso %}<time datetime="{{ iso }}">{{ iso }}</time>{% endif %}</p>
+  <div>
+    <h3 class="index-row-title"><a class="link-underline" href="{{ post.url }}">{{ post.data.title }}</a></h3>
+    {%- if post.data.description %}
+    <p class="index-row-desc">{{ post.data.description }}</p>
+    {%- endif %}
+    {%- if subjects.length %}
+    <p class="index-row-tags">
+      {%- for tag in subjects %}
+      <a class="tag-chip" href="/blog_tag_{{ tag | tagSlug }}.html">{{ tag }}</a>
+      {%- endfor %}
+    </p>
+    {%- endif %}
+  </div>
 </article>
 {% endmacro %}

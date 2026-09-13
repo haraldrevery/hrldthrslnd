@@ -52,6 +52,12 @@
          floating in the middle of the bar. #}
       <div class="nav-desktop-only" style="flex:1 1 auto; justify-content:flex-end;">
         {{ search.field("desktop", settings) }}
+        {# The full index, in the field's place for as long as there is no
+           field: with scripting off, or when search_bar.js could not fetch the
+           index, find-in-page on that page is the one way left to search the
+           site. html.js-search withdraws it as it reveals the field (section I
+           of input.css), so a reader only ever sees one of the two. #}
+        <a class="nav-link nav-index-link" href="/full_index.html"{% if page.url == "/full_index.html" %} aria-current="page"{% endif %}><span class="icon icon-magnifier" aria-hidden="true"></span>Full index</a>
       </div>
 
       <nav class="nav-desktop-only" aria-label="Primary" style="gap:1.75rem; align-items:center;">
@@ -81,6 +87,8 @@
        a link instead. #}
     <nav class="nav-drawer" aria-label="Primary, mobile">
       {{ search.field("drawer", settings) }}
+      {# The same stand-in for the field as in the bar above. #}
+      <a class="nav-link nav-index-link" href="/full_index.html"{% if page.url == "/full_index.html" %} aria-current="page"{% endif %}><span class="icon icon-magnifier" aria-hidden="true"></span>Full index</a>
       {% for item in settings.nav %}
       <a class="nav-link" href="{{ item.link }}"{% if page.url == item.link %} aria-current="page"{% endif %}>{{ item.label }}</a>
       {% endfor %}

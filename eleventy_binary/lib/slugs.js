@@ -64,17 +64,26 @@ const isHidden = (name) => name.startsWith(".");
  *
  * `blog` is set in eleventy_njk/blog.11tydata.js, because the page size comes
  * from site_settings.json and Eleventy resolves pagination before computed data.
+ * `full_index` is set in eleventy_njk/full_index.11tydata.js for the same
+ * reason: a paginated page computes its URL, and a computed URL cannot be read
+ * out of front matter.
  *
  * `status_check` is deliberately NOT here. That name is protected the other way
  * round: writeStatusPage() refuses to overwrite a page it did not write, so an
  * author who wants /status_check.html keeps it and loses the report. Reserving
  * it would reverse that decision and rename a page that works today.
  */
-const RESERVED_EXTRA = ["/blog.html"];
+const RESERVED_EXTRA = ["/blog.html", "/full_index.html"];
 
 /**
  * Prefixes the build generates pages under, from data rather than from files:
- * one page per subject, and one per page of the journal.
+ * one page per subject, and one per page after the first of the journal and of
+ * the full index.
+ *
+ * The full index numbers its later pages /full_index_page_N.html rather than
+ * /full_index_N.html because `_N` is the suffix a collision below is resolved
+ * with: a note called full_index.md is renamed full_index_2, and that URL has
+ * to stay free for it.
  *
  * Warned about rather than reserved. The set is open — it depends on which tags
  * exist and how many entries there are — so reserving the prefix would rename
@@ -154,8 +163,9 @@ function builtInPages(root) {
       const value = wholeValue(block, "permalink");
       if (!value) continue;
 
-      // A computed permalink — blog-tag.njk writes its under `eleventyComputed:`
-      // and blog.njk's lives in blog.11tydata.js — is not readable here at all,
+      // A computed permalink — blog-tag.njk writes its under `eleventyComputed:`,
+      // and blog.njk's and full_index.njk's live in their .11tydata.js files —
+      // is not readable here at all,
       // and must not be half-read either: a template expression is not a name
       // worth reserving, and reserving a garbled one would rename a page that
       // does not actually collide with anything. Those two are covered by
@@ -479,8 +489,8 @@ export function buildRegistry(root = process.cwd()) {
       log.warn(
         "slugs",
         `"${slug}" is in the range of names the build generates for itself`,
-        `${candidate.inputPath} — subject and journal pages are published as ` +
-          `/blog_tag_*.html and /blog_page_*.html; this page keeps its URL, but ` +
+        `${candidate.inputPath} — subject, journal and index pages are published as ` +
+          `/blog_tag_*.html, /blog_page_*.html and /full_index_page_*.html; this page keeps its URL, but ` +
           `will collide the moment one is generated under the same name`,
       );
     }

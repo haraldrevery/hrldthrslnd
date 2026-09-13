@@ -1,0 +1,70 @@
+---
+layout: base.njk
+title: Full index
+description: Every page on the site in one list — title, date, subjects and summary — to search with your browser's find in page.
+---
+{# The full index: the whole site as one flat list, for a reader who finds
+   things with Ctrl+F. The search field in the bar needs scripting and is not
+   shown without it; this is what that reader has instead. The footer links it
+   from every page, and nav.njk puts a link in the search field's place
+   whenever the field is not there.
+
+   Written for find-in-page, which decides three things here:
+
+   - Nothing is collapsed. Some browsers' find-in-page skips a closed
+     <details>, and a clamped chip list hides what it clips, so every subject a
+     post has is printed in full and tag_filter.njk is not included.
+   - Nothing animates in. The site's entrance animations hold an element at
+     opacity 0 through its delay, and a match inside one is a highlight on
+     nothing.
+   - Pages are large. Find-in-page searches only the page that is loaded, so
+     `index_per_page` in site_settings.json defaults to 200 rows, against 40
+     cards on the journal.
+
+   The paging is in full_index.11tydata.js and in the fullIndex collection in
+   eleventy_binary/lib/eleventy_config.js. #}
+{% import "card.njk" as cards %}
+
+{%- set total = collections.posts.length %}
+{%- set paged = pagination.pages.length > 1 %}
+
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
+  <p class="eyebrow">{{ settings.name }}</p>
+  <h1 class="display" style="margin-top:1rem;">{{ title }}</h1>
+  <p class="lede" style="margin-top:1.5rem;">
+    Every page on the site in one list, entries newest first. Search it with
+    your browser's find in page: Ctrl+F, or Cmd+F on a Mac.
+    {%- if paged %} The {{ total }} entries run to {{ pagination.pages.length }}
+    pages, and find in page searches only the one you are on.{% endif %}
+  </p>
+  <hr class="rule-grad" style="margin-top:2.5rem;">
+</section>
+
+{# The standing pages open page 1 only. Repeated on every page they would be
+   the same few matches for every search, and the entries are what move. #}
+{% if pagination.pageNumber == 0 and collections.sitePages.length %}
+<section class="shell" style="padding-bottom:3rem;">
+  <h2 class="display-md">Pages</h2>
+  <div class="index-list" style="margin-top:1.5rem;">
+    {% for item in collections.sitePages %}{{ cards.row(item) }}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="shell" style="padding-bottom:2rem;">
+  <h2 class="display-md">Entries</h2>
+  {% if indexPage.entries.length %}
+  {% if paged %}
+  <p class="micro" style="margin-top:0.75rem; color:var(--fg-muted);">
+    {{ indexPage.first }}–{{ indexPage.first + indexPage.entries.length - 1 }} of {{ total }}
+  </p>
+  {% endif %}
+  <div class="index-list" style="margin-top:1.5rem;">
+    {% for post in indexPage.entries %}{{ cards.row(post) }}{% endfor %}
+  </div>
+  {% else %}
+  <p class="lede" style="padding-block:3rem;">Nothing published yet.</p>
+  {% endif %}
+</section>
+
+{% include "pagination.njk" %}

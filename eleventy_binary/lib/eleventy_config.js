@@ -589,7 +589,14 @@ export function createConfig({
       return true;
     };
 
-    eleventyConfig.addCollection("posts", (api) =>
+    /**
+     * Every published post, newest first.
+     *
+     * A named function rather than a callback written inline, because
+     * `fullIndex` below needs the same list in the same order, and a collection
+     * callback cannot read another collection — each is built from getAll().
+     */
+    const publishedPosts = (api) =>
       api
         .getAll()
         .filter(publishable)
@@ -605,7 +612,70 @@ export function createConfig({
           const bt = postTime(b.data.date);
           if (at !== bt) return bt - at;
           return String(a.data.title ?? "").localeCompare(String(b.data.title ?? ""));
-        }),
+        });
+
+    eleventyConfig.addCollection("posts", publishedPosts);
+
+    /**
+     * The full index (eleventy_njk/full_index.njk), already cut into pages.
+     *
+     * Paged here rather than by the template's own `pagination.size`, because
+     * the page size comes from site_settings.json and Eleventy settles a
+     * template's pagination before computed data runs — the reason
+     * blog.11tydata.js has to read the settings file a second time, by hand.
+     * Cut in the one place that already holds the parsed settings, the
+     * template pages over the result one item at a time, the way blog-tag.njk
+     * pages over tagList.
+     *
+     * Never empty: a site with no posts still gets its one page, because the
+     * footer links it from every page and a missing target would be a broken
+     * link on all of them.
+     */
+    eleventyConfig.addCollection("fullIndex", (api) => {
+      const posts = publishedPosts(api);
+      const size = settings.index_per_page;
+      const pages = [];
+      for (let start = 0; start < posts.length; start += size) {
+        pages.push(posts.slice(start, start + size));
+      }
+      if (pages.length === 0) pages.push([]);
+
+      return pages.map((entries, number) => {
+        // The latest change among this page's entries, for the sitemap's
+        // <lastmod>. An edit counts as well as a publication, so this is the
+        // later of `updated` and `date` per entry, not the first entry's date.
+        const changed = entries
+          .map((item) => Math.max(postTime(item.data.updated), postTime(item.data.date)))
+          .filter(Number.isFinite);
+        return {
+          entries,
+          // 1-based position of the first entry, for "Entries 201–400 of 612".
+          first: number * size + 1,
+          lastModified: changed.length ? isoDate(new Date(Math.max(...changed))) : "",
+        };
+      });
+    });
+
+    /**
+     * The site's standing pages — About, Contact, Legal, and whatever joins
+     * them in eleventy_njk/ — listed at the head of the full index.
+     *
+     * Derived rather than listed by name, so a page added to eleventy_njk/
+     * appears without anyone remembering to add it here. A standing page is a
+     * titled HTML page that is not a post, not one page of a paginated listing
+     * (the journal, the subject pages, the index itself) and not marked
+     * noindex. The front page has `title: false` and drops out on that, which
+     * is right: it is where the wordmark goes, not an entry.
+     */
+    eleventyConfig.addCollection("sitePages", (api) =>
+      api
+        .getAll()
+        .filter((item) => {
+          if (isPost(item) || item.data.pagination || !item.data.title) return false;
+          if (/noindex/i.test(String(item.data.robots ?? ""))) return false;
+          return String(item.outputPath ?? "").endsWith(".html");
+        })
+        .sort((a, b) => String(a.data.title).localeCompare(String(b.data.title))),
     );
 
     /**

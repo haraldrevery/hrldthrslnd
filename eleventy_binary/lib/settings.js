@@ -29,6 +29,11 @@ export const DEFAULTS = {
   date_locale: "en-GB",
   author: "",
   posts_per_page: 40,
+  // Rows per page of the full index, /full_index.html. Far more than
+  // posts_per_page on purpose: that page exists for find-in-page, which only
+  // searches the page that is loaded, so every split is a search the reader
+  // has to repeat. A row is about a kilobyte of text.
+  index_per_page: 200,
   // One "default image", as website.md names it. The card and Open Graph
   // thumbnail is derived from it — resolveThumbnail() picks the _min
   // counterpart when one exists.
@@ -103,6 +108,13 @@ export function loadSettings(root = process.cwd()) {
   if (!Number.isFinite(settings.posts_per_page) || settings.posts_per_page < 1) {
     log.warn("settings", "posts_per_page is not a positive number, using 40");
     settings.posts_per_page = 40;
+  }
+
+  // A whole number, not merely a finite one: the full index is cut with
+  // slice(), and a fractional size cuts pages of uneven length.
+  if (!Number.isInteger(settings.index_per_page) || settings.index_per_page < 1) {
+    log.warn("settings", "index_per_page is not a positive whole number, using 200");
+    settings.index_per_page = DEFAULTS.index_per_page;
   }
 
   cache.set(key, settings);
