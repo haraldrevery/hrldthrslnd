@@ -323,8 +323,21 @@ function listSourceFiles(root, source) {
 }
 
 /**
- * A post folder publishes the HTML file that shares the folder's name
- * (`post_i/post_i.html`); failing that, the single HTML file inside it.
+ * A post folder publishes ONE page, and the file that is the page is decided
+ * here, in this order:
+ *
+ *   1. `<folder>.json` — the page builder's document. The build validates it,
+ *      renders its blocks and registers the result as a virtual template (see
+ *      eleventy_config.js). Any .html beside it is ignored and said so: two
+ *      files that could each be the page is exactly the ambiguity that made the
+ *      old save file dead data, and it is resolved by rule rather than by
+ *      which file happens to be newer.
+ *   2. `<folder>.html` — a hand-written page, as before.
+ *   3. failing that, the single .html file inside the folder.
+ *
+ * The JSON wins by NAME, not by content. A save file that fails to parse is
+ * still the page — reported by the status check as an error on that page —
+ * rather than silently falling through to an .html that may be months stale.
  *
  * Not walked recursively: here a folder IS the page, so a folder inside one is
  * a folder of that page's assets, not another post. build.mjs copies those.
@@ -346,7 +359,35 @@ function listPostFolders(root) {
     const name = entry.name;
     const folder = path.join(dir, name);
 
-    const htmlFiles = fs.readdirSync(folder).filter((f) => f.endsWith(".html")).sort();
+    const files = fs.readdirSync(folder).sort();
+    const htmlFiles = files.filter((f) => f.endsWith(".html"));
+    const jsonFile = `${name}.json`;
+
+    if (files.includes(jsonFile)) {
+      if (htmlFiles.length > 0) {
+        log.warn(
+          "slugs",
+          `post folder holds both ${jsonFile} and ${htmlFiles.join(", ")} — the JSON is the page`,
+          `input_custom_post/${name}/ — the HTML is ignored; delete it, or delete the JSON to publish the HTML instead`,
+        );
+      }
+      entries.push({
+        kind: "custom_post",
+        source: "json",
+        inputPath: path.join("input_custom_post", name, jsonFile),
+        // The path Eleventy knows the rendered page by. A virtual template has
+        // to carry a template extension, and it must not be a path that exists
+        // on disk, so the document's own name gets ".html" appended.
+        virtualPath: `input_custom_post/${name}/${jsonFile}.html`,
+        relative: `${name}/${jsonFile}`,
+        base: name,
+        folder: name,
+        sourceDir: `input_custom_post/${name}`,
+        publishedDir: null,
+      });
+      continue;
+    }
+
     if (htmlFiles.length === 0) {
       log.warn("slugs", `post folder has no .html file, skipped`, `input_custom_post/${name}/`);
       continue;
@@ -363,6 +404,7 @@ function listPostFolders(root) {
 
     entries.push({
       kind: "custom_post",
+      source: "html",
       inputPath: path.join("input_custom_post", name, preferred),
       relative: `${name}/${preferred}`,
       base: name,
@@ -462,6 +504,9 @@ export function buildRegistry(root = process.cwd()) {
     };
     bySlug.set(slug, record);
     byInputPath.set(normaliseKey(candidate.inputPath), record);
+    // Eleventy reports a JSON post under its virtual path, so the collections
+    // filter has to find the record by that name as well.
+    if (record.virtualPath) byInputPath.set(record.virtualPath, record);
 
     // A page at the top of an input folder publishes to the site root, so its
     // neighbours do too. That is recorded one way only: the reverse table would
@@ -593,6 +638,21 @@ function registerDir(dirs, record) {
  * raise its own error on it.
  */
 function readSourceMeta(root, inputPath) {
+  // A page-builder document carries the same two answers in `meta`, and only
+  // the strict reading counts: `draft: true` as a JSON boolean, matching what
+  // isDraft() accepts from YAML. A file that does not parse is "not a draft"
+  // for the same reason an unreadable one is — the status check reports it.
+  if (/\.json$/i.test(inputPath)) {
+    try {
+      const doc = JSON.parse(fs.readFileSync(path.join(root, inputPath), "utf8"));
+      const meta = doc && typeof doc === "object" && doc.meta && typeof doc.meta === "object" ? doc.meta : {};
+      const permalink = typeof meta.permalink === "string" ? meta.permalink.trim() : "";
+      return { draft: meta.draft === true, declared: permalink || null };
+    } catch {
+      return { draft: false, declared: null };
+    }
+  }
+
   let block = null;
   try {
     block = frontMatterBlock(fs.readFileSync(path.join(root, inputPath), "utf8"));
@@ -622,6 +682,22 @@ export function getRegistry(root = process.cwd()) {
   const key = path.resolve(root);
   if (!registries.has(key)) registries.set(key, buildRegistry(key));
   return registries.get(key);
+}
+
+/**
+ * Forget the registry for a root, so the next getRegistry() rebuilds it.
+ *
+ * For the editor server and nothing else. A build enumerates its inputs once
+ * and must not see them change under it, which is why the cache exists; the
+ * editor is a long-running process that CREATES post folders, and a registry
+ * built before a folder existed cannot publish its assets or resolve its
+ * thumbnails. The build never calls this. (The old resetRegistry() export was
+ * removed because it implied a working watch mode; this makes no such claim —
+ * the config function still closes over whatever registry it was built with.)
+ */
+export function invalidateRegistry(root = process.cwd()) {
+  registries.delete(path.resolve(root));
+  reportedCycles.clear();
 }
 
 /**

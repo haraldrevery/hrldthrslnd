@@ -1,0 +1,89 @@
+{
+  "format": 1,
+  "meta": {
+    "title": "Hero test — the collage",
+    "date": "2026-09-12",
+    "description": "The collage hero rendered from JSON: block_test_page_c's five overlapping pieces, with the section count, the date stamp and the ruler worked out from the post itself.",
+    "tags": [
+      "test",
+      "reference"
+    ],
+    "category": [],
+    "image": "/image/2025galdhoepiggen/2025harald_on_galdhopiggen3.jpg",
+    "author": "Harald Revery",
+    "draft": true
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "variant": "collage",
+      "eyebrow": "Hero test — collage",
+      "title": "Galdhøpiggen,\nin layers",
+      "accent": "in layers",
+      "lede": "The collage treatment from block_test_page_c, chosen in the page builder. Titles and captions came out of the photographs' own metadata.",
+      "image": {
+        "src": "/image/2025galdhoepiggen/2025harald_on_galdhopiggen3.jpg",
+        "alt": "",
+        "title": "Chilling on Galdhøpiggen top",
+        "caption": "Harald sitting on Galdhøpiggen top."
+      },
+      "image_2": {
+        "src": "/image/2025galdhoepiggen/2025galdhopiggen1.jpg",
+        "alt": "",
+        "title": "Styggebreen glacier and Galdhøpiggen",
+        "caption": "Two people crossing the Styggebreen glacier towards Galdhøpiggen."
+      },
+      "actions": [
+        {
+          "label": "See the plates",
+          "href": "#hero-end"
+        },
+        {
+          "label": "The hand-written collage",
+          "href": "/block_test_page_c.html"
+        }
+      ],
+      "scroll_cue": true
+    },
+    {
+      "type": "heading",
+      "eyebrow": "Plates",
+      "title": "Jotunheimen, 2025"
+    },
+    {
+      "type": "gallery",
+      "layout": "waterfall",
+      "gap": "0.75rem",
+      "images": [
+        {
+          "src": "/image/2025galdhoepiggen/2025styggebreen_glacier_3.jpg",
+          "alt": "",
+          "title": "Styggebreen glacier",
+          "caption": "A view over the Styggebreen glacier and a mountain hill."
+        },
+        {
+          "src": "/image/2025galdhoepiggen/2025jotunheimen_view_from_galdhopiggen3.jpg",
+          "alt": "",
+          "title": "A view from Galdhøpiggen",
+          "caption": "A view from Galdhøpiggen over Jotunheimen."
+        },
+        {
+          "src": "/image/2025galdhoepiggen/2025close_to_galdhopiggen_top2.jpg",
+          "alt": "",
+          "title": "Close to Galdhøpiggen top",
+          "caption": "Another top close to the Galdhøpiggen top."
+        },
+        {
+          "src": "/image/2025galdhoepiggen/2025h_close_to_galdhopiggen_top7.jpg",
+          "alt": "",
+          "title": "Harald with his backpack",
+          "caption": "Harald with his backpack looking over Jotunheimen."
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "markdown": "## What the hero worked out for itself\n\nThe count in the ink block is the number of sections below the hero. The stamp is this post's date and its first subject. The ruler has one segment per section, each as long as the section has content, and closes on the year and the number of plates on the page. The note under the count is the portrait's caption.\n\nNone of it is typed into the document: change the page and the hero follows."
+    }
+  ]
+}

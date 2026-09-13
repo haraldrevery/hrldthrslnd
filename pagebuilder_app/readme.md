@@ -1,38 +1,140 @@
-# Page builder app — not built yet
+# Page builder
 
-The block editor described in `../page_builder_app.md` has not been implemented.
-This folder is a placeholder so the project layout matches the plan.
+The page builder is not a separate application. It is a mode of the site
+generator:
 
-## What stands in for it
+```bash
+./site_generate --edit            # opens http://127.0.0.1:8484
+./site_generate --edit --port 9000
+```
 
-`input_custom_post/` already exists as an input format, and the generator
-already handles it: a folder holding `post_x.html` plus its own media, published
-to `/post_x.html` with the assets copied to `/post_x/`. That is the format the
-app will read and write, so pages made by hand today will open in the app later.
+On Windows, `site_generate.exe --edit`. The generator prints the address and
+tries to open a browser; if none opens, paste the address into one.
 
-Until then, **[`../input_custom_html/block_test_page.html`](../input_custom_html/block_test_page.html)**
-is the substitute. It holds every block type the site can render — hero, heading,
-text with maths, three gallery layouts, video, audio, download with generated
-checksums, FAQ, feature panel, stat grid, index rows and raw HTML — each fenced
-with `COPY FROM HERE` / `COPY TO HERE` comments. Copy a block into a new file,
-add front matter, rebuild.
+There is nothing to install. The editor is four plain files —
+[`../eleventy_binary/editor/`](../eleventy_binary/editor/) — embedded in the
+binary and served on the loopback address. It runs the same validator, renderer,
+image codecs and checks the build runs, on the same files.
 
-`block_test_page_a.html` and `block_test_page_b.html` show the two hero
-treatments.
+## Using it
 
-## What already exists for it
+The page is the interface. The middle of the screen is the post as it will be
+published; the panel on the right edits whatever you click in it.
 
-The generator side of several app features is done and can be reused:
+- **Click a block** on the page to select it. A toolbar appears on it: drag the
+  ⋮⋮ grip to move it, the arrows to nudge it, ⧉ to duplicate, ✕ to remove.
+  "+ Add block" under it inserts a new block there.
+- **Click a picture** in a gallery to edit its alt text, title and caption.
+- **Drop photographs from your computer** onto the page. Onto a gallery, they
+  are added to it. Onto a hero or a feature, the first one becomes its picture.
+  Anywhere else, they become a new gallery at that spot. Any number at once;
+  a progress bar shows each one being imported.
+- **Tile grid.** Three to twelve numbered tiles on hairlines — a label, a
+  heading and a line or two each. *Columns* on Auto works out three to six
+  across from how much the tiles say, choosing a count that leaves no tile
+  alone on the last row of a wide screen: six short tiles are one row of six,
+  six long ones two rows of three, eight are 4 + 4. Pick 3, 4, 5 or 6 to set
+  it yourself. Narrower screens give up columns rather than squeeze the text.
+- **Uniform gallery ratio and height.** With the Uniform layout chosen, *Ratio*
+  crops every picture to one shape — type 3:2, 4:5, 16:9 or anything between
+  1:5 and 5:1, or pick one from the list — and *Row height* is the smallest a
+  cell gets: each row fits as many cells as that allows and they grow to fill
+  the width, so a cell ends up that tall or a little taller, and the gap stays
+  the gap. A gallery too short to fill a row grows by up to a quarter and is
+  centred. Leave both empty for square cells at the usual size. Something the build cannot read
+  is flagged in the checks and left out of the page.
+- **Gallery pictures** are a grid of thumbnails in the panel. Drag to reorder,
+  "+ Upload" to add from your computer, "From library…" to pick from this
+  post's files or from the site-wide folders (`image/`, `svg/`, `gif/` …).
+- **Files** tab: everything in the post folder, with what is on the page and
+  what is not. Select several and "Add to page", or drag them onto the page.
+- **Hero treatments.** Select the hero and pick Stage, Photo (dark or
+  adaptive), Collage or Salon. The collage takes two pictures — drop one onto
+  each, or two at once — and works out its section count, date stamp and ruler
+  from the page; the line under the stamp's date is the post's first subject
+  unless you type one. The salon hangs one portrait, labels it "Plate I" unless
+  you type another label, and engraves the author and the date in Roman
+  numerals under it, unless you word that line yourself.
+- **Feature block.** *Over* lays a glass panel over the picture, which keeps its
+  own proportions: nothing is cropped, and a tall picture is narrowed to fit
+  the screen rather than cut. *Beside* is a 3:4 plate next to a solid panel.
+  Either way, "Picture on the" chooses the side.
+- **Field notes and Wash.** Two blocks that run the full width of the page,
+  over a photograph. *Field notes* pins one to five glass notes across it,
+  staggered, each numbered for you ("Note 01 · your label"). *Wash* sets a
+  large heading, an optional quote and one to six tiles over it; without a
+  quote the tiles take the whole width. *Tile columns* sets two or three tiles
+  to a row; three beside a quote take three fifths of the row. The photograph is the section's
+  ground, so it is published without alt text or a lightbox — the text over it
+  is what it says. Add and Remove stop at the limits.
+- **Page** tab: title, description, date, subjects, card image, draft, and the
+  saved versions under History.
+- The badge in the top bar says what the build will say. Click it for the list;
+  click an item to jump to the field.
+- Desktop, tablet and phone widths are the three buttons at the top.
 
-- **`../eleventy_binary/lib/images.js`** — the `_min` thumbnail pipeline, WASM
-  MozJPEG, ≤ 80 kB budget, with the "you were missing this, I made one" warning.
-- **`../eleventy_binary/lib/downloads.js`** — SHA-256 and SHA-512 for download
-  blocks, computed from the shipped bytes at build time.
-- **`../eleventy_binary/lib/status_check.js`** — the front-matter, heading
-  structure, alt-text and `_min` completeness checks the app's green/amber/red
-  indicators are meant to surface, already written and already running.
-- **`../eleventy_binary/lib/imagesize.js`** — intrinsic dimensions from file
-  headers, no decode.
+Shortcuts: Ctrl+S saves and keeps a revision, Ctrl+Z / Ctrl+Shift+Z undo and
+redo, Delete removes the selected block or picture, Escape deselects.
 
-When the app is built, `compile.sh` belongs here and the Tauri project under
-`page_builder/`, per the layout in `../website.md`.
+Text is edited in the panel, not on the page. Typing directly into the preview
+would mean turning rendered HTML back into markdown, and a wrong round trip
+silently rewrites your words.
+
+## What it edits
+
+A post folder whose page is a JSON document:
+
+```
+input_custom_post/my_trip/
+├── my_trip.json        <-- the page. The build renders it; the editor edits it.
+├── photo.jpg           <-- assets, referred to by bare name
+├── photo_min.jpg       <-- made on import (or by the build if missing)
+└── .revisions/         <-- every replaced version of the document; never published
+```
+
+The format is described in [`../page_builder_plan.md`](../page_builder_plan.md)
+and defined by [`../eleventy_binary/lib/blocks/catalogue.js`](../eleventy_binary/lib/blocks/catalogue.js).
+A document can be written by hand in any text editor, and
+`./site_generate --check-post my_trip` says what the editor would say about it.
+
+## What it does to a photograph you add
+
+Turned upright from its EXIF orientation. If it is over the site's photograph
+budget or over 2800px on a side, re-encoded as a JPEG under both. Its GPS block
+is emptied and any GPS values in an XMP packet blanked; the rest of the file is
+untouched. A `_min` counterpart under 80 kB is made with the same MozJPEG
+settings the build uses. Video, audio, GIF and SVG files are checked and passed
+through unchanged; the editor tells you what it saw.
+
+A title and a description written into the file become the picture's title and
+caption — never its alt text, which is yours to write. They are read from XMP
+first, where Lightroom and ExifTool put them, then IPTC, then EXIF; camera
+boilerplate such as "OLYMPUS DIGITAL CAMERA" is ignored. When a picture has to
+be re-encoded, its title, caption, creator and copyright are written back into
+the new file, so they are still there when it is picked from the library later.
+Pictures from the site-wide folders are titled the same way when you pick them.
+
+From Lightroom, export with Metadata set to *All Except Camera & Camera Raw
+Info*, with *Remove Location Info* ticked. *Copyright Only* and *Copyright &
+Contact Info Only* leave the title and caption behind.
+
+## What it will never do
+
+Delete a file, or overwrite one. An upload whose name is taken is saved under
+the next free name, and its thumbnail with it.
+A file dropped outside a drop target is ignored rather than opened, so a missed
+drop cannot navigate away from unsaved work. Removing a picture from a page removes the reference; the
+file stays in the folder until you delete it yourself.
+
+## Safety of the document
+
+Every save is written to a temporary file and renamed into place. An explicit
+save (the Save button, Ctrl-S) keeps a copy of the version it replaced in
+`.revisions/`; autosave keeps one every fifteen minutes. Undo and redo work
+across every edit in the session.
+
+## Building
+
+The Build button runs `site_generate` as a separate process — exactly what you
+would run yourself — and shows its report. A build with drafts is marked as
+such and must not be deployed; the editor says so.

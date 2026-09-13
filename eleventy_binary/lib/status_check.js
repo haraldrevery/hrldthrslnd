@@ -22,6 +22,7 @@ import {
   frontMatterBlock, firstToken, hasKey, hasValue, hasUnsupportedFence,
 } from "./front_matter.js";
 import { humanBytes } from "./format.js";
+import { validatePost } from "./blocks/validate.js";
 
 const REQUIRED_FRONT_MATTER = ["title", "date", "description", "tags"];
 
@@ -155,6 +156,14 @@ function checkFrontMatter(root, findings, includeDrafts) {
     const file = path.join(root, record.inputPath);
     if (!fs.existsSync(file)) continue;
 
+    // A page-builder document has no front matter; its `meta` is checked by
+    // the same validator the editor runs, so the two can never disagree about
+    // what a complete post is.
+    if (record.source === "json") {
+      checkJsonPost(root, record, findings, includeDrafts);
+      continue;
+    }
+
     // A draft being built with --drafts IS on the site, so it is held to the
     // same standard as everything else around it.
     const unpublished = record.draft && !includeDrafts;
@@ -267,6 +276,85 @@ function checkFrontMatter(root, findings, includeDrafts) {
         detail: "sort order and the sitemap may be wrong",
       });
     }
+  }
+}
+
+/**
+ * A page-builder document, validated against the files actually in its folder.
+ *
+ * Notes are dropped here: they are the editor's business while a page is
+ * being written, and on a build report they would only bury the findings that
+ * matter. The draft rule is the same one checkFrontMatter() applies — a draft
+ * that is not in the build is reported at warning level, whatever the finding.
+ */
+function checkJsonPost(root, record, findings, includeDrafts) {
+  const unpublished = record.draft && !includeDrafts;
+  const page = unpublished ? `${record.inputPath} (draft)` : record.inputPath;
+
+  let doc;
+  try {
+    doc = JSON.parse(fs.readFileSync(path.join(root, record.inputPath), "utf8"));
+  } catch (error) {
+    findings.push({
+      level: "error",
+      scope: "post json",
+      page,
+      message: "not valid JSON, so no page was rendered",
+      detail: error.message,
+    });
+    return;
+  }
+
+  const assets = walkFiles(path.join(root, record.sourceDir)).filter(
+    (relative) => relative !== `${record.folder}.json`,
+  );
+
+  for (const finding of validatePost(doc, { assets })) {
+    if (finding.level === "note") continue;
+    findings.push({
+      level: unpublished ? "warn" : finding.level,
+      scope: "post json",
+      page,
+      message: finding.path ? `${finding.path} — ${finding.message}` : finding.message,
+      detail: finding.detail,
+    });
+  }
+}
+
+/**
+ * A hand-written post page that names its own folder in a path, when the
+ * registry had to give the page a different slug.
+ *
+ * A post folder's assets publish at /<slug>/, and the slug carries a suffix
+ * when the folder's name was already taken. The page cannot know that when it
+ * is written, so every `/post_i/photo.jpg` in it goes to the wrong place —
+ * and the link check would report each picture separately, with no hint that
+ * one rename fixes them all. This names the cause once. A JSON post has no
+ * such problem: the renderer writes the URL from the assigned slug.
+ */
+function checkPostFolderPaths(root, findings) {
+  for (const record of getRegistry(root).all) {
+    if (record.kind !== "custom_post" || record.source === "json") continue;
+    if (record.slug === record.desired) continue;
+
+    let html = "";
+    try {
+      html = fs.readFileSync(path.join(root, record.inputPath), "utf8");
+    } catch {
+      continue;
+    }
+    if (!html.includes(`/${record.desired}/`)) continue;
+
+    findings.push({
+      level: "error",
+      scope: "post folder",
+      page: record.inputPath,
+      message: `refers to /${record.desired}/ but its assets publish at /${record.slug}/`,
+      detail:
+        "the folder's name was already taken by another page, so this one carries " +
+        "a suffix — rename the folder, or write the page as a JSON document and the " +
+        "build fills the path in",
+    });
   }
 }
 
@@ -667,6 +755,7 @@ export async function runStatusCheck({ root, outputDir, settings, images, includ
   checkHtml(outputDir, findings, stats);
   checkAssets(outputDir, settings, findings, stats);
   checkSlugs(root, findings);
+  checkPostFolderPaths(root, findings);
   checkUnpublished(root, outputDir, includeDrafts, findings);
 
   // Assets fetched from another origin break the no-third-party promise, so
@@ -712,9 +801,46 @@ const STATUS_MARKER = '<meta name="generator" content="site_generate/status_chec
  * finished output, so it can only be produced after Eleventy has already run.
  * It links the site stylesheet and reuses the site's own classes.
  */
+/**
+ * The same report as data, for anything that is not a person reading a page:
+ * the editor's status panel, a deploy script, a test. Written beside the HTML
+ * report as _site/status_check.json. The shape is the return value of
+ * runStatusCheck() plus the thumbnail totals and a timestamp, and nothing in it
+ * is derived from the HTML — the two are written from the same findings.
+ */
+export function statusReport({ status, images }) {
+  const errors = status.findings.filter((f) => f.level === "error").length;
+  const warnings = status.findings.filter((f) => f.level === "warn").length;
+  return {
+    generated: new Date().toISOString(),
+    verdict: errors > 0 ? "error" : warnings > 0 ? "warn" : "ok",
+    pages: status.pageCount,
+    assets: status.assetCount,
+    assetBytes: status.totalAssetBytes,
+    errors,
+    warnings,
+    thumbnails: {
+      generated: images?.totals?.generated ?? 0,
+      stale: images?.totals?.stale ?? 0,
+      collisions: images?.totals?.collisions ?? 0,
+    },
+    findings: status.findings,
+  };
+}
+
 export function writeStatusPage({ outputDir, settings, status, images }) {
   const errors = status.findings.filter((f) => f.level === "error");
   const warnings = status.findings.filter((f) => f.level === "warn");
+
+  // The data copy is written whatever happens to the HTML one below: nothing
+  // an author writes can be published at status_check.json, because slugify()
+  // never produces that name.
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(outputDir, "status_check.json"),
+    `${JSON.stringify(statusReport({ status, images }), null, 2)}\n`,
+    "utf8",
+  );
 
   const verdict =
     errors.length > 0

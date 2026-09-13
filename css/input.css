@@ -1603,6 +1603,60 @@
     margin-bottom: var(--hero-cue-lane);
   }
 
+  /* The salon as the page builder renders it (render.js, renderSalon).
+     block_test_page_d.html places these pieces with style attributes; markup
+     generated into every post cannot, because a value written into every page
+     is a value the theme can never retune. So each piece the hand page styles
+     inline is a class here, with the same values — and the hand page is
+     unaffected, since its inline styles say the same thing and win anyway.
+
+     None of these set `display`, so the phone block below still hides the
+     caption and the engraved line exactly as it does on the hand page.
+
+     The selectors are written up to (0,2,0) on purpose: .hero-in and the
+     .hero-copy beat rules above are (0,1,0), and .art-plate sits later in this
+     file, so a salon piece wins on specificity rather than on where it lands. */
+  .salon-stage .block-two-col { align-items: center; gap: clamp(2.5rem, 6vw, 5rem); }
+
+  /* The gilded masthead: the warm end of the palette through the custom
+     property, never a background — see the note on .text-flow. */
+  .salon-stage .text-flow { --flow-image: var(--grad-heat); }
+
+  /* The hung portrait. The entrance is on the frame's wrapper, not the mount
+     or the plate: both carry transforms of their own, and an animation that
+     ends on `transform: none` would flatten the mount's offset. */
+  .salon-stage .salon-frame {
+    --hero-in-beat: 2;
+    position: relative;
+    width: 100%;
+    max-width: 34rem;
+    margin-inline: auto;
+  }
+  .salon-frame > .salon-mount {
+    position: absolute;
+    inset: 0;
+    transform: translate(clamp(0.6rem, 1.4vw, 1.4rem), clamp(0.6rem, 1.4vw, 1.4rem));
+  }
+  .salon-frame > .salon-plate { position: relative; height: clamp(15rem, 48vh, 28rem); margin: 0; }
+  .salon-frame > .salon-stamp {
+    position: absolute;
+    top: -1.1rem;
+    right: -1.1rem;
+    padding: 0.8rem 1.1rem;
+    text-align: center;
+  }
+  .salon-stamp > .micro { color: var(--fg-faint); }
+  .salon-stamp > .display-sm { margin-top: 0.3rem; }
+  .salon-stage .salon-plate-caption {
+    --hero-in-beat: 4;
+    margin-top: clamp(1.5rem, 3vh, 2rem);
+    text-align: center;
+    color: var(--fg-faint);
+  }
+  .salon-stage .salon-rule { --hero-in-beat: 6; }
+  .salon-rule > .hairline { flex: 1; }
+  .salon-rule > .micro { color: var(--fg-faint); text-align: center; }
+
   /* The comma is an OR, and the two arms answer different failures.
 
      Narrow is the stack: .block-two-col unwinds below 48rem and the phone gets
@@ -2608,6 +2662,75 @@
 
   @media (prefers-reduced-motion: reduce) {
     .feature-overlay-panel::after { animation: none; }
+  }
+
+  /* -- Feature overlay at the picture's own proportions -----------------------
+     What the page builder renders (render.js, renderFeature). The block above
+     gives its plate a fixed height and crops the picture to fit, which suits a
+     photograph chosen for it; a picture chosen in the editor can be any shape,
+     and a panorama cropped to 64vh loses most of itself. So this plate takes
+     its ratio from --ar, the measured width over height, the way a gallery
+     cell does, and nothing is cropped.
+
+     A ratio alone makes a portrait taller than the screen — the reason the
+     block above uses a height. So the width is the smaller of the room the
+     panel leaves and what the height cap allows at that ratio: a portrait
+     narrows rather than grows.
+
+     A narrower picture would leave a gap if the panel stayed pinned to the far
+     edge, so the two sit in a row with the panel pulled back over the picture
+     by the lap, and the pair is centred in the column. The overlap is then
+     --feature-overlay-lap whatever the picture's shape, which is the promise
+     the block above makes. The row also drops the block's own min-height and
+     padding: its height is the taller of the two pieces, and .block owns the
+     rhythm below it.
+
+     Every rule here is (0,2,0), so it wins over the block above — its phone
+     rules included — on specificity rather than on order. */
+  .feature-overlay-native {
+    --feature-plate-max-h: min(80vh, 44rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding-block: 0;
+  }
+  .feature-overlay-native .feature-overlay-visual {
+    flex: none;
+    width: min(
+      calc(100% - var(--feature-overlay-panel-w) + var(--feature-overlay-lap)),
+      calc(var(--feature-plate-max-h) * var(--ar, 1.5))
+    );
+    height: auto;
+    aspect-ratio: var(--ar, 3 / 2);
+  }
+  .feature-overlay-native .feature-overlay-panel {
+    flex: none;
+    margin-inline-start: calc(-1 * var(--feature-overlay-lap));
+  }
+
+  /* Picture on the right: the same row reversed, the panel lapping it from the
+     left. The picture stays first in the source, so the panel still paints over
+     it. */
+  .feature-overlay-native.feature-overlay-flip { flex-direction: row-reverse; }
+  .feature-overlay-flip .feature-overlay-panel {
+    margin-inline-start: 0;
+    margin-inline-end: calc(-1 * var(--feature-overlay-lap));
+  }
+
+  /* On a narrow screen the block above stacks picture and panel, the panel
+     stepping over the picture's lower edge. Same here, with the picture at its
+     own ratio and still under the height cap. */
+  @media (max-width: 60rem) {
+    .feature-overlay-native.feature-overlay-native { flex-direction: column; }
+    .feature-overlay-native .feature-overlay-visual {
+      width: min(100%, calc(var(--feature-plate-max-h) * var(--ar, 1.5)));
+    }
+    .feature-overlay-native .feature-overlay-panel,
+    .feature-overlay-flip .feature-overlay-panel {
+      width: min(94%, 30rem);
+      margin: -3rem 0 0;
+    }
   }
 
   /* Gradient border without a wrapper element. */
@@ -4180,7 +4303,32 @@
     gap: var(--gallery-gap);
     grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
   }
-  .gallery-uniform figure { aspect-ratio: 1 / 1; }
+  /* --tile-ar is the block's chosen ratio, written on the grid by the page
+     builder; a grid without it — every hand-written one — stays square. */
+  .gallery-uniform figure { aspect-ratio: var(--tile-ar, 1); }
+  /* A uniform grid with a row height (--tile-h, again from the page builder).
+     The height is the SMALLEST a cell gets, not its size: every cell has the
+     same ratio and the gap is fixed, so a row that fills the width can only be
+     as tall as the width shared among n cells allows, and the height is what
+     chooses n. This is the square grid's own mechanism with its 14rem minimum
+     replaced by height x ratio — as many cells as fit at that size, grown to
+     fill the row — so a full row always fills the width, the gap is always the
+     gap, and a cell ends up as tall as asked or a little taller (a quarter or
+     so on a wide screen, more on a phone, where one to a row is the width of
+     the column). A cell wider than a phone's column narrows to it.
+
+     A gallery with fewer pictures than a row holds would stretch those few to
+     fill it. The renderer writes the count as --tile-count, and the grid is
+     never wider than that many cells a quarter past the height plus their
+     gaps: a short gallery grows as a full row would, then stops and centres.
+     auto-fit, so the tracks nothing lands in close up and the few cells take
+     the grid's width. A partial last row stays at the row's cell size, left
+     aligned, as in every uniform grid. */
+  .gallery-uniform-sized {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--tile-h) * var(--tile-ar, 1))), 1fr));
+    max-width: calc(var(--tile-count, 1000) * (var(--tile-h) * var(--tile-ar, 1) * 1.25 + var(--gallery-gap)) - var(--gallery-gap));
+    margin-inline: auto;
+  }
   .gallery-uniform img, .gallery-uniform svg, .gallery-uniform video {
     width: 100%; height: 100%; object-fit: cover;
   }
@@ -4294,6 +4442,13 @@
     display: grid;
     place-items: center;
     padding: 2rem;
+    /* One track exactly the tile's inner box, so the artwork's height: 100%
+       below has something definite to be a percentage of. Without it the row
+       was sized by the artwork, which is as tall as it is wide: right in a
+       square tile, and spilling out of a 3:2 or 16:9 one. min-height: 0 stops
+       aspect-ratio growing the tile to fit its content instead. */
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-height: 0;
   }
   /* The project SVGs are sized in percentages, so they have no intrinsic
      height to lay out against — the tile's own square gives them one. */
@@ -4501,6 +4656,100 @@
     .block-two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.5rem; }
   }
 
+  /* -- Blocks rendered from a post's JSON -------------------------------------
+     eleventy_binary/lib/blocks/render.js emits every block as
+     <section class="shell block block-<type>">. The vertical rhythm the
+     hand-written library carries as an inline style on every block — pad the
+     BOTTOM only, never the top, so the gap above a block is always the previous
+     block's bottom padding — is this one rule, so the theme owns it.
+
+     The heading block is the documented exception: it pads its top, because it
+     is the first thing after a hero, and closes tight because the block under
+     it is what it is a heading for. The full-width blocks are the other one;
+     see .block-bleed below. */
+  .block { padding-bottom: clamp(3rem, 8vh, 4.5rem); }
+  .block-heading { padding-top: clamp(3rem, 8vh, 4.5rem); padding-bottom: 1rem; }
+  .block-heading .display-md { margin-top: 0.9rem; }
+  .block-heading .rule-grad { margin-top: 1.75rem; }
+
+  /* An optional masthead above a block's content, and the gap under it. */
+  .block-lede { margin-top: 0.9rem; font-size: var(--step--1); }
+  .block-title + .block-body,
+  .block-lede + .block-body { margin-top: 2rem; }
+
+  /* Questions read badly at the full shell width; the library caps them too. */
+  .block-faq { max-width: min(var(--shell-max), 60rem); }
+
+  /* The caption under a video or audio block: the mono micro face, but in
+     mixed case and muted, which is what the library set inline. */
+  .block-caption { letter-spacing: 0.08em; text-transform: none; color: var(--fg-muted); }
+
+  /* Full-width blocks: the field notes and the wash, rendered as
+     <section class="block-bleed block-<type> photo-stage photo-stage-adaptive">
+     with a .shell inside. Not .block: the band's photograph fills its padding,
+     so it pads both ends, and the page's rhythm below it is a margin. The
+     values are the ones the hand-written sections in block_test_page.html
+     carry inline. Colours are .photo-stage-adaptive's, in section L. */
+  .block-bleed { padding-block: clamp(4rem, 12vh, 7rem); margin-bottom: clamp(3rem, 8vh, 4.5rem); }
+  .block-stage_wash { padding-block: clamp(4rem, 14vh, 8rem); }
+  .bleed-shell { position: relative; }
+  .eyebrow + .bleed-title { margin-top: 0.9rem; }
+  .block-stage_wash .eyebrow + .bleed-title { margin-top: 1.25rem; }
+  .bleed-body { margin-top: clamp(2.5rem, 7vh, 4rem); }
+  /* align-items: start, or the grid stretches the quote to the tiles' height. */
+  .bleed-pair { align-items: start; }
+  .bleed-quote {
+    font-size: var(--step-1);
+    line-height: 1.5;
+    border-left: var(--hairline-width) solid;
+    padding-left: 1.5rem;
+    max-width: 44ch;
+  }
+  /* A tile grid's columns, the wash's and the tile grid block's alike: at most
+     --cols tiles to a row, fewer where a tile would be narrower than
+     --tile-min, one on a phone, and a row of fewer tiles than --cols spreads
+     across the grid. Both are data about the page, written on the grid by the
+     renderer — the tile grid works --cols out from its text, see measure.js.
+     A track is the larger of --tile-min and a --cols-th of the grid, less a
+     pixel so that --cols of them fit and one more does not. auto-fit, never
+     auto-fill: .stat-grid's outer rules need the first row full. */
+  .stat-grid-fit {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(var(--tile-min, 13rem), calc(100% / var(--cols, 3) - 1px))), 1fr));
+  }
+  /* The tile grid block: block_test_page.html's "Extended readout", its
+     inline styles as classes. measure.js keeps a heading's longest word on
+     one line, but a word longer than a tile breaks rather than cross the
+     hairline. */
+  .block-tile_grid .eyebrow + .block-title { margin-top: 1.25rem; }
+  .tile-grid .tile-label { color: var(--fg-faint); }
+  .tile-grid .tile-title { margin-top: 0.55rem; overflow-wrap: anywhere; }
+  .tile-grid .tile-text { margin-top: 0.55rem; font-size: var(--step--1); color: var(--fg-muted); }
+  /* Three tiles beside a quote need more than half the row: the quote, capped
+     at 44ch anyway, gives up a fifth. Two columns only from 48rem, as
+     .block-two-col itself, so a phone still stacks. */
+  @media (min-width: 48rem) {
+    .bleed-pair-wide { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+  }
+  .stat-tile-text { font-size: var(--step--1); }
+  .stat-grid > * > * + .stat-tile-text { margin-top: 0.5rem; }
+  .note-card { padding: clamp(1.5rem, 3vw, 2.25rem); }
+  .note-card h3 { margin-top: 0.9rem; font-size: var(--step-1); }
+  .note-text { margin-top: 0.9rem; font-size: var(--step--1); }
+
+  /* The download block's head row: name on the left, the pill on the right. */
+  .download-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
+  .download-head .display-sm { margin-top: 0.5rem; }
+  .download-note { margin-top: 1rem; color: var(--fg-muted); }
+
+  /* The feature block: a 3:4 plate beside a glass panel, centred on each other. */
+  .feature-row { align-items: center; gap: 3rem; }
+  .feature-plate { aspect-ratio: 3 / 4; }
+  .feature-panel { padding: clamp(1.75rem, 4vw, 3rem); }
+  .feature-panel .display-md { margin-top: 1rem; }
+  .feature-panel .feature-text { margin-top: 1.5rem; max-width: 46ch; }
+  .feature-panel .feature-text > * + * { margin-top: 1em; }
+  .feature-panel .feature-action { margin-top: 1.75rem; }
+
   /* -- Text beside media ------------------------------------------------------
      .block-two-col splits 50/50, which is right for two columns of prose and
      wrong for prose beside a video: a 16:9 frame at half the shell is small,
@@ -4574,6 +4823,19 @@
     padding: clamp(1.25rem, 2.5vw, 1.75rem);
   }
   .collage-stamp { padding: 0.9rem 1.1rem; }
+
+  /* The collage as the page builder renders it (render.js, renderCollage): the
+     pieces block_test_page_c.html styles inline, as classes, for the reason
+     given at the salon — a value generated into every post has to be one the
+     theme can reach. Same values; the hand page's inline styles say the same
+     and still win. The ruler's segment lengths stay inline in the generated
+     markup too, because they are data about the page, not design. */
+  .collage-block .collage-count { font-size: clamp(2.4rem, 4vw, 3.6rem); }
+  .collage-block .collage-note { margin-top: 0.6rem; font-size: var(--step--1); }
+  .collage-stamp > .collage-stamp-label { color: var(--fg-muted); }
+  .collage-stamp > .collage-stamp-value { margin-top: 0.35rem; }
+  .collage-stamp > .collage-stamp-sub { margin-top: 0.5rem; color: var(--fg-faint); }
+  .collage-rule > .micro { color: var(--fg-faint); white-space: nowrap; }
 
   /* The shell that holds a collage. Named rather than found with :has(), so
      the mobile block below can unset the positioning and the desktop block
@@ -5226,6 +5488,15 @@
     .panel-field > *:nth-child(1) { grid-column: 1 / 6; }
     .panel-field > *:nth-child(2) { grid-column: 7 / 12; margin-top: clamp(2rem, 7vh, 5rem); }
     .panel-field > *:nth-child(3) { grid-column: 3 / 9; }
+    /* Four and five notes. The last two become a second staggered pair, one
+       column to the right of the first, so the field reads as more notes
+       pinned to the picture rather than as a grid. Counted from both ends
+       (the third of four, the fourth of five), so it needs no class and a
+       hand-written field gets it too; one to three are the rules above. */
+    .panel-field > :nth-child(3):nth-last-child(2),
+    .panel-field > :nth-child(4):nth-last-child(2) { grid-column: 2 / 7; }
+    .panel-field > :nth-child(4):nth-last-child(1),
+    .panel-field > :nth-child(5):nth-last-child(1) { grid-column: 8 / 13; margin-top: clamp(2rem, 7vh, 5rem); }
   }
   /* Same correction .feature-overlay-panel makes, for the same reason.
      .glass-card's near-transparent white is tuned for a panel on a dark ground;
