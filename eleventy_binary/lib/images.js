@@ -17,17 +17,11 @@ import { initCodecs, decodeJpeg, encodeJpeg, decodePng, resize } from "./codecs.
 import { isRaster, isDecodable, isMinName, minFileName, extensionOf } from "./paths.js";
 import { readImageHeader } from "./imagesize.js";
 import { walkFiles } from "./slugs.js";
+import { encodeThumbnail as encodeLadder, orientImage, MAX_THUMBNAIL_BYTES } from "./thumbnail.js";
+import { readExif } from "./exif.js";
 
-/**
- * Edge ladder. A thumbnail never needs more than the first value; the smaller
- * ones are fallbacks for images that will not fit the byte budget at full size.
- * 1280 matches the hand-made counterparts already in this repository.
- */
-const EDGE_STEPS = [1600, 1280, 1024, 800];
 /** Hard ceiling from page_builder_app.md: no thumbnail over 80 kB. */
-const MAX_BYTES = 80_000;
-/** Quality ladder, walked down at each edge size. */
-const QUALITY_STEPS = [72, 62, 54, 46, 38];
+const MAX_BYTES = MAX_THUMBNAIL_BYTES;
 /**
  * How much newer a source has to be before its counterpart is worth mentioning.
  *
@@ -106,66 +100,14 @@ async function decodeAny(buffer, file) {
   return null;
 }
 
-async function scaleToEdge(image, edge) {
-  const longest = Math.max(image.width, image.height);
-  if (longest <= edge) return image;
-  const factor = edge / longest;
-  return resize(image, {
-    width: Math.max(1, Math.round(image.width * factor)),
-    height: Math.max(1, Math.round(image.height * factor)),
-  });
-}
-
 /**
- * Encode one thumbnail inside the 80 kB budget.
- *
- * Walks quality down at each size, then drops to the next size if quality alone
- * cannot get there. A detailed photograph will not reach 80 kB at 1600px no
- * matter how far the quality falls, and shipping an oversized thumbnail defeats
- * the point of having one — so dimensions give way before the budget does.
- *
- * Returns the smallest attempt if even the last combination overshoots, and
- * reports what it settled on so the caller can say so.
+ * Encode one thumbnail inside the 80 kB budget — the ladder in thumbnail.js,
+ * with this module's codecs. The pixels are first turned the way the EXIF
+ * orientation says, because a thumbnail carries no orientation tag of its own
+ * and was shipping sideways for every photograph a phone stored rotated.
  */
-async function encodeThumbnail(image) {
-  const options = {
-    // MozJpeg settings from page_builder_app.md.
-    color_space: 3,        // YCbCr
-    chroma_subsample: 2,   // auto 4:2:0
-    smoothing: 30,
-    quant_table: 3,        // ImageMagick table
-    progressive: true,
-    optimize_coding: true,
-  };
-
-  let smallest = null;
-  let lastLongestEdge = null;
-
-  for (const edge of EDGE_STEPS) {
-    const source = await scaleToEdge(image, edge);
-    const longest = Math.max(source.width, source.height);
-
-    // scaleToEdge never enlarges, so every ladder step at or above the source's
-    // own size yields the same pixels. Re-encoding those is pure waste: an
-    // image 1280px on its longest edge used to walk the entire quality ladder
-    // twice, once for the 1600 step and again for the identical 1280 one.
-    if (longest === lastLongestEdge) continue;
-    lastLongestEdge = longest;
-
-    for (const quality of QUALITY_STEPS) {
-      const encoded = await encodeJpeg(source, { ...options, quality });
-      const attempt = {
-        bytes: encoded,
-        quality,
-        width: source.width,
-        height: source.height,
-      };
-      if (!smallest || encoded.byteLength < smallest.bytes.byteLength) smallest = attempt;
-      if (encoded.byteLength <= MAX_BYTES) return attempt;
-    }
-  }
-
-  return smallest;
+async function encodeThumbnail(image, orientation) {
+  return encodeLadder(orientImage(image, orientation), { encodeJpeg, resize });
 }
 
 /**
@@ -280,7 +222,8 @@ export async function mirrorDirectory(sourceDir, targetDir, { label, sourceLabel
     }
 
     try {
-      const image = await decodeAny(fs.readFileSync(sourcePath), relative);
+      const sourceBytes = fs.readFileSync(sourcePath);
+      const image = await decodeAny(sourceBytes, relative);
       if (!image) {
         report.skipped.push(sourcePath);
         // A note, not a warning. This is not a fault in the file — the format
@@ -296,7 +239,7 @@ export async function mirrorDirectory(sourceDir, targetDir, { label, sourceLabel
         continue;
       }
 
-      const encoded = await encodeThumbnail(image);
+      const encoded = await encodeThumbnail(image, readExif(sourceBytes).orientation);
       if (!encoded) throw new Error("the encoder produced no output at any size or quality");
 
       const { bytes, quality, width, height } = encoded;

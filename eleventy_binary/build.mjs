@@ -26,8 +26,9 @@ import { loadSettings } from "./lib/settings.js";
 import { getRegistry, walkFiles, normaliseKey, publishedPathForSource } from "./lib/slugs.js";
 import { createConfig } from "./lib/eleventy_config.js";
 import { generateMissingThumbnails } from "./lib/images.js";
-import { runStatusCheck, writeStatusPage } from "./lib/status_check.js";
+import { runStatusCheck, writeStatusPage, statusReport } from "./lib/status_check.js";
 import { fillDownloadHashes } from "./lib/downloads.js";
+import { validatePost, verdict } from "./lib/blocks/validate.js";
 
 const HELP = `
 site_generate — build the static site.
@@ -42,6 +43,14 @@ site_generate — build the static site.
                 staged build is kept, report included, so it can be inspected.
   --check-only  do not build; just inspect the existing _site and rewrite
                 _site/status_check.html. This is what status_check.sh runs.
+  --check-post <folder>
+                validate one page-builder document (input_custom_post/<folder>)
+                against the files in its folder, print the findings as JSON,
+                and exit non-zero on errors. No build.
+  --json        print the status report as JSON on the last line of output.
+                The same report is always written to _site/status_check.json.
+  --edit        start the page builder on http://127.0.0.1:8484 (or --port N)
+                and keep running until interrupted. No build until asked for.
   --quiet       suppress notes; warnings and errors are always shown
   --help        show this message
 
@@ -49,18 +58,60 @@ Run it from the project root — the folder holding site_settings.json.
 `;
 
 function parseArgs(argv) {
-  const flags = new Set(argv.slice(2));
+  const args = argv.slice(2);
+  const flags = new Set(args);
   if (flags.has("--help") || flags.has("-h")) {
     console.log(HELP.trim());
     process.exit(0);
   }
+  const valueOf = (name) => {
+    const at = args.indexOf(name);
+    return at >= 0 ? args[at + 1] ?? "" : null;
+  };
   return {
     includeDrafts: flags.has("--drafts"),
     css: !flags.has("--no-css"),
     checkOnly: flags.has("--check-only"),
+    checkPost: valueOf("--check-post"),
+    json: flags.has("--json"),
+    edit: flags.has("--edit"),
+    port: Number(valueOf("--port") ?? 8484),
     strict: flags.has("--strict"),
     quiet: flags.has("--quiet"),
   };
+}
+
+/**
+ * --check-post: one page-builder document, judged the way the editor judges
+ * it. Prints findings as JSON so a script can read them, and a one-line
+ * verdict on stderr so a person can.
+ */
+function checkPost(root, folder) {
+  const name = String(folder ?? "").replace(/^input_custom_post[\\/]/, "").replace(/[\\/]+$/, "");
+  if (!name) {
+    console.error("--check-post needs a folder name: --check-post post_i");
+    process.exit(2);
+  }
+  const dir = path.join(root, "input_custom_post", name);
+  const file = path.join(dir, `${name}.json`);
+  if (!fs.existsSync(file)) {
+    console.error(`no such document: input_custom_post/${name}/${name}.json`);
+    process.exit(2);
+  }
+
+  let findings;
+  try {
+    const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+    const assets = walkFiles(dir).filter((relative) => relative !== `${name}.json`);
+    findings = validatePost(doc, { assets });
+  } catch (error) {
+    findings = [{ level: "error", path: "", message: "not valid JSON", detail: error.message }];
+  }
+
+  const result = { folder: name, verdict: verdict(findings), findings };
+  console.log(JSON.stringify(result, null, 2));
+  console.error(`${name}: ${result.verdict}, ${findings.length} finding(s)`);
+  process.exit(result.verdict === "error" ? 1 : 0);
 }
 
 /** The Tailwind standalone binary for this platform, if it is present. */
@@ -412,6 +463,16 @@ async function main() {
     process.exit(1);
   }
 
+  if (options.checkPost !== null) checkPost(root, options.checkPost);
+
+  if (options.edit) {
+    // Loaded here rather than at the top: the server pulls in the editor page
+    // and every API module, none of which a build needs.
+    const { startEditor } = await import("./lib/editor/server.js");
+    await startEditor({ root, port: options.port });
+    return; // the server keeps the process alive
+  }
+
   const started = Date.now();
   const settings = loadSettings(root);
   const outputDir = path.join(root, "_site");
@@ -437,6 +498,7 @@ async function main() {
         ? "Report: _site/status_check.html\n"
         : "Report NOT written — /status_check.html belongs to another page.\n",
     );
+    if (options.json) console.log(JSON.stringify(statusReport({ status: report, images: empty })));
     process.exit(counts.errors > 0 ? 1 : 0);
   }
 
@@ -543,6 +605,7 @@ async function main() {
       ? "Report: _site/status_check.html\n"
       : "Report NOT written — /status_check.html belongs to another page.\n",
   );
+  if (options.json) console.log(JSON.stringify(statusReport({ status, images })));
 
   // A warning is information, not a failure; only a hard error fails the build,
   // so a CI job can treat a non-zero exit as "the site did not build".

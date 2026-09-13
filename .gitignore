@@ -26,3 +26,6 @@ Thumbs.db
 # Tailwind
 tailwindcss-linux-x64
 tailwindcss-windows-x64.exe
+# The page builder keeps a copy of every replaced document beside it. They are
+# the author's own history, not content, and the build never reads them.
+input_custom_post/*/.revisions/
