@@ -196,20 +196,22 @@ function picture(img, ctx, gallery, { loading = "lazy" } = {}) {
  * The hero's title: `.hero-break` between lines, so a short screen can drop
  * the break.
  */
-function heroTitle(title, accent) {
-  return titleLines(title, accent, ' <br class="hero-break">');
+function heroTitle(title, accent, alternate) {
+  return titleLines(title, accent, ' <br class="hero-break">', alternate);
 }
 
 /**
  * A title, line by line, joined by `br`, with the accent phrase set in the
- * gradient.
+ * gradient — or, with `alternate`, every other word in place of the accent.
  *
  * `.text-flow` on a span INSIDE the heading, the way every hero in the library
  * does it. The accent is matched once, on the first line that holds it, and
  * escaped in three pieces so the span never lands inside an entity.
+ * validate.js matches it the same way, so its warning is exactly this miss.
  */
-function titleLines(title, accent, br) {
+function titleLines(title, accent, br, alternate = false) {
   const lines = String(title ?? "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (alternate === true) return alternateWords(lines).join(br);
   const phrase = text(accent);
   let done = false;
 
@@ -225,6 +227,35 @@ function titleLines(title, accent, br) {
       );
     })
     .join(br);
+}
+
+/** The spaces between words: any white space but the no-break kinds. */
+const WORD_GAP = /([^\S   ]+)/;
+const WORDLIKE = /[\p{L}\p{N}]/u;
+
+/**
+ * Every other word of a title in the gradient, starting with the first, so
+ * the toggle shows even on a one-word title. The count runs on across line
+ * breaks: where a short screen drops a .hero-break, the joined line still
+ * alternates.
+ *
+ * A word is a run between spaces, punctuation and all; a no-break space ties
+ * two words into one, as it does in the line. A run with no letter or digit —
+ * a dash, an ampersand — is not a word: it stays in ink and takes no turn.
+ * Split before escaping, so no span lands inside an entity.
+ */
+function alternateWords(lines) {
+  let turn = 0;
+  return lines.map((line) =>
+    line
+      .split(WORD_GAP)
+      .map((part, i) => {
+        // Odd pieces are the gaps the split kept.
+        if (i % 2 === 1 || !WORDLIKE.test(part)) return esc(part);
+        return turn++ % 2 === 0 ? `<span class="text-flow">${esc(part)}</span>` : esc(part);
+      })
+      .join(""),
+  );
 }
 
 /**
@@ -261,7 +292,7 @@ function heroCopy(block, indent) {
     .join(`\n${pad}  `);
   return (
     (text(block.eyebrow) ? `${pad}<p class="eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
-    `${pad}<h1 class="display">${heroTitle(block.title, block.accent)}</h1>\n` +
+    `${pad}<h1 class="display">${heroTitle(block.title, block.accent, block.alternate)}</h1>\n` +
     (text(block.lede) ? `${pad}<p class="lede">${esc(text(block.lede))}</p>\n` : "") +
     (actions ? `${pad}<div class="hero-actions">\n${pad}  ${actions}\n${pad}</div>\n` : "")
   );
@@ -694,7 +725,7 @@ function records(block, name) {
 function bleedHead(block, size) {
   return (
     (text(block.eyebrow) ? `<p class="eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
-    `<h2 class="${size} bleed-title">${titleLines(block.title, block.accent, "<br>")}</h2>\n`
+    `<h2 class="${size} bleed-title">${titleLines(block.title, block.accent, "<br>", block.alternate)}</h2>\n`
   );
 }
 

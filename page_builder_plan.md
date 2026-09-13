@@ -618,3 +618,27 @@ The wash's `.stat-grid-cols-2` and `-3` are replaced by the same rule with
 - Numbers are the renderer's, as on the field notes: "01 · Ground".
 
 `post_blocks.json` gains a 4:5 gallery at 16rem beside the square one.
+
+## Alternating words, and the accent judged as it is drawn
+
+The hero and the wash can set every other word of the title in the gradient
+instead of one accent phrase: `alternate`, a checkbox, off by default.
+
+- It starts on the first word, so the box shows even on a one-word title.
+- The count runs on across line breaks: where a short screen drops a
+  `.hero-break`, the joined line still alternates.
+- A word is a run between spaces, punctuation and all. A no-break space ties
+  two words into one. A run with no letter or digit — a dash, an ampersand —
+  stays in ink and takes no turn.
+- It takes the place of the accent. An accent left filled in is a note, not a
+  warning, and is still there when the box is unticked.
+- Each word is a `.text-flow` span of its own, so the reduced-motion and
+  no-background-clip fallbacks, the adaptive panels' ink and the salon's
+  gilding all apply as they are. No CSS was added. Each word carries its own
+  copy of the gradient, sized to the word.
+- Only `true` turns it on. Off, the markup is what it was, byte for byte.
+
+The validator now matches the accent the way `titleLines` does — trimmed,
+within one line of the title. It used to compare the untrimmed accent with the
+whole title, so `" in layers"` warned although the page highlighted it, and an
+accent spanning a line break passed although nothing was highlighted.

@@ -190,6 +190,22 @@ describe("renderPost", () => {
     expect(html).toContain("hero-scroll-cue");
   });
 
+  test("alternating words sets every other word in the gradient, across the break, in place of the accent", () => {
+    const hero = (extra) => render([{ type: "hero", title: "Galdhøpiggen,\nin layers", accent: "layers", ...extra }]).html;
+    expect(hero({ alternate: true })).toContain('<h1 class="display"><span class="text-flow">Galdhøpiggen,</span> <br class="hero-break">in <span class="text-flow">layers</span></h1>');
+    // Off, or anything but true, is the accent exactly as before.
+    expect(hero({ alternate: false })).toBe(hero({}));
+    expect(hero({ alternate: "yes" })).toBe(hero({}));
+  });
+
+  test("an alternating title skips a dash, keeps words tied by a no-break space, and escapes each word", () => {
+    const h1 = (title) => render([{ type: "hero", title, alternate: true }]).html.match(/<h1 class="display">(.*)<\/h1>/)[1];
+    expect(h1("Rome — in winter")).toBe('<span class="text-flow">Rome</span> — in <span class="text-flow">winter</span>');
+    expect(h1("in layers of ice")).toBe('<span class="text-flow">in layers</span> of <span class="text-flow">ice</span>');
+    expect(h1("<Fish> & chips")).toBe('<span class="text-flow">&lt;Fish&gt;</span> &amp; chips');
+    expect(h1("One")).toBe('<span class="text-flow">One</span>');
+  });
+
   test("a photograph hero loads the original eagerly with its size", () => {
     const { html } = render([{ type: "hero", variant: "photo", title: "x", image: { src: "photo.jpg", alt: "A" } }]);
     expect(html).toContain('class="hero-stage hero-stage-photo"');
@@ -584,6 +600,24 @@ describe("full-width blocks", () => {
   test("an accent missing from a band's heading is a warning, as on the hero", () => {
     const findings = validatePost(doc([{ type: "stage_wash", title: "Fog", accent: "mist", image: ground, tiles: tiles(1) }]));
     expect(findings.some((f) => f.level === "warn" && f.path === "blocks[0].accent")).toBe(true);
+  });
+
+  test("the accent is judged as the renderer matches it: trimmed, and within one line", () => {
+    const accentFindings = (title, accent, extra = {}) =>
+      validatePost(doc([{ type: "hero", title, accent, ...extra }])).filter((f) => f.path === "blocks[0].accent");
+    // A stray space is trimmed by the renderer, which still highlights.
+    expect(accentFindings("Galdhøpiggen,\nin layers", " in layers ")).toEqual([]);
+    // Across a line break the renderer finds nothing, so that is the warning.
+    expect(accentFindings("Galdhøpiggen,\nin layers", "Galdhøpiggen,\nin").map((f) => f.level)).toEqual(["warn"]);
+    // With alternating words on, the accent is set aside, and a note says so.
+    expect(accentFindings("Galdhøpiggen", "missing", { alternate: true }).map((f) => f.level)).toEqual(["note"]);
+  });
+
+  test("a band alternates its heading's words the way the hero does", () => {
+    const html = render([{ type: "stage_wash", title: "Fog is a\nblend mode", accent: "blend mode", alternate: true, image: ground, tiles: tiles(1) }]).html;
+    expect(html).toContain('<h2 class="display bleed-title"><span class="text-flow">Fog</span> is <span class="text-flow">a</span><br>blend <span class="text-flow">mode</span></h2>');
+    const findings = validatePost(doc([{ type: "stage_wash", title: "x", alternate: "yes", image: ground, tiles: tiles(1) }]));
+    expect(findings.find((f) => f.path === "blocks[0].alternate").level).toBe("warn");
   });
 
   test("a band is refused in a column, and carries its path for the canvas", () => {

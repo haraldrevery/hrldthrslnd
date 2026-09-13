@@ -117,7 +117,14 @@ export const BLOCKS = [
         name: "accent",
         label: "Accent word",
         kind: "text",
-        help: "A word or phrase from the title to set in the chroma gradient. Must appear in the title exactly.",
+        help: "A word or phrase from the title to set in the chroma gradient. Must appear in the title exactly, on one line.",
+      },
+      {
+        name: "alternate",
+        label: "Alternate words",
+        kind: "boolean",
+        default: false,
+        help: "Set every other word of the title in the chroma gradient, starting with the first. Takes the place of the accent word.",
       },
       { name: "lede", label: "Lede", kind: "textarea" },
       {
@@ -359,7 +366,14 @@ export const BLOCKS = [
         name: "accent",
         label: "Accent word",
         kind: "text",
-        help: "A word or phrase from the heading to set in the chroma gradient. Must appear in the heading exactly.",
+        help: "A word or phrase from the heading to set in the chroma gradient. Must appear in the heading exactly, on one line.",
+      },
+      {
+        name: "alternate",
+        label: "Alternate words",
+        kind: "boolean",
+        default: false,
+        help: "Set every other word of the heading in the chroma gradient, starting with the first. Takes the place of the accent word.",
       },
       {
         name: "image",

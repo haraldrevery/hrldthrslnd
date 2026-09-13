@@ -359,9 +359,16 @@ function validateBlock(block, path, { error, warn, note }) {
   if (spec.type === "hero" && variant === "collage" && !(block.image_2 && String(block.image_2.src ?? "").trim())) {
     warn(`${path}.image_2`, "the collage has no second picture", "the landscape corner at the top right stays empty");
   }
-  // Any block with an accent field: the hero and the wash.
-  if (spec.fields.some((f) => f.name === "accent") && block.accent && typeof block.title === "string" && !block.title.includes(block.accent)) {
-    warn(`${path}.accent`, `the accent "${block.accent}" does not appear in the title`, "nothing is highlighted");
+  // Any block with an accent field: the hero and the wash. Matched the way
+  // render.js's titleLines matches it — trimmed, within one line of the title
+  // — so the warning fires exactly when the page highlights nothing.
+  const accent = String(block.accent ?? "").trim();
+  if (spec.fields.some((f) => f.name === "accent") && accent) {
+    if (block.alternate === true) {
+      note(`${path}.accent`, "the accent is not used while alternating words is on", "every other word is set in the gradient instead");
+    } else if (typeof block.title === "string" && !block.title.split(/\r?\n/).some((line) => line.includes(accent))) {
+      warn(`${path}.accent`, `the accent "${accent}" does not appear in the title`, "nothing is highlighted");
+    }
   }
 
   return spec;

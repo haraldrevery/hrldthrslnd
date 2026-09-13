@@ -15,9 +15,9 @@
   "blocks": [
     {
       "type": "hero",
-      "variant": "stage",
+      "variant": "collage",
       "eyebrow": "Reference — 02",
-      "title": "Block\ntest\npost",
+      "title": "Block\ntest",
       "accent": "test",
       "lede": "Every block type the builder knows, rendered from JSON by the build. If a block renders wrong, it is visible here.",
       "actions": [
@@ -30,7 +30,20 @@
           "href": "/blog.html"
         }
       ],
-      "scroll_cue": true
+      "scroll_cue": true,
+      "image": {
+        "src": "/gif/haraldrevery11techbw.gif",
+        "alt": "",
+        "title": "",
+        "caption": ""
+      },
+      "image_2": {
+        "src": "/image/2018augusti10stranden.jpg",
+        "alt": "",
+        "title": "",
+        "caption": ""
+      },
+      "alternate": false
     },
     {
       "type": "heading",
