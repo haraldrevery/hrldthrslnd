@@ -8,9 +8,11 @@
  *
  * Every block is a `<section class="shell block block-<type>">`. The vertical
  * rhythm — a block pads its bottom and never its top — is the `.block` class in
- * css/input.css rather than an inline style, so the theme owns it. The one
- * exception is the hero, which is not a block in that sense: it owns the
- * viewport, sits first, and carries the page's h1.
+ * css/input.css rather than an inline style, so the theme owns it. Two kinds
+ * of exception: the hero, which is not a block in that sense — it owns the
+ * viewport, sits first, and carries the page's h1 — and the blocks the
+ * catalogue marks `bleed`, which run the full width of the page as a photo
+ * stage (see renderBleed).
  *
  * Pure string work over a resolver (see resolver.js), so this runs identically
  * inside the build and inside the editor's preview. Nothing here touches the
@@ -21,6 +23,7 @@ import { pictureHtml, playerTag, posterFor, imageTag, lightboxLink, lightboxable
 import { mergeSubjects } from "../subjects.js";
 import { BY_TYPE, variantOf } from "./catalogue.js";
 import { isFolderRef, isSafeFolderRef, assetRefs } from "./validate.js";
+import { cssLength, parseRatio } from "./units.js";
 
 const esc = escapeHtml;
 
@@ -52,12 +55,6 @@ function choice(spec, block, name) {
 
 const text = (value) => String(value ?? "").trim();
 const list = (value) => (Array.isArray(value) ? value : []);
-
-/** A CSS length an author typed, or the fallback. Kept narrow on purpose. */
-function cssLength(value, fallback) {
-  const v = text(value);
-  return /^\d*\.?\d+(rem|em|px|%|vw|vh|ch)$/.test(v) ? v : fallback;
-}
 
 /**
  * Render a whole post.
@@ -109,9 +106,41 @@ function renderTop(block, path, ctx) {
     return "";
   }
   if (spec.type === "hero") return renderHero(block, path, ctx);
+  if (spec.bleed) return renderBleed(block, spec, path, ctx);
 
   const inner = renderInner(block, path, ctx);
   return `<section class="shell block block-${spec.type}"${ctx.mark(path, spec.type)}>\n${inner}\n</section>`;
+}
+
+/**
+ * A block that runs the full width of the page: a .photo-stage-adaptive band
+ * with the block's picture as its ground, and a .shell inside it that holds
+ * the type to the column — the shape of the hand-written "Wash" and "Field
+ * notes" sections in block_test_page.html.
+ *
+ * Not `.shell block`: .shell would cap the band at the column's width, and
+ * .block pads the bottom only, which on a band is photograph. .block-bleed pads
+ * both ends and keeps the page's rhythm below as a margin instead.
+ *
+ * The ground is the ORIGINAL, as it is in the hand-written sections: a band is
+ * the widest surface on the page after the hero, past what a _min counterpart
+ * covers. Lazy, because it is below the fold by definition. Empty alt, because
+ * everything it shows is said in the text over it.
+ */
+function renderBleed(block, spec, path, ctx) {
+  let ground = "";
+  if (block.image?.src) {
+    const url = assetUrl(block.image.src, ctx.slug);
+    const size = ctx.resolver.imageSize(url);
+    if (!size) ctx.warn(`${path}.image`, `could not measure "${block.image.src}"`, "the background ships without width and height");
+    ground = `  <div class="stage-media">${imageTag(url, "", "", size, { loading: "lazy" })}</div>\n`;
+  }
+  return (
+    `<section class="block-bleed block-${spec.type} photo-stage photo-stage-adaptive"${ctx.mark(path, spec.type)}>\n` +
+    ground +
+    `  <div class="shell bleed-shell">\n${renderInner(block, path, ctx)}\n  </div>\n` +
+    `</section>`
+  );
 }
 
 /** The inside of a block, which is also what a column holds. */
@@ -125,6 +154,8 @@ function renderInner(block, path, ctx) {
     case "download": return renderDownload(block, ctx);
     case "faq": return renderFaq(block, ctx);
     case "feature": return renderFeature(block, path, ctx);
+    case "stage_notes": return renderStageNotes(block);
+    case "stage_wash": return renderStageWash(block);
     case "raw_html": return String(block.html ?? "");
     case "columns": return renderColumns(block, path, ctx);
     default:
@@ -160,14 +191,22 @@ function picture(img, ctx, gallery, { loading = "lazy" } = {}) {
 /* ------------------------------------------------------------------ hero */
 
 /**
- * The title, line by line, with the accent phrase set in the gradient.
- *
- * `.text-flow` on a span INSIDE the h1, the way every hero in the library does
- * it, and `.hero-break` between lines so a short screen can drop the break.
- * The accent is matched once, on the first line that holds it, and escaped in
- * three pieces so the span never lands inside an entity.
+ * The hero's title: `.hero-break` between lines, so a short screen can drop
+ * the break.
  */
 function heroTitle(title, accent) {
+  return titleLines(title, accent, ' <br class="hero-break">');
+}
+
+/**
+ * A title, line by line, joined by `br`, with the accent phrase set in the
+ * gradient.
+ *
+ * `.text-flow` on a span INSIDE the heading, the way every hero in the library
+ * does it. The accent is matched once, on the first line that holds it, and
+ * escaped in three pieces so the span never lands inside an entity.
+ */
+function titleLines(title, accent, br) {
   const lines = String(title ?? "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const phrase = text(accent);
   let done = false;
@@ -183,7 +222,7 @@ function heroTitle(title, accent) {
         esc(line.slice(at + phrase.length))
       );
     })
-    .join(' <br class="hero-break">');
+    .join(br);
 }
 
 /**
@@ -295,7 +334,8 @@ function pageFacts(ctx) {
   const doc = ctx.doc ?? {};
   const meta = doc.meta ?? {};
   const sections = list(doc.blocks).filter((b) => b && BY_TYPE.has(b.type) && !BY_TYPE.get(b.type).hero);
-  const plates = assetRefs(doc).filter((ref) => ref.path !== "meta.image" && mediaKind(assetUrl(ref.src, ctx.slug)) === "image").length;
+  // A band's ground is not one of the page's pictures; see `decorative`.
+  const plates = assetRefs(doc).filter((ref) => ref.path !== "meta.image" && !ref.decorative && mediaKind(assetUrl(ref.src, ctx.slug)) === "image").length;
   const parts = DATE_PARTS.exec(text(meta.date));
   const date = parts ? { year: Number(parts[1]), month: Number(parts[2]), day: Number(parts[3]) } : null;
   const [subject = ""] = mergeSubjects(meta.tags, meta.category);
@@ -472,7 +512,20 @@ function renderText(block, ctx) {
 function renderGallery(block, path, ctx) {
   const spec = BY_TYPE.get("gallery");
   const layout = choice(spec, block, "layout");
-  const gap = cssLength(block.gap, "0.75rem");
+  const gap = cssLength(block.gap) ?? "0.75rem";
+  // The uniform grid's ratio and height, as custom properties on the grid;
+  // css/input.css reads them, and a grid without them is the square one.
+  // Unreadable values are left out, and the validator has said why.
+  const style = [`--gallery-gap:${gap}`];
+  let sized = false;
+  if (layout === "uniform") {
+    const ratio = parseRatio(block.ratio);
+    if (ratio !== null) style.push(`--tile-ar:${+ratio.toFixed(4)}`);
+    // The height is a minimum and the rows fill the width; the count lets the
+    // stylesheet stop a gallery shorter than a row from stretching to fill it.
+    const height = cssLength(block.height, { percent: false, positive: true });
+    if (height) { style.push(`--tile-h:${height}`, `--tile-count:${list(block.images).length}`); sized = true; }
+  }
   ctx.galleries += 1;
   const group = `gallery-${ctx.galleries}`;
 
@@ -508,7 +561,7 @@ function renderGallery(block, path, ctx) {
     return `<figure class="art-plate fill"${ratio ? ` style="--ar:${ratio}"` : ""}${at}>${p.html}</figure>`;
   });
 
-  const grid = `<div class="gallery gallery-${layout}" style="--gallery-gap:${gap}">\n${cells.join("\n")}\n</div>`;
+  const grid = `<div class="gallery gallery-${layout}${sized ? " gallery-uniform-sized" : ""}" style="${style.join(";")}">\n${cells.join("\n")}\n</div>`;
   return body(head(block), grid);
 }
 
@@ -625,6 +678,72 @@ function renderFeature(block, path, ctx) {
   const plate = `<div class="feature-overlay-visual art-plate fill"${ratio ? ` style="--ar:${ratio}"` : ""}>${p.html}</div>`;
   const panel = `<div class="feature-overlay-panel feature-panel glass-card panel-adaptive">\n${copy}</div>`;
   return `<div class="feature-overlay feature-overlay-native${side === "right" ? " feature-overlay-flip" : ""}">\n${plate}\n${panel}\n</div>`;
+}
+
+/* ---------------------------------------------------- full-width blocks */
+
+/** A `records` list as it renders: objects only, never more than `max`. */
+function records(block, name) {
+  const field = BY_TYPE.get(block.type).fields.find((f) => f.name === name);
+  return list(block[name]).filter((r) => r && typeof r === "object" && !Array.isArray(r)).slice(0, field.max ?? Infinity);
+}
+
+/** Eyebrow and heading at the top of a band; line breaks kept, accent gilded. */
+function bleedHead(block, size) {
+  return (
+    (text(block.eyebrow) ? `<p class="eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
+    `<h2 class="${size} bleed-title">${titleLines(block.title, block.accent, "<br>")}</h2>\n`
+  );
+}
+
+/** Plain text in paragraphs: a blank line starts a new one. */
+function paragraphs(value, cls) {
+  return String(value ?? "").split(/\r?\n\s*\r?\n/).map((p) => p.trim()).filter(Boolean)
+    .map((p) => `<p class="${cls}">${esc(p)}</p>\n`).join("");
+}
+
+/**
+ * Field notes: block_test_page.html's "Section 04 — Field notes". One to five
+ * glass notes on .panel-field, whose stagger the stylesheet works out from the
+ * count. The number is the renderer's ("Note 01"); the label after it is the
+ * author's.
+ */
+function renderStageNotes(block) {
+  const notes = records(block, "notes").map((note, i) =>
+    `<article class="glass-card note-card">\n` +
+    `<p class="micro">${esc([`Note ${pad2(i + 1)}`, text(note.label)].filter(Boolean).join(" · "))}</p>\n` +
+    (text(note.title) ? `<h3>${esc(text(note.title))}</h3>\n` : "") +
+    paragraphs(note.text, "note-text") +
+    `</article>`,
+  );
+  return bleedHead(block, "display-md") + `<div class="panel-field bleed-body">\n${notes.join("\n")}\n</div>`;
+}
+
+/**
+ * The wash: block_test_page.html's "Section 03 — Wash". A heading at display
+ * size, then a pull quote beside one to six glass tiles; with no quote, the
+ * tiles take the full width. The quote is set without paragraphs of its own,
+ * because a <p> on an adaptive stage takes the muted body colour and the quote
+ * is meant to read at full strength.
+ */
+function renderStageWash(block) {
+  // At most two or three tiles to a row, as the block says; three beside a
+  // quote take the wider share of the row (.bleed-pair-wide).
+  const columns = choice(BY_TYPE.get("stage_wash"), block, "tile_columns");
+  const tiles = records(block, "tiles").map((tile) =>
+    `<div>\n` +
+    (text(tile.label) ? `<p class="micro">${esc(text(tile.label))}</p>\n` : "") +
+    paragraphs(tile.text, "stat-tile-text") +
+    `</div>`,
+  );
+  const grid = tiles.length ? `<div class="stat-grid stat-grid-glass stat-grid-cols-${columns}">\n${tiles.join("\n")}\n</div>` : "";
+  const quote = text(block.quote)
+    ? `<blockquote class="bleed-quote">${esc(text(block.quote)).replace(/\r?\n/g, "<br>")}</blockquote>`
+    : "";
+  let body = "";
+  if (quote && grid) body = `<div class="block-two-col bleed-pair${columns === "3" ? " bleed-pair-wide" : ""} bleed-body">\n${quote}\n${grid}\n</div>`;
+  else if (quote || grid) body = `<div class="bleed-body">\n${quote || grid}\n</div>`;
+  return bleedHead(block, "display") + body;
 }
 
 function renderColumns(block, path, ctx) {

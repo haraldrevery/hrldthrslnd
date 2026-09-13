@@ -7,10 +7,12 @@
  * that is broken rather than as an exception somewhere else.
  */
 import { test, expect, describe } from "bun:test";
+import { readFileSync } from "node:fs";
 
 import { BLOCKS, BY_TYPE, defaultBlock, COLUMN_TYPES, fieldApplies } from "../eleventy_binary/lib/blocks/catalogue.js";
 import { validatePost, assetRefs, verdict } from "../eleventy_binary/lib/blocks/validate.js";
 import { renderPost, assetUrl, pageData } from "../eleventy_binary/lib/blocks/render.js";
+import { cssLength, parseRatio } from "../eleventy_binary/lib/blocks/units.js";
 import { createMarkdownLibrary } from "../eleventy_binary/lib/markdown.js";
 import { memoryResolver } from "../eleventy_binary/lib/resolver.js";
 
@@ -464,5 +466,245 @@ describe("hero treatments", () => {
     const { html } = render([{ type: "hero", variant: "stage", title: "x", image: portrait, image_2: landscape }]);
     expect(html).not.toContain("photo.jpg");
     expect(html).not.toContain("tall");
+  });
+});
+
+describe("full-width blocks", () => {
+  const ground = { src: "photo.jpg", alt: "", title: "", caption: "" };
+  const notes = (n) => Array.from({ length: n }, (_, i) => ({ label: `L${i + 1}`, title: `T${i + 1}`, text: `Body ${i + 1}` }));
+  const tiles = (n) => Array.from({ length: n }, (_, i) => ({ label: `K${i + 1}`, text: `V${i + 1}` }));
+
+  test("bleed blocks stay out of columns, and every records field is bounded and names its entries", () => {
+    const bleed = BLOCKS.filter((b) => b.bleed).map((b) => b.type);
+    expect(bleed).toEqual(["stage_notes", "stage_wash"]);
+    for (const type of bleed) expect(COLUMN_TYPES).not.toContain(type);
+    for (const spec of BLOCKS) {
+      for (const f of spec.fields.filter((x) => x.kind === "records")) {
+        expect(f.min).toBeLessThanOrEqual(f.max);
+        expect(f.item.length).toBeGreaterThan(0);
+        expect(f.itemLabel).toBeTruthy();
+      }
+    }
+  });
+
+  test("a new block starts with its minimum of empty entries, and never shares a list", () => {
+    const a = defaultBlock("stage_notes");
+    expect(a.notes).toEqual([{ label: "", title: "", text: "" }]);
+    const b = defaultBlock("stage_notes");
+    a.notes.push({});
+    expect(b.notes).toHaveLength(1);
+    expect(defaultBlock("stage_wash").tiles).toEqual([{ label: "", text: "" }]);
+  });
+
+  test("one to five notes and one to six tiles; outside that is an error at the list", () => {
+    const check = (block) => validatePost(doc([block]), { assets: ["photo.jpg"] });
+    const at = (findings, path) => findings.some((f) => f.level === "error" && f.path === path);
+    for (const n of [1, 5]) expect(verdict(check({ type: "stage_notes", title: "x", image: ground, notes: notes(n) }))).not.toBe("error");
+    for (const n of [1, 6]) expect(verdict(check({ type: "stage_wash", title: "x", image: ground, tiles: tiles(n) }))).not.toBe("error");
+    expect(at(check({ type: "stage_notes", title: "x", image: ground, notes: notes(6) }), "blocks[0].notes")).toBe(true);
+    expect(at(check({ type: "stage_wash", title: "x", image: ground, tiles: tiles(7) }), "blocks[0].tiles")).toBe(true);
+    expect(at(check({ type: "stage_notes", title: "x", image: ground, notes: [] }), "blocks[0].notes")).toBe(true);
+  });
+
+  test("an entry is reported at its key", () => {
+    const findings = validatePost(doc([
+      { type: "stage_notes", title: "x", image: ground, notes: [{ label: "a", title: "t" }, { label: "b", title: " " }, "loose"] },
+      { type: "stage_wash", title: "x", image: ground, tiles: [{ label: "only a label" }, { text: 3 }] },
+    ]));
+    const errors = findings.filter((f) => f.level === "error").map((f) => `${f.path}: ${f.message}`);
+    expect(errors).toContain("blocks[0].notes[1].title: note 2 has no heading");
+    expect(errors).toContain("blocks[0].notes[2]: note 3 is not an object");
+    expect(errors).toContain("blocks[1].tiles[0].text: tile 1 has no text");
+    expect(errors).toContain('blocks[1].tiles[1].text: "text" must be text');
+  });
+
+  test("the ground is required, is asked for no alt text, and is not one of the page's plates", () => {
+    const missing = validatePost(doc([{ type: "stage_wash", title: "x", tiles: tiles(1) }]));
+    expect(missing.some((f) => f.level === "error" && f.path === "blocks[0].image")).toBe(true);
+    const band = { type: "stage_notes", title: "x", image: ground, notes: notes(1) };
+    expect(validatePost(doc([band]), { assets: ["photo.jpg"] }).filter((f) => f.path.startsWith("blocks[0]"))).toEqual([]);
+    expect(assetRefs(doc([band])).find((r) => r.path === "blocks[0].image.src").decorative).toBe(true);
+    // A collage counts the pictures on the page; a band's ground is not one of them.
+    const { html } = render([{ type: "hero", variant: "collage", title: "x", image: { src: "photo.jpg", alt: "A" } }, band]);
+    expect(html).toContain('<span class="micro">2026 · 1 plate</span>');
+  });
+
+  test("field notes run the full width: the ground behind a shell, and the notes numbered", () => {
+    const { html, warnings } = render([{ type: "stage_notes", eyebrow: "E", title: "Jotunheimen,\nfrom the top", image: { ...ground, alt: "not printed" }, notes: notes(3) }]);
+    expect(warnings).toEqual([]);
+    expect(html.startsWith('<section class="block-bleed block-stage_notes photo-stage photo-stage-adaptive">')).toBe(true);
+    expect(html).not.toContain("shell block");
+    expect(html).toContain('<div class="stage-media"><img src="/post_x/photo.jpg" alt="" width="1600" height="1200" loading="lazy" decoding="async"></div>');
+    expect(html).toContain('<div class="shell bleed-shell">');
+    expect(html).toContain('<p class="eyebrow">E</p>\n<h2 class="display-md bleed-title">Jotunheimen,<br>from the top</h2>');
+    expect(html).toContain('<div class="panel-field bleed-body">');
+    expect(html.match(/<article class="glass-card note-card">/g)).toHaveLength(3);
+    expect(html).toContain('<p class="micro">Note 01 · L1</p>\n<h3>T1</h3>\n<p class="note-text">Body 1</p>');
+    expect(html).not.toContain("glightbox");
+  });
+
+  test("never more entries than the layout is drawn for, even from a hand-edited file", () => {
+    expect(render([{ type: "stage_notes", title: "x", image: ground, notes: notes(7) }]).html.match(/note-card/g)).toHaveLength(5);
+    expect(render([{ type: "stage_wash", title: "x", image: ground, tiles: tiles(9) }]).html.match(/stat-tile-text/g)).toHaveLength(6);
+    const plain = render([{ type: "stage_notes", title: "x", image: ground, notes: [{ title: "Unlabelled", text: "One.\n\nTwo." }] }]).html;
+    expect(plain).toContain('<p class="micro">Note 01</p>');
+    expect(plain).toContain('<p class="note-text">One.</p>\n<p class="note-text">Two.</p>');
+  });
+
+  test("the wash sets the quote beside the tiles, or the tiles alone at full width", () => {
+    const both = render([{ type: "stage_wash", eyebrow: "E", title: "Fog is a\nblend mode", accent: "blend mode", image: ground, quote: "Fog <does>\nthis.", tiles: tiles(4) }]).html;
+    expect(both).toContain('<section class="block-bleed block-stage_wash photo-stage photo-stage-adaptive">');
+    expect(both).toContain('<h2 class="display bleed-title">Fog is a<br><span class="text-flow">blend mode</span></h2>');
+    expect(both).toContain('<div class="block-two-col bleed-pair bleed-body">\n<blockquote class="bleed-quote">Fog &lt;does&gt;<br>this.</blockquote>');
+    expect(both).toContain('<div class="stat-grid stat-grid-glass stat-grid-cols-2">');
+    expect(both).toContain('<div>\n<p class="micro">K1</p>\n<p class="stat-tile-text">V1</p>\n</div>');
+    const alone = render([{ type: "stage_wash", title: "x", image: ground, tiles: [{ text: "No label" }] }]).html;
+    expect(alone).not.toContain("block-two-col");
+    expect(alone).not.toContain("blockquote");
+    expect(alone).toContain('<div class="bleed-body">\n<div class="stat-grid stat-grid-glass stat-grid-cols-2">\n<div>\n<p class="stat-tile-text">No label</p>\n</div>');
+  });
+
+  test("the wash's tiles are two or three to a row; three beside a quote take the wider share", () => {
+    const wash = (extra) => render([{ type: "stage_wash", title: "x", image: ground, quote: "q", tiles: tiles(6), ...extra }]).html;
+    expect(wash({})).toContain('<div class="block-two-col bleed-pair bleed-body">');
+    const three = wash({ tile_columns: "3" });
+    expect(three).toContain('<div class="block-two-col bleed-pair bleed-pair-wide bleed-body">');
+    expect(three).toContain('<div class="stat-grid stat-grid-glass stat-grid-cols-3">');
+    // With no quote there is no pair to widen.
+    const alone = wash({ tile_columns: "3", quote: "" });
+    expect(alone).toContain('<div class="bleed-body">\n<div class="stat-grid stat-grid-glass stat-grid-cols-3">');
+    expect(alone).not.toContain("bleed-pair");
+    // A count this build does not know is a warning, and two stands in.
+    expect(wash({ tile_columns: "4" })).toContain("stat-grid-cols-2");
+    const findings = validatePost(doc([{ type: "stage_wash", title: "x", image: ground, tiles: tiles(1), tile_columns: "4" }]));
+    expect(findings.find((f) => f.path === "blocks[0].tile_columns").level).toBe("warn");
+  });
+
+  test("an accent missing from a band's heading is a warning, as on the hero", () => {
+    const findings = validatePost(doc([{ type: "stage_wash", title: "Fog", accent: "mist", image: ground, tiles: tiles(1) }]));
+    expect(findings.some((f) => f.level === "warn" && f.path === "blocks[0].accent")).toBe(true);
+  });
+
+  test("a band is refused in a column, and carries its path for the canvas", () => {
+    const refused = validatePost(doc([{ type: "columns", items: [{ type: "text", markdown: "a" }, { type: "stage_wash", title: "x", image: ground, tiles: tiles(1) }] }]));
+    expect(refused.some((f) => f.level === "error" && f.path === "blocks[0].items[1]")).toBe(true);
+    const editable = renderPost(doc([{ type: "stage_notes", title: "x", image: ground, notes: notes(1) }]), { md, slug: "post_x", editable: true }).html;
+    expect(editable).toContain('<section class="block-bleed block-stage_notes photo-stage photo-stage-adaptive" data-block="blocks[0]" data-block-type="stage_notes">');
+  });
+
+  test("an unmeasurable ground is a warning, not a crash", () => {
+    const { html, warnings } = render([{ type: "stage_notes", title: "x", image: { src: "/image/unknown.jpg" }, notes: notes(1) }]);
+    expect(html).toContain('<img src="/image/unknown.jpg" alt="" loading="lazy" decoding="async">');
+    expect(warnings[0].path).toBe("blocks[0].image");
+  });
+});
+
+describe("uniform gallery ratio and height", () => {
+  const images = [{ src: "photo.jpg", alt: "A" }, { src: "/svg/mark.svg", alt: "M" }];
+  const grid = (extra) => /<div class="gallery [^"]*"[^>]*>/.exec(render([{ type: "gallery", layout: "uniform", images, ...extra }]).html)[0];
+
+  test("left empty, it is the square grid it always was", () => {
+    expect(grid({})).toBe('<div class="gallery gallery-uniform" style="--gallery-gap:0.75rem">');
+  });
+
+  test("a ratio is carried on the grid, in any of the ways it is written", () => {
+    expect(grid({ ratio: "3:2" })).toBe('<div class="gallery gallery-uniform" style="--gallery-gap:0.75rem;--tile-ar:1.5">');
+    expect(grid({ ratio: "4/5" })).toContain("--tile-ar:0.8");
+    expect(grid({ ratio: "16 x 9" })).toContain("--tile-ar:1.7778");
+    expect(grid({ ratio: "1.25" })).toContain("--tile-ar:1.25");
+  });
+
+  test("a row height is carried with the picture count, so a short gallery can stop growing", () => {
+    expect(grid({ ratio: "3:2", height: "12rem", gap: "4px" }))
+      .toBe('<div class="gallery gallery-uniform gallery-uniform-sized" style="--gallery-gap:4px;--tile-ar:1.5;--tile-h:12rem;--tile-count:2">');
+    // No height, no count: the count only matters to a sized grid.
+    expect(grid({ ratio: "3:2" })).not.toContain("--tile-count");
+  });
+
+  test("what cannot be read is left out of the page and warned about at its field", () => {
+    const bad = { ratio: "wide", height: "50%", gap: "12" };
+    expect(grid(bad)).toBe('<div class="gallery gallery-uniform" style="--gallery-gap:0.75rem">');
+    const findings = validatePost(doc([{ type: "gallery", layout: "uniform", images, ...bad }]));
+    for (const at of ["ratio", "height", "gap"]) {
+      expect(findings.find((f) => f.path === `blocks[0].${at}`)?.level).toBe("warn");
+    }
+    // Past 5:1 a cell is a strip, and zero is no height at all.
+    expect(grid({ ratio: "6:1", height: "0rem" })).toBe('<div class="gallery gallery-uniform" style="--gallery-gap:0.75rem">');
+  });
+
+  test("ratio and height belong to the uniform layout: elsewhere they are hidden, unchecked and unrendered", () => {
+    const gallery = BY_TYPE.get("gallery");
+    const field = (name) => gallery.fields.find((f) => f.name === name);
+    expect(fieldApplies(gallery, field("ratio"), { layout: "uniform" })).toBe(true);
+    expect(fieldApplies(gallery, field("ratio"), { layout: "justified" })).toBe(false);
+    expect(fieldApplies(gallery, field("height"), {})).toBe(false); // justified is the default
+    const justified = { type: "gallery", layout: "justified", ratio: "junk", height: "junk", images };
+    expect(validatePost(doc([justified])).some((f) => /ratio|height/.test(f.path))).toBe(false);
+    expect(render([justified]).html).not.toContain("--tile");
+  });
+
+  test("units read lengths and ratios narrowly", () => {
+    expect(cssLength("0.75rem")).toBe("0.75rem");
+    expect(cssLength("50%")).toBe("50%");
+    expect(cssLength("50%", { percent: false })).toBe(null);
+    expect(cssLength("0px", { positive: true })).toBe(null);
+    expect(cssLength("12")).toBe(null);
+    expect(cssLength("1rem; color:red")).toBe(null);
+    expect(parseRatio("3:2")).toBe(1.5);
+    expect(parseRatio("1:5")).toBe(0.2);
+    expect(parseRatio("1:6")).toBe(null);
+    expect(parseRatio("3:0")).toBe(null);
+    expect(parseRatio("")).toBe(null);
+  });
+});
+
+describe("the stylesheet", () => {
+  /*
+   * Every class the renderer writes is styled by css/main.css, or is a hook
+   * the contract names: block-<type> and block-col-<type> on every block, so
+   * the theme can reach one kind without the renderer's help. A class added to
+   * the renderer and to css/input.css without update_css.sh being run fails
+   * here, instead of shipping a block with no styles.
+   */
+  const HOOKS = new Set([
+    ...BLOCKS.flatMap((b) => [`block-${b.type}`, `block-col-${b.type}`]),
+    "block-col", // a column's wrapper, which the editor's canvas finds by name
+    "glightbox", // the lightbox script's hook; css/glightbox.min.css styles it
+  ]);
+  const img = (src, alt = "A") => ({ src, alt, title: "T", caption: "C" });
+  const pages = [
+    ...["stage", "photo", "photo_adaptive", "collage", "salon"].map((variant) => [
+      { type: "hero", variant, eyebrow: "E", title: "A\nB", accent: "B", lede: "L", image: img("photo.jpg"), image_2: img("tall.jpg"), actions: [{ label: "a", href: "/a" }, { label: "b", href: "/b" }] },
+      { type: "text", markdown: "a" },
+    ]),
+    [
+      { type: "heading", eyebrow: "E", title: "H" },
+      { type: "gallery", title: "G", lede: "L", layout: "justified", images: [img("photo.jpg"), img("clip.mp4")] },
+      { type: "gallery", layout: "uniform", images: [img("photo.jpg"), img("/svg/mark.svg")] },
+      { type: "gallery", layout: "uniform", ratio: "3:2", height: "12rem", images: [img("photo.jpg")] },
+      { type: "stage_wash", title: "T", image: img("photo.jpg", ""), quote: "q", tile_columns: "3", tiles: [{ label: "l", text: "x" }] },
+      { type: "gallery", layout: "waterfall", images: [img("photo.jpg")] },
+      { type: "video", eyebrow: "E", title: "V", src: "clip.mp4", meta: ["1:00"], caption: "c" },
+      { type: "audio", eyebrow: "E", title: "A", src: "/audio/a.wav", meta: ["0:01"], caption: "c" },
+      { type: "download", eyebrow: "E", src: "a.zip", note: "n" },
+      { type: "faq", title: "F", items: [{ question: "Q", answer: "A" }] },
+      { type: "feature", eyebrow: "E", title: "T", text: "x", image: img("photo.jpg"), action_label: "Go", action_href: "/x" },
+      { type: "feature", layout: "beside", title: "T", image: img("photo.jpg"), image_side: "right" },
+      { type: "stage_notes", eyebrow: "E", title: "T", image: img("photo.jpg", ""), notes: [{ label: "l", title: "t", text: "x" }] },
+      { type: "stage_wash", eyebrow: "E", title: "T", accent: "T", image: img("photo.jpg", ""), quote: "q", tiles: [{ label: "l", text: "x" }] },
+      { type: "columns", items: [{ type: "text", markdown: "a" }, { type: "faq", items: [{ question: "Q", answer: "A" }] }] },
+    ],
+  ];
+
+  test("styles every class the renderer writes", () => {
+    const css = readFileSync(new URL("../css/main.css", import.meta.url), "utf8");
+    const defined = new Set([...css.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].map((m) => m[1]));
+    const written = new Set();
+    for (const blocks of pages) {
+      for (const [, list] of render(blocks).html.matchAll(/class="([^"]*)"/g)) {
+        for (const name of list.split(/\s+/)) if (name) written.add(name);
+      }
+    }
+    expect([...written].filter((name) => !defined.has(name) && !HOOKS.has(name)).sort()).toEqual([]);
   });
 });

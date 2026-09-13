@@ -220,7 +220,12 @@
   window.addEventListener("message", (e) => {
     if (e.origin !== origin || !e.data || e.data.source !== "editor") return;
     const m = e.data;
-    if (m.type === "labels") { labels = m.labels || {}; emptyLabel = m.empty || emptyLabel; decorate(); }
+    if (m.type === "labels") {
+      labels = m.labels || {};
+      emptyLabel = m.empty || emptyLabel;
+      if (Array.isArray(m.takesPictures)) takesPictures = new Set(m.takesPictures);
+      decorate();
+    }
     else if (m.type === "update") { main().innerHTML = m.html; decorate(); }
     else if (m.type === "scroll") { window.scrollTo(0, m.y || 0); }
     else if (m.type === "select") {
@@ -298,15 +303,18 @@
   let zone = null;
   const clearDrop = () => { zone?.classList.remove("cv-dropzone"); zone = null; dropline.hidden = true; };
   const carries = (dt) => { const t = Array.from(dt?.types || []); return t.includes("Files") || t.includes("text/x-assets"); };
-  // What a drop onto a block means depends on the block; these take pictures.
-  const TAKES_PICTURES = new Set(["gallery", "hero", "feature", "empty"]);
+  // What a drop onto a block means depends on the block. The editor sends the
+  // types that take a picture, worked out from the catalogue; these stand in
+  // until it has.
+  let takesPictures = new Set(["gallery", "hero", "feature"]);
+  const takesPicture = (type) => type === "empty" || takesPictures.has(type);
 
   document.addEventListener("dragover", (e) => {
     if (!carries(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     const block = e.target.closest("[data-block]");
-    const into = block && TAKES_PICTURES.has(block.dataset.blockType) ? block : null;
+    const into = block && takesPicture(block.dataset.blockType) ? block : null;
     if (into !== zone) { zone?.classList.remove("cv-dropzone"); zone = into; into?.classList.add("cv-dropzone"); }
     if (into) dropline.hidden = true;
     else showDropline(dropIndexAt(e.clientY));

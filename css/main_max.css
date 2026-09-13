@@ -2664,7 +2664,12 @@
     grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
   }
   .gallery-uniform figure {
-    aspect-ratio: 1 / 1;
+    aspect-ratio: var(--tile-ar, 1);
+  }
+  .gallery-uniform-sized {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--tile-h) * var(--tile-ar, 1))), 1fr));
+    max-width: calc(var(--tile-count, 1000) * (var(--tile-h) * var(--tile-ar, 1) * 1.25 + var(--gallery-gap)) - var(--gallery-gap));
+    margin-inline: auto;
   }
   .gallery-uniform img, .gallery-uniform svg, .gallery-uniform video {
     width: 100%;
@@ -2710,6 +2715,8 @@
     display: grid;
     place-items: center;
     padding: 2rem;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-height: 0;
   }
   .gallery .tile-vector img {
     width: 100%;
@@ -2891,6 +2898,63 @@
     letter-spacing: 0.08em;
     text-transform: none;
     color: var(--fg-muted);
+  }
+  .block-bleed {
+    padding-block: clamp(4rem, 12vh, 7rem);
+    margin-bottom: clamp(3rem, 8vh, 4.5rem);
+  }
+  .block-stage_wash {
+    padding-block: clamp(4rem, 14vh, 8rem);
+  }
+  .bleed-shell {
+    position: relative;
+  }
+  .eyebrow + .bleed-title {
+    margin-top: 0.9rem;
+  }
+  .block-stage_wash .eyebrow + .bleed-title {
+    margin-top: 1.25rem;
+  }
+  .bleed-body {
+    margin-top: clamp(2.5rem, 7vh, 4rem);
+  }
+  .bleed-pair {
+    align-items: start;
+  }
+  .bleed-quote {
+    font-size: var(--step-1);
+    line-height: 1.5;
+    border-left: var(--hairline-width) solid;
+    padding-left: 1.5rem;
+    max-width: 44ch;
+  }
+  .stat-grid-cols-2 {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(13rem, 40%)), 1fr));
+  }
+  .stat-grid-cols-3 {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(13rem, 30%)), 1fr));
+  }
+  @media (min-width: 48rem) {
+    .bleed-pair-wide {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    }
+  }
+  .stat-tile-text {
+    font-size: var(--step--1);
+  }
+  .stat-grid > * > * + .stat-tile-text {
+    margin-top: 0.5rem;
+  }
+  .note-card {
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+  }
+  .note-card h3 {
+    margin-top: 0.9rem;
+    font-size: var(--step-1);
+  }
+  .note-text {
+    margin-top: 0.9rem;
+    font-size: var(--step--1);
   }
   .download-head {
     display: flex;
@@ -3308,6 +3372,13 @@
     }
     .panel-field > *:nth-child(3) {
       grid-column: 3 / 9;
+    }
+    .panel-field > :nth-child(3):nth-last-child(2), .panel-field > :nth-child(4):nth-last-child(2) {
+      grid-column: 2 / 7;
+    }
+    .panel-field > :nth-child(4):nth-last-child(1), .panel-field > :nth-child(5):nth-last-child(1) {
+      grid-column: 8 / 13;
+      margin-top: clamp(2rem, 7vh, 5rem);
     }
   }
   .panel-field > .glass-card {

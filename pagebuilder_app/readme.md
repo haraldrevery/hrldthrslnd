@@ -29,6 +29,14 @@ published; the panel on the right edits whatever you click in it.
   are added to it. Onto a hero or a feature, the first one becomes its picture.
   Anywhere else, they become a new gallery at that spot. Any number at once;
   a progress bar shows each one being imported.
+- **Uniform gallery ratio and height.** With the Uniform layout chosen, *Ratio*
+  crops every picture to one shape — type 3:2, 4:5, 16:9 or anything between
+  1:5 and 5:1, or pick one from the list — and *Row height* is the smallest a
+  cell gets: each row fits as many cells as that allows and they grow to fill
+  the width, so a cell ends up that tall or a little taller, and the gap stays
+  the gap. A gallery too short to fill a row grows by up to a quarter and is
+  centred. Leave both empty for square cells at the usual size. Something the build cannot read
+  is flagged in the checks and left out of the page.
 - **Gallery pictures** are a grid of thumbnails in the panel. Drag to reorder,
   "+ Upload" to add from your computer, "From library…" to pick from this
   post's files or from the site-wide folders (`image/`, `svg/`, `gif/` …).
@@ -45,6 +53,14 @@ published; the panel on the right edits whatever you click in it.
   own proportions: nothing is cropped, and a tall picture is narrowed to fit
   the screen rather than cut. *Beside* is a 3:4 plate next to a solid panel.
   Either way, "Picture on the" chooses the side.
+- **Field notes and Wash.** Two blocks that run the full width of the page,
+  over a photograph. *Field notes* pins one to five glass notes across it,
+  staggered, each numbered for you ("Note 01 · your label"). *Wash* sets a
+  large heading, an optional quote and one to six tiles over it; without a
+  quote the tiles take the whole width. *Tile columns* sets two or three tiles
+  to a row; three beside a quote take three fifths of the row. The photograph is the section's
+  ground, so it is published without alt text or a lightbox — the text over it
+  is what it says. Add and Remove stop at the limits.
 - **Page** tab: title, description, date, subjects, card image, draft, and the
   saved versions under History.
 - The badge in the top bar says what the build will say. Click it for the list;

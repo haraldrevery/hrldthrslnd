@@ -18,8 +18,32 @@
  * editor's browser page.
  */
 import { BLOCKS, BY_TYPE, FORMAT_VERSION, COLUMN_TYPES, META_FIELDS, variantOf, fieldApplies } from "./catalogue.js";
+import { cssLength, parseRatio } from "./units.js";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * A text field's `format`: what it must parse as, read by units.js exactly as
+ * the renderer reads it. A value that does not parse is left out of the page,
+ * so it is a warning, not an error — the page still builds, with the default.
+ */
+const FORMATS = {
+  length: {
+    ok: (v) => cssLength(v) !== null,
+    message: (v) => `"${v}" is not a CSS length`,
+    detail: "a number and a unit — rem, em, px, %, vw, vh or ch — such as 0.75rem; until then the default is used",
+  },
+  height: {
+    ok: (v) => cssLength(v, { percent: false, positive: true }) !== null,
+    message: (v) => `"${v}" is not a height`,
+    detail: "a number above zero and a unit — rem, em, px, vw, vh or ch — such as 12rem; until then the cells fill the column",
+  },
+  ratio: {
+    ok: (v) => parseRatio(v) !== null,
+    message: (v) => `"${v}" is not a ratio this gallery can use`,
+    detail: "width:height between 1:5 and 5:1, such as 3:2 or 4:5; until then the cells are square",
+  },
+};
 
 /**
  * Whether an asset reference points into the post folder rather than at a
@@ -46,12 +70,15 @@ export function isSafeFolderRef(src) {
  * walk serves the validator, the status check and the editor's "which files
  * does this page use" answer.
  *
- * @returns {{path:string, src:string, kind:string}[]}
+ * A picture from a `decorative` field is marked so: it is a ground, not one of
+ * the page's pictures.
+ *
+ * @returns {{path:string, src:string, kind:string, decorative?:true}[]}
  */
 export function assetRefs(doc) {
   const refs = [];
-  const push = (path, src, kind) => {
-    if (typeof src === "string" && src.trim()) refs.push({ path, src: src.trim(), kind });
+  const push = (path, src, kind, decorative = false) => {
+    if (typeof src === "string" && src.trim()) refs.push({ path, src: src.trim(), kind, ...(decorative ? { decorative: true } : {}) });
   };
 
   const meta = doc?.meta ?? {};
@@ -66,7 +93,7 @@ export function assetRefs(doc) {
       if (!fieldApplies(spec, field, block)) continue;
       const value = block[field.name];
       const at = `${path}.${field.name}`;
-      if (field.kind === "image" && value && typeof value === "object") push(`${at}.src`, value.src, "image");
+      if (field.kind === "image" && value && typeof value === "object") push(`${at}.src`, value.src, "image", field.decorative === true);
       else if (field.kind === "images" && Array.isArray(value)) {
         value.forEach((img, i) => {
           if (img && typeof img === "object") push(`${at}[${i}].src`, img.src, "media");
@@ -233,7 +260,7 @@ function validateBlock(block, path, { error, warn, note }) {
 
   const variant = variantOf(spec, block);
   const variantLabel = () => {
-    const option = spec.fields.find((f) => f.name === "variant").options.find((o) => o.value === variant);
+    const option = spec.fields.find((f) => f.name === (spec.variantField ?? "variant")).options.find((o) => o.value === variant);
     return option.label.split(" — ")[0].toLowerCase();
   };
 
@@ -263,6 +290,11 @@ function validateBlock(block, path, { error, warn, note }) {
     }
     if (empty) continue;
 
+    if (Array.isArray(value) && (value.length > (field.max ?? Infinity) || value.length < (field.min ?? 0))) {
+      const range = field.min != null && field.max != null ? `${field.min} to ${field.max}` : field.max != null ? `at most ${field.max}` : `at least ${field.min}`;
+      error(at, `${field.label.toLowerCase()}: ${range}, this block has ${value.length}`, "the layout is drawn for that many");
+    }
+
     switch (field.kind) {
       case "select":
         if (!field.options.some((o) => o.value === value)) {
@@ -278,7 +310,11 @@ function validateBlock(block, path, { error, warn, note }) {
         if (typeof value !== "boolean") warn(at, `"${field.name}" should be true or false`);
         break;
       case "image":
-        validateImage(value, at, { error, warn });
+        validateImage(value, at, { error, warn }, { decorative: field.decorative === true });
+        break;
+      case "records":
+        if (!Array.isArray(value)) error(at, `"${field.name}" must be a list`);
+        else value.forEach((item, i) => validateRecord(item, field, `${at}[${i}]`, i, { error }));
         break;
       case "images":
         if (!Array.isArray(value)) error(at, `"${field.name}" must be a list`);
@@ -314,22 +350,45 @@ function validateBlock(block, path, { error, warn, note }) {
         break;
       default:
         if (typeof value !== "string") error(at, `"${field.name}" must be text`);
+        else if (field.format && !FORMATS[field.format].ok(value.trim())) {
+          warn(at, FORMATS[field.format].message(value.trim()), FORMATS[field.format].detail);
+        }
     }
   }
 
-  if (spec.type === "hero") {
-    if (variant === "collage" && !(block.image_2 && String(block.image_2.src ?? "").trim())) {
-      warn(`${path}.image_2`, "the collage has no second picture", "the landscape corner at the top right stays empty");
-    }
-    if (block.accent && typeof block.title === "string" && !block.title.includes(block.accent)) {
-      warn(`${path}.accent`, `the accent "${block.accent}" does not appear in the title`, "nothing is highlighted");
-    }
+  if (spec.type === "hero" && variant === "collage" && !(block.image_2 && String(block.image_2.src ?? "").trim())) {
+    warn(`${path}.image_2`, "the collage has no second picture", "the landscape corner at the top right stays empty");
+  }
+  // Any block with an accent field: the hero and the wash.
+  if (spec.fields.some((f) => f.name === "accent") && block.accent && typeof block.title === "string" && !block.title.includes(block.accent)) {
+    warn(`${path}.accent`, `the accent "${block.accent}" does not appear in the title`, "nothing is highlighted");
   }
 
   return spec;
 }
 
-function validateImage(value, at, { error, warn }) {
+/**
+ * One entry of a `records` list against the field's `item` list: an object,
+ * text in every key it has, and something in every key the item requires.
+ */
+function validateRecord(item, field, at, index, { error }) {
+  const noun = field.itemLabel ?? "entry";
+  if (!item || typeof item !== "object" || Array.isArray(item)) {
+    error(at, `${noun} ${index + 1} is not an object`, `it holds ${field.item.map((f) => f.name).join(", ")}`);
+    return;
+  }
+  for (const f of field.item) {
+    const value = item[f.name];
+    if (value != null && typeof value !== "string") error(`${at}.${f.name}`, `"${f.name}" must be text`);
+    else if (f.required && !String(value ?? "").trim()) error(`${at}.${f.name}`, `${noun} ${index + 1} has no ${f.label.toLowerCase()}`);
+  }
+}
+
+/**
+ * A picture object. A decorative one — a ground, see the catalogue — is
+ * published with an empty alt on purpose, so it is not asked for one.
+ */
+function validateImage(value, at, { error, warn }, { decorative = false } = {}) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     error(at, "a picture is an object with at least a src");
     return;
@@ -338,6 +397,7 @@ function validateImage(value, at, { error, warn }) {
     error(`${at}.src`, "a picture needs a src");
     return;
   }
+  if (decorative) return;
   if (!String(value.alt ?? "").trim()) {
     warn(`${at}.alt`, "no alt text", "read aloud by a screen reader, and the strongest signal image search has");
   } else if (value.caption && String(value.alt).trim() === String(value.caption).trim()) {

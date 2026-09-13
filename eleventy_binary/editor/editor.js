@@ -66,7 +66,8 @@
   const iconButton = (name, title, onclick, opts = {}) =>
     h("button", { type: "button", class: `icon-btn icon-btn-sm${opts.danger ? " danger" : ""}`, title, "aria-label": title, disabled: opts.disabled, onclick }, icon(name));
 
-  const TYPE_GLYPH = { hero: "H1", heading: "H", text: "¶", gallery: "▦", video: "▶", audio: "♪", download: "↓", faq: "?", feature: "◧", raw_html: "</>", columns: "▥" };
+  /** A block type's mark beside its label, from the catalogue. */
+  const glyphOf = (s) => (s && s.glyph) || "·";
 
   function debounce(fn, ms) {
     let t = null;
@@ -130,13 +131,15 @@
 
   /**
    * Whether a field is part of the block as it renders: the catalogue's
-   * `variants`, read the way fieldApplies() in catalogue.js reads it. The
+   * `variants`, read the way fieldApplies() in catalogue.js reads it — against
+   * the block's `variantField`, "variant" unless it names another select. The
    * catalogue arrives here as data, so the rule is restated, not imported.
    */
   function fieldShown(s, f, block) {
     if (!f.variants) return true;
-    const v = s.fields.find((x) => x.name === "variant");
-    const current = v && v.options.some((o) => o.value === block.variant) ? block.variant : v?.default;
+    const name = s.variantField || "variant";
+    const v = s.fields.find((x) => x.name === name);
+    const current = v && v.options.some((o) => o.value === block[name]) ? block[name] : v?.default;
     return f.variants.includes(current);
   }
 
@@ -317,7 +320,14 @@
     switch (m.type) {
       case "ready":
         state.canvasReady = true;
-        tellCanvas({ type: "labels", labels: Object.fromEntries(state.site.catalogue.map((b) => [b.type, b.label])), empty: "Empty column" });
+        tellCanvas({
+          type: "labels",
+          labels: Object.fromEntries(state.site.catalogue.map((b) => [b.type, b.label])),
+          empty: "Empty column",
+          // Worked out from the catalogue, so a new block with a picture field
+          // is a drop target without the canvas being told its name.
+          takesPictures: state.site.catalogue.filter((b) => b.fields.some((f) => f.kind === "image" || f.kind === "images")).map((b) => b.type),
+        });
         tellCanvas({ type: "scroll", y: state.canvasScroll });
         tellCanvasSelection(false);
         break;
@@ -348,11 +358,15 @@
   }
 
   /* ======================================================= block operations */
+  /** One empty entry for a `records` field, as blankRecord() in catalogue.js makes it. */
+  const blankRecord = (f) => Object.fromEntries(f.item.map((x) => [x.name, ""]));
+
   function defaultBlock(type) {
     const s = spec(type);
     const block = { type };
     for (const f of s.fields) {
       if (f.default !== undefined) block[f.name] = clone(f.default);
+      else if (f.kind === "records") block[f.name] = Array.from({ length: f.min || 0 }, () => blankRecord(f));
       else if (["images", "strings", "actions", "faq_items"].includes(f.kind)) block[f.name] = [];
       else if (f.kind === "blocks") block[f.name] = [null, null];
       else if (f.kind === "image") block[f.name] = null;
@@ -517,9 +531,12 @@
     const firstPic = pics[0];
 
     if (target && target.type === "gallery") return addToGallery(path, srcs);
-    if (target && (target.type === "hero" || target.type === "feature") && firstPic) {
+    // Any block with a picture field takes the first picture dropped on it; the
+    // hero, whose picture depends on its treatment, decides below which one.
+    const slot = target ? spec(target.type)?.fields.find((f) => f.kind === "image") : null;
+    if (target && slot && firstPic) {
       mutate(() => {
-        if (target.type !== "hero") { target.image = pictureFor(firstPic); return; }
+        if (target.type !== "hero") { target[slot.name] = pictureFor(firstPic); return; }
         const heroSpec = spec("hero");
         if (!fieldShown(heroSpec, heroSpec.fields.find((f) => f.name === "image"), target)) target.variant = "photo_adaptive";
         if (target.variant !== "collage") { target.image = pictureFor(firstPic); return; }
@@ -606,13 +623,15 @@
       case "hero": return t(block.title) || "untitled";
       case "heading": return t(block.title) || "untitled";
       case "text": return t(block.markdown).slice(0, 80) || "empty";
-      case "gallery": return `${(block.images || []).length} picture${(block.images || []).length === 1 ? "" : "s"} · ${block.layout || "justified"}${block.title ? ` · ${t(block.title)}` : ""}`;
+      case "gallery": return `${(block.images || []).length} picture${(block.images || []).length === 1 ? "" : "s"} · ${block.layout || "justified"}${block.layout === "uniform" && block.ratio ? ` ${t(block.ratio)}` : ""}${block.title ? ` · ${t(block.title)}` : ""}`;
       case "video": case "audio": case "download": return t(block.title) || baseName(block.src) || "no file";
       case "faq": return `${(block.items || []).length} question${(block.items || []).length === 1 ? "" : "s"}`;
       case "feature": return t(block.title) || "untitled";
+      case "stage_notes": return `${(block.notes || []).length} note${(block.notes || []).length === 1 ? "" : "s"}${block.title ? ` · ${t(block.title)}` : ""}`;
+      case "stage_wash": return `${(block.tiles || []).length} tile${(block.tiles || []).length === 1 ? "" : "s"}${block.title ? ` · ${t(block.title)}` : ""}`;
       case "raw_html": return "HTML";
       case "columns": return (block.items || []).map((b) => (b && spec(b.type) ? spec(b.type).label : "empty")).join(" + ");
-      default: return block.type;
+      default: return t(block.title) || block.type;
     }
   }
   function worstFor(prefix) {
@@ -702,7 +721,7 @@
     const head = h("div", { class: "insp-head" },
       iconButton("back", "Back to the page", () => select(nested ? parentPath : null)),
       h("div", { class: "insp-head-main" }, crumbs,
-        h("div", { class: "insp-title" }, h("span", { class: "type-icon" }, s ? TYPE_GLYPH[s.type] || "·" : "·"), s ? s.label : block === null ? "Empty column" : block.type),
+        h("div", { class: "insp-title" }, h("span", { class: "type-icon" }, glyphOf(s)), s ? s.label : block === null ? "Empty column" : block.type),
         s ? h("div", { class: "insp-desc" }, s.description) : null),
       actions,
     );
@@ -733,7 +752,7 @@
     const options = state.site.columnTypes.map((type) => {
       const s = spec(type);
       return h("button", { type: "button", onclick: () => { mutate(() => setAt(state.doc, path, defaultBlock(type)), { inspector: false }); select(path); } },
-        h("span", { class: "type-icon" }, TYPE_GLYPH[type] || "·"), h("strong", {}, s.label), h("small", {}, s.description));
+        h("span", { class: "type-icon" }, glyphOf(s)), h("strong", {}, s.label), h("small", {}, s.description));
     });
     return h("div", {}, h("p", { class: "f-note", style: { marginTop: 0, marginBottom: "10px" } }, "Choose what goes in this column."), h("div", { class: "palette", style: { gridTemplateColumns: "1fr" } }, options));
   }
@@ -786,8 +805,13 @@
     const key = f.name;
     const value = target[key];
     switch (f.kind) {
-      case "text":
-        return fieldShell(f, path, bindText(h("input", { class: "input", type: "text", value: value ?? "", placeholder: f.placeholder ?? "", "data-path": path }), target, key));
+      case "text": {
+        // A field with `suggestions` offers them as the browser's own
+        // drop-down, and still takes anything typed.
+        const list = f.suggestions ? `dl-${path}` : null;
+        const input = bindText(h("input", { class: "input", type: "text", value: value ?? "", placeholder: f.placeholder ?? "", "data-path": path, list }), target, key);
+        return fieldShell(f, path, list ? h("div", {}, input, h("datalist", { id: list }, f.suggestions.map((s) => h("option", { value: s })))) : input);
+      }
       case "date":
         return fieldShell(f, path, bindText(h("input", { class: "input", type: "date", value: value ?? "", "data-path": path }), target, key));
       case "textarea":
@@ -815,7 +839,11 @@
       case "strings":
         return fieldShell(f, path, chipInput(target, key, path));
       case "image":
-        return fieldShell(f, path, imageSlot(target, key, path));
+        return fieldShell(f, path, imageSlot(target, key, path, f));
+      case "records":
+        return fieldShell(f, path, rowsEditor(target, key, path, () => blankRecord(f),
+          (item, at) => f.item.map((x) => recordControl(x, item, `${at}.${x.name}`)),
+          f.addLabel || "Add", { min: f.min, max: f.max }));
       case "file":
         return fieldShell(f, path, fileSlot(target, key, path, f.accept || "any"));
       case "images":
@@ -864,24 +892,45 @@
     return box;
   }
 
-  function rowsEditor(target, key, path, blank, renderRow, addLabel) {
+  /**
+   * A list of small objects, one row each. `min` and `max` are the catalogue's
+   * bounds: Add stops at `max` and Remove at `min`, so the editor cannot make a
+   * list the validator would refuse.
+   */
+  function rowsEditor(target, key, path, blank, renderRow, addLabel, { min = 0, max = Infinity } = {}) {
     if (!Array.isArray(target[key])) target[key] = [];
     const items = target[key];
     const wrap = h("div", { "data-path": path });
     const draw = () => {
+      const full = items.length >= max;
       wrap.replaceChildren(
         ...items.map((item, i) => h("div", { class: "list-row", "data-path": `${path}[${i}]` },
           h("div", { class: "list-row-fields" }, renderRow(item, `${path}[${i}]`)),
           h("div", { class: "list-row-tools" },
             iconButton("up", "Move up", () => { mutate(() => items.splice(i - 1, 0, items.splice(i, 1)[0]), { inspector: false }); draw(); }, { disabled: i === 0 }),
             iconButton("down", "Move down", () => { mutate(() => items.splice(i + 1, 0, items.splice(i, 1)[0]), { inspector: false }); draw(); }, { disabled: i === items.length - 1 }),
-            iconButton("trash", "Remove", () => { mutate(() => items.splice(i, 1), { inspector: false }); draw(); }, { danger: true }),
+            iconButton("trash", items.length <= min ? `At least ${min}` : "Remove", () => { mutate(() => items.splice(i, 1), { inspector: false }); draw(); }, { danger: true, disabled: items.length <= min }),
           ))),
-        h("button", { type: "button", class: "btn btn-sm", onclick: () => { mutate(() => items.push(blank()), { inspector: false }); draw(); $$("input,textarea", wrap).slice(-2)[0]?.focus(); } }, icon("plus"), addLabel),
+        h("div", { class: "f-row" },
+          h("button", { type: "button", class: "btn btn-sm", disabled: full, title: full ? `At most ${max}` : "", onclick: () => {
+            if (items.length >= max) return;
+            mutate(() => items.push(blank()), { inspector: false });
+            draw();
+            $$(".list-row", wrap).at(-1)?.querySelector("input,textarea")?.focus();
+          } }, icon("plus"), addLabel),
+          Number.isFinite(max) ? h("span", { class: "f-note", style: { margin: 0 } }, `${items.length} of ${max}`) : null),
       );
     };
     draw();
     return wrap;
+  }
+
+  /** One key of a `records` entry: a line, or several for a textarea item. */
+  function recordControl(x, item, at) {
+    const attrs = { placeholder: x.placeholder || x.label, value: item[x.name] ?? "", "data-path": at, "aria-label": x.label };
+    return x.kind === "textarea"
+      ? autoGrow(bindText(h("textarea", { class: "textarea", rows: 2, ...attrs }), item, x.name))
+      : bindText(h("input", { class: "input", type: "text", ...attrs }), item, x.name);
   }
 
   /* -------------------------------------------------------- picture slots */
@@ -919,7 +968,7 @@
   }
   const ACCEPT = { image: "image/*,.svg", video: "video/*", audio: "audio/*", any: "", media: "image/*,video/*,.svg" };
 
-  function imageSlot(target, key, path) {
+  function imageSlot(target, key, path, f = {}) {
     const img = target[key] && typeof target[key] === "object" ? target[key] : null;
     // A new picture is described by its own file, not by the one it replaces:
     // the old alt text, title and caption were about a different photograph.
@@ -947,7 +996,12 @@
           h("button", { type: "button", class: "btn btn-sm", onclick: choose }, "Replace…"),
           h("button", { type: "button", class: "btn btn-sm btn-ghost btn-danger", onclick: () => set(null) }, "Remove"))));
     dropTarget(slot, (srcs) => set(srcs.find((s) => kindOf(s) === "image")));
-    return h("div", {}, slot, h("div", { style: { marginTop: "10px" } }, pictureFields(img, path)));
+    // A ground is published with an empty alt and no lightbox, so it has no
+    // alt text, title or caption to write.
+    const about = f.decorative
+      ? h("p", { class: "f-note", style: { margin: 0 } }, "The section's background: published without alt text or a lightbox, because the text over it says what it shows.")
+      : pictureFields(img, path);
+    return h("div", {}, slot, h("div", { style: { marginTop: "10px" } }, about));
   }
 
   /**
@@ -1319,7 +1373,7 @@
         h("div", { class: "palette" },
           h("button", { type: "button", onclick: () => choose("__pictures") }, h("span", { class: "type-icon" }, "▦"), h("strong", {}, "Gallery from pictures…"), h("small", {}, "Pick several pictures at once and get a gallery of them.")),
           state.site.catalogue.map((s) => h("button", { type: "button", disabled: s.hero && hasHero(), title: s.hero && hasHero() ? "The page already has a hero" : "", onclick: () => choose(s.type) },
-            h("span", { class: "type-icon" }, TYPE_GLYPH[s.type] || "·"), h("strong", {}, s.label), h("small", {}, s.description))))),
+            h("span", { class: "type-icon" }, glyphOf(s)), h("strong", {}, s.label), h("small", {}, s.description))))),
     );
     modal.showModal();
   }

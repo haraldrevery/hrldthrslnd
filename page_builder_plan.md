@@ -130,9 +130,10 @@ folder; a site-absolute path (`/image/x.jpg`) is a site-wide asset. Nothing else
 is accepted. Optional meta keys: `author`, `updated`, `permalink`.
 
 Block types: `hero`, `heading`, `text`, `gallery`, `video`, `audio`,
-`download`, `faq`, `feature`, `raw_html`, and `columns`, which holds exactly two
-of the others. `hero` may only be the first block. The catalogue file is the
-authoritative field list.
+`download`, `faq`, `feature`, `stage_notes`, `stage_wash`, `raw_html`, and
+`columns`, which holds exactly two of the others. `hero` may only be the first
+block; the two `stage_` blocks run the full width of the page and cannot sit in
+a column. The catalogue file is the authoritative field list.
 
 ---
 
@@ -171,6 +172,7 @@ every block. Readmes updated. Binary recompiled and verified.
 | UI pass | done | canvas editing, bulk import and drop, library picker, one inspector; driven end to end in a headless browser |
 | Third pass | done | collage and salon hero treatments; title and caption from the file's XMP, IPTC or EXIF; 19 tests. See below |
 | Feature overlay | done | the feature block's "Over" layout: block_test_page's "Featured dispatch", at the picture's own proportions. See below |
+| Fourth pass | done | two full-width blocks, field notes (1–5) and wash (1–6); `bleed`, `records` with `min`/`max`, `decorative` pictures; a stylesheet test. See below |
 
 ---
 
@@ -349,3 +351,211 @@ phone, the 3rem step over a panorama's lower edge covers about a third of what
 is a short strip.
 
 The beside layout still crops to 3:4, as the hand block does.
+
+---
+
+## Fourth pass: two full-width blocks
+
+Two requests: block_test_page.html's "Section 04 — Field notes" with one to
+five notes, and its "Section 03 — Wash" with one to six tiles. Both are a
+`.photo-stage-adaptive` band: a photograph as the ground, type over it that
+follows the reader's scheme. They are `stage_notes` and `stage_wash` in the
+format — names that are permanent once a post is saved, so they are named for
+what they are (a photo stage) rather than for a test page's section numbers.
+
+Four things had to change underneath before either could be added.
+
+### A block that is not in the column
+
+Every block was `<section class="shell block">`, and `.shell` caps a block at
+the column's width. A band has to reach both edges, so the catalogue gains
+`bleed: true` and the renderer a third wrapper beside the hero's:
+`<section class="block-bleed block-<type> photo-stage photo-stage-adaptive">`
+with a `.shell` inside for the type. `.block` pads a block's bottom, which on a
+band would be photograph; `.block-bleed` pads both ends and keeps the page's
+rhythm below it as a margin. Neither band may sit in a column.
+
+### Lists with bounds, as data
+
+`actions` and `faq_items` are lists of small objects, each written out by hand
+in the catalogue, the validator and the editor. Two more of those would have
+been four copies. The catalogue gains one general kind, `records`, whose
+entries' keys are the field's `item` list, with `min` and `max`: the validator
+reports a count outside them at the list and a missing required key at the key
+("note 2 has no heading"), the editor stops adding at `max` and removing at
+`min`, and a new block starts with `min` empty entries. The JSON is a plain
+list of objects either way, so the format stays at 1. `actions` and
+`faq_items` are left as they are; their messages are worded for what they
+hold, and moving them over gains nothing a reader would see.
+
+The renderer also slices to `max`, so a hand-edited file with seven notes
+renders five, and the validator says why.
+
+### A picture that is a ground
+
+Both originals give the photograph `alt=""` on purpose: it is the section's
+ground, and what it shows is said in the text over it. The validator warned
+about missing alt text on every picture, so a band could never be clean. An
+image field can now be `decorative`: no alt warning, an empty alt in the
+markup, no lightbox, no alt field in the editor, and not counted among the
+page's plates — the collage's "N plates" and the salon's stamp count pictures
+on the page, and a band's ground is not one.
+
+### What the renderer works out, and what it is told
+
+| Piece | Rendered from |
+|---|---|
+| Note numbers | the note's position: "Note 01", then the note's own label after " · " |
+| Note layout | the count, by the stylesheet alone — see below |
+| Heading | a textarea; each line break is a `<br>`, as in the originals |
+| Wash accent | an `accent` field, matched once, as on the hero; missing from the heading is a warning on both |
+| Quote | optional. Without it the tiles take the full width. How many to a row is the block's `tile_columns` since the fifth pass |
+| Ground | the original file, lazy, measured; unmeasurable is a warning |
+
+`.panel-field` placed three notes and nothing past them: a fourth landed in a
+single twelfth of the grid. The stylesheet now counts from both ends — the
+third of four, the fourth of five — and sets the last two as a second
+staggered pair one column to the right of the first. It needs no class from
+the renderer, so a hand-written field of four or five gets it too; one to
+three are unchanged.
+
+The originals' 20-odd style attributes are classes in `css/input.css`
+(`.block-bleed`, `.bleed-*`, `.stat-grid-cols-2`/`-3` since the fifth pass,
+`.stat-tile-text`, `.note-card`, `.note-text`), with the same values.
+
+### Smaller changes made on the way
+
+- Block glyphs live in the catalogue (`glyph`) rather than in a table in the
+  editor.
+- A drop onto the canvas fills the first picture field of any block that has
+  one; the canvas learns which blocks take pictures from the catalogue, by way
+  of the editor, instead of a list of type names.
+- `defaultBlock()` copies a field's default rather than sharing it.
+- A test renders every block and fails on any class the renderer writes that
+  `css/main.css` does not style, other than the `block-<type>` and
+  `block-col-<type>` hooks. It is what catches an `input.css` change with
+  `update_css.sh` not run.
+- `post_blocks.json`'s hero is the stage hero again ("Block / test / post");
+  test text had been saved over it. It carries a wash and a field-notes band
+  mirroring the hand-written sections.
+
+### Not done
+
+- `actions` and `faq_items` are not moved onto `records` (see above).
+- A band's scheme is always adaptive, as both originals are. A dark-only band
+  would be one select on each block when it is wanted.
+- Note and tile text is plain text; a blank line starts a paragraph.
+- The ground is the full original. Files imported through the editor are
+  capped at 2800px; files in the site library are not, and the wash's fog
+  picture is 4705px wide.
+
+---
+
+## Fifth pass: the wash's tile columns, and the uniform gallery's shape
+
+Two requests: a three-column option for the wash's tiles, and a custom ratio
+and height for the uniform gallery.
+
+### Wash: two or three tiles to a row
+
+`tile_columns` is a select, "2" (the default, and what every wash so far has
+been) or "3". It means "at most": `.stat-grid-cols-2` and `.stat-grid-cols-3`
+are auto-fit grids whose minimum track is the larger of 13rem and 40% (or 30%)
+of the grid, so the percentage caps the count, 13rem makes a narrow screen
+drop to fewer, and a phone gets one. Auto-fit rather than a fixed count keeps
+`.stat-grid`'s outer rules whole: the first row is always full. These replace
+the fourth pass's `.stat-grid-fit` and its `:has()` rule, which picked the
+count from the number of tiles instead of from the author.
+
+Three tiles in half the row are too narrow to read, so beside a quote the
+three-column wash is `.bleed-pair-wide`: the quote takes two fifths and the
+tiles three, from 48rem up, like `.block-two-col` itself. The quote was
+capped at 44ch already and loses nothing it was using.
+
+### Uniform gallery: ratio and height
+
+| Field | Empty | Set |
+|---|---|---|
+| `ratio` | square, as before | every cell cropped to it: `--tile-ar` on the grid |
+| `height` | the cells share out the column, as before | every cell exactly that tall and as wide as the ratio makes it; as many to a row as fit, rows centred (`.gallery-uniform-sized`, `--tile-h`). A cell wider than a phone's column narrows to it. Replaced in the sixth pass by a minimum that fills each row |
+
+A ratio is written 3:2, 3/2, 3x2 or 1.5, and must lie between 1:5 and 5:1.
+The editor offers the usual ones in a drop-down that still takes anything
+typed. A height is a CSS length other than a percentage and above zero.
+
+The hand-written uniform grid is untouched: `.gallery-uniform figure` reads
+`var(--tile-ar, 1)`, and a grid that does not set it is square.
+
+### Built on the way
+
+- **Fields that belong to a layout.** Ratio and height mean nothing in a
+  justified or waterfall gallery, so they carry `variants: ["uniform"]` like the
+  hero's treatment-specific fields, and the gallery names `layout` as its
+  `variantField`. `variantOf()`, the validator and the editor read that; a
+  field outside its layout is hidden, not checked, and not rendered.
+- **Values that must parse.** `lib/blocks/units.js` reads CSS lengths and
+  ratios, once, for the validator and the renderer. A text field with a
+  `format` ("length", "height", "ratio") is warned about at the field when it
+  does not parse, and the renderer leaves it out. The gallery's gap gets the
+  same check: a gap of "12" used to fall back to 0.75rem without a word.
+- **Suggestions.** A text field may carry `suggestions`, drawn as a datalist.
+- **Vector tiles in any shape.** An SVG in a uniform grid is a `.tile-vector`,
+  whose artwork sized itself by its own width: right in a square cell, and
+  spilling out of a 3:2 or 16:9 one. The tile is now a one-track grid the size
+  of its inner box, so the artwork fits whatever the cell's ratio.
+- **Checked in a headless browser**, against a copy of the project, at 1440,
+  820 and 390 wide: washes of three, four and six tiles at two and three
+  columns, with and without a quote; uniform galleries empty, 3:2, 4:5 at
+  16rem, 16:9 at 10rem, 2:3 at 20rem and 1:1 at 8rem; the hand-written uniform
+  grid, unchanged. The editor was driven through the new fields: ratio and
+  height appear only for the uniform layout, an unreadable ratio is flagged at
+  its field, and three tile columns reach the canvas.
+
+---
+
+## Sixth pass: the uniform gallery's row height, as a minimum
+
+The fifth pass made the height exact: every cell that tall, rows centred,
+empty space at the edges. Asked for instead: a height that is not so strict,
+rows that fill the width, nothing odd as the page scales, and gaps that do not
+change.
+
+Every cell has the same ratio and the gap is fixed, so a row that fills the
+width exactly can only be as tall as the width shared among n cells allows.
+The height stops being a size and becomes the target that chooses n. Three
+rules were weighed at the gallery widths of a 1440, 1024 and 820 screen and a
+phone (3:2 at 12rem shown; 4:5, 16:9 and 1:1 behave alike):
+
+| Rule | 1440 | 1024 | 820 | Phone |
+|---|---|---|---|---|
+| Exact (fifth pass) | 4 across, 184px empty | 3, 64px empty | 2, 156px empty | 1, 54px empty |
+| Minimum (chosen) | 4 across, 116% | 3, 107% | 2, 127% | 1, 119% |
+| Nearest fit | 5 across, 92% | 3, 107% | 3, 84% | 1, 119% |
+
+Percentages are the height a cell gets as a share of the number. Over every
+case the minimum rule lands at 100–130%, and on a phone a tall ratio goes one
+to a row at the column's full width (up to 167% for 4:5 at 16rem), which is
+what the justified gallery does on a phone too. Nearest fit is closer (82–120%)
+but plain CSS cannot compute it: it needs a script, or typed arithmetic with
+container queries, too new to rely on for a site meant to build unchanged for
+ten years. It could be layered on later with the minimum rule as its fallback.
+Capping each cell's width inside a wider track was rejected outright: the
+visible gaps would grow.
+
+So `.gallery-uniform-sized` is `repeat(auto-fit, minmax(min(100%, height ×
+ratio), 1fr))` — the square grid's own mechanism with its 14rem minimum
+replaced. As the window widens, cells grow until one more fits, then drop back
+to the height; nothing jumps or overflows, and the gap is the grid's gap.
+
+A gallery with fewer pictures than a row holds would stretch them to fill it —
+two 16:9 pictures at 10rem on a wide screen became 2.4 times the height. The
+renderer writes the picture count as `--tile-count`, and the grid is never
+wider than that many cells a quarter past the height, plus their gaps: a short
+gallery grows as a full row would, then stops and centres. A partial last row
+of a longer gallery stays left-aligned at the row's cell size, as in every
+uniform grid; centring it would take different cell sizes or gaps.
+
+The field is labelled "Row height" now. The key in the JSON is still `height`,
+so nothing saved changes.
+
+`post_blocks.json` gains a 4:5 gallery at 16rem beside the square one.

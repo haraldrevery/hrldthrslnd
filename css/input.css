@@ -4303,7 +4303,32 @@
     gap: var(--gallery-gap);
     grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
   }
-  .gallery-uniform figure { aspect-ratio: 1 / 1; }
+  /* --tile-ar is the block's chosen ratio, written on the grid by the page
+     builder; a grid without it — every hand-written one — stays square. */
+  .gallery-uniform figure { aspect-ratio: var(--tile-ar, 1); }
+  /* A uniform grid with a row height (--tile-h, again from the page builder).
+     The height is the SMALLEST a cell gets, not its size: every cell has the
+     same ratio and the gap is fixed, so a row that fills the width can only be
+     as tall as the width shared among n cells allows, and the height is what
+     chooses n. This is the square grid's own mechanism with its 14rem minimum
+     replaced by height x ratio — as many cells as fit at that size, grown to
+     fill the row — so a full row always fills the width, the gap is always the
+     gap, and a cell ends up as tall as asked or a little taller (a quarter or
+     so on a wide screen, more on a phone, where one to a row is the width of
+     the column). A cell wider than a phone's column narrows to it.
+
+     A gallery with fewer pictures than a row holds would stretch those few to
+     fill it. The renderer writes the count as --tile-count, and the grid is
+     never wider than that many cells a quarter past the height plus their
+     gaps: a short gallery grows as a full row would, then stops and centres.
+     auto-fit, so the tracks nothing lands in close up and the few cells take
+     the grid's width. A partial last row stays at the row's cell size, left
+     aligned, as in every uniform grid. */
+  .gallery-uniform-sized {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--tile-h) * var(--tile-ar, 1))), 1fr));
+    max-width: calc(var(--tile-count, 1000) * (var(--tile-h) * var(--tile-ar, 1) * 1.25 + var(--gallery-gap)) - var(--gallery-gap));
+    margin-inline: auto;
+  }
   .gallery-uniform img, .gallery-uniform svg, .gallery-uniform video {
     width: 100%; height: 100%; object-fit: cover;
   }
@@ -4417,6 +4442,13 @@
     display: grid;
     place-items: center;
     padding: 2rem;
+    /* One track exactly the tile's inner box, so the artwork's height: 100%
+       below has something definite to be a percentage of. Without it the row
+       was sized by the artwork, which is as tall as it is wide: right in a
+       square tile, and spilling out of a 3:2 or 16:9 one. min-height: 0 stops
+       aspect-ratio growing the tile to fit its content instead. */
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-height: 0;
   }
   /* The project SVGs are sized in percentages, so they have no intrinsic
      height to lay out against — the tile's own square gives them one. */
@@ -4633,7 +4665,8 @@
 
      The heading block is the documented exception: it pads its top, because it
      is the first thing after a hero, and closes tight because the block under
-     it is what it is a heading for. */
+     it is what it is a heading for. The full-width blocks are the other one;
+     see .block-bleed below. */
   .block { padding-bottom: clamp(3rem, 8vh, 4.5rem); }
   .block-heading { padding-top: clamp(3rem, 8vh, 4.5rem); padding-bottom: 1rem; }
   .block-heading .display-md { margin-top: 0.9rem; }
@@ -4650,6 +4683,47 @@
   /* The caption under a video or audio block: the mono micro face, but in
      mixed case and muted, which is what the library set inline. */
   .block-caption { letter-spacing: 0.08em; text-transform: none; color: var(--fg-muted); }
+
+  /* Full-width blocks: the field notes and the wash, rendered as
+     <section class="block-bleed block-<type> photo-stage photo-stage-adaptive">
+     with a .shell inside. Not .block: the band's photograph fills its padding,
+     so it pads both ends, and the page's rhythm below it is a margin. The
+     values are the ones the hand-written sections in block_test_page.html
+     carry inline. Colours are .photo-stage-adaptive's, in section L. */
+  .block-bleed { padding-block: clamp(4rem, 12vh, 7rem); margin-bottom: clamp(3rem, 8vh, 4.5rem); }
+  .block-stage_wash { padding-block: clamp(4rem, 14vh, 8rem); }
+  .bleed-shell { position: relative; }
+  .eyebrow + .bleed-title { margin-top: 0.9rem; }
+  .block-stage_wash .eyebrow + .bleed-title { margin-top: 1.25rem; }
+  .bleed-body { margin-top: clamp(2.5rem, 7vh, 4rem); }
+  /* align-items: start, or the grid stretches the quote to the tiles' height. */
+  .bleed-pair { align-items: start; }
+  .bleed-quote {
+    font-size: var(--step-1);
+    line-height: 1.5;
+    border-left: var(--hairline-width) solid;
+    padding-left: 1.5rem;
+    max-width: 44ch;
+  }
+  /* The wash's tile columns: at most two, or three, tiles to a row, as the
+     block says; fewer where the room runs out, one on a phone; and a row of
+     fewer tiles than that spreads across the grid. The percentage caps the
+     count — three 40% tracks do not fit, nor four 30% ones — and 13rem is the
+     narrowest a tile gets before one fewer fits. auto-fit, never auto-fill:
+     .stat-grid's outer rules need the first row full. */
+  .stat-grid-cols-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(13rem, 40%)), 1fr)); }
+  .stat-grid-cols-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(13rem, 30%)), 1fr)); }
+  /* Three tiles beside a quote need more than half the row: the quote, capped
+     at 44ch anyway, gives up a fifth. Two columns only from 48rem, as
+     .block-two-col itself, so a phone still stacks. */
+  @media (min-width: 48rem) {
+    .bleed-pair-wide { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+  }
+  .stat-tile-text { font-size: var(--step--1); }
+  .stat-grid > * > * + .stat-tile-text { margin-top: 0.5rem; }
+  .note-card { padding: clamp(1.5rem, 3vw, 2.25rem); }
+  .note-card h3 { margin-top: 0.9rem; font-size: var(--step-1); }
+  .note-text { margin-top: 0.9rem; font-size: var(--step--1); }
 
   /* The download block's head row: name on the left, the pill on the right. */
   .download-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
@@ -5403,6 +5477,15 @@
     .panel-field > *:nth-child(1) { grid-column: 1 / 6; }
     .panel-field > *:nth-child(2) { grid-column: 7 / 12; margin-top: clamp(2rem, 7vh, 5rem); }
     .panel-field > *:nth-child(3) { grid-column: 3 / 9; }
+    /* Four and five notes. The last two become a second staggered pair, one
+       column to the right of the first, so the field reads as more notes
+       pinned to the picture rather than as a grid. Counted from both ends
+       (the third of four, the fourth of five), so it needs no class and a
+       hand-written field gets it too; one to three are the rules above. */
+    .panel-field > :nth-child(3):nth-last-child(2),
+    .panel-field > :nth-child(4):nth-last-child(2) { grid-column: 2 / 7; }
+    .panel-field > :nth-child(4):nth-last-child(1),
+    .panel-field > :nth-child(5):nth-last-child(1) { grid-column: 8 / 13; margin-top: clamp(2rem, 7vh, 5rem); }
   }
   /* Same correction .feature-overlay-panel makes, for the same reason.
      .glass-card's near-transparent white is tuned for a panel on a dark ground;
