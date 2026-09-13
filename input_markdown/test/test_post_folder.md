@@ -25,7 +25,7 @@ Here the audio should be playable:
 
 ## Video
 
-![Video description here.](video/under_25_mb/harald_revery_-_phrases.mp4)
+![Video description here.](/video/under_25_mb/harald_revery_-_phrases.mp4)
 
 ### Heading 3
 #### Heading 4

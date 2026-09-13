@@ -117,8 +117,8 @@
       "title": "Gallery — uniform, 4:5, rows from 16rem",
       "lede": "The same pictures cropped to a portrait ratio. Every cell is at least 16rem tall and each row fills the width; four pictures are short of a row on a wide screen, so they grow a little and centre.",
       "layout": "uniform",
-      "ratio": "4:5",
-      "height": "16rem",
+      "ratio": "16:9",
+      "height": "12rem",
       "gap": "0.5rem",
       "images": [
         {
