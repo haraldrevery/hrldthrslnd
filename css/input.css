@@ -3023,6 +3023,31 @@
        it, so it is tuned per card size below: on a small card the same value
        that suits a poster-sized plate leaves almost no photograph showing. */
     --category-body-top: clamp(3rem, 7vw, 5.5rem);
+
+    /* The light scheme's values; the dark ones are four declarations at the
+       foot of this component. Two layers do the work — a veil over the whole
+       picture and a ramp under the text — and in light mode both wash the
+       photograph towards paper so ink can stand on it, which is the same
+       bargain .photo-stage-adaptive strikes with --hero-scrim-pale.
+
+       The alphas are NOT the dark ones inverted. Near-black type needs more of
+       the photograph taken out from under it than near-white type does, which
+       is why --hero-scrim-pale is heavier than --hero-scrim at every stop; the
+       ramp below follows it. The veil is the other way round: mixing a picture
+       towards white flattens it fast, so the middle of the frame is left
+       nearly clear and the wash is spent at the edges. */
+    --category-veil: linear-gradient(180deg,
+      rgba(250, 250, 248, 0.30) 0%,
+      rgba(250, 250, 248, 0.10) 40%,
+      rgba(250, 250, 248, 0.26) 100%);
+    --category-ramp: linear-gradient(180deg,
+      rgba(250, 250, 248, 0) 0%,
+      rgba(250, 250, 248, 0.88) 30%,
+      rgba(250, 250, 248, 0.96) 58%,
+      rgba(250, 250, 248, 0.97) 100%);
+    --category-frame: rgba(13, 13, 16, 0.16);
+    --category-frame-strong: rgba(13, 13, 16, 0.34);
+
     position: relative;
     isolation: isolate;
     display: flex;
@@ -3030,8 +3055,10 @@
     justify-content: flex-end;
     min-height: 17rem;
     overflow: hidden;
-    background: #111217;
-    color: var(--paper);
+    /* The ground a card with no picture stands on, and the scheme's own: the
+       pale stage in light, the old matte in dark. */
+    background: var(--stage-ground);
+    color: var(--panel-adaptive-fg);
   }
 
   /* The text block, and the ramp that holds it up. The ramp is on the block
@@ -3042,11 +3069,7 @@
   .category-card-body {
     padding: clamp(1.5rem, 3vw, 2.5rem);
     padding-top: var(--category-body-top);
-    background: linear-gradient(180deg,
-      rgba(9, 9, 12, 0) 0%,
-      rgba(9, 9, 12, 0.72) 30%,
-      rgba(9, 9, 12, 0.93) 58%,
-      rgba(9, 9, 12, 0.96) 100%);
+    background: var(--category-ramp);
   }
   .category-grid > .category-card:nth-child(3n + 1) { min-height: 22rem; }
 
@@ -3054,8 +3077,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    /* The ground a card with no picture at all stands on. */
-    background: var(--matte-ground);
+    background: var(--stage-ground);
   }
   .category-card:hover .category-card-media img,
   .category-card:focus-within .category-card-media img { transform: scale(1.04); }
@@ -3069,10 +3091,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(180deg,
-      rgba(9, 9, 12, 0.34) 0%,
-      rgba(9, 9, 12, 0.06) 40%,
-      rgba(9, 9, 12, 0.22) 100%);
+    background: var(--category-veil);
     pointer-events: none;
   }
 
@@ -3084,12 +3103,12 @@
     position: absolute;
     inset: clamp(0.55rem, 1vw, 0.8rem);
     z-index: 0;
-    border: var(--hairline-width) solid rgba(244, 244, 242, 0.16);
+    border: var(--hairline-width) solid var(--category-frame);
     pointer-events: none;
     transition: border-color var(--dur-slow) var(--ease-liquid);
   }
   .category-card:hover::before,
-  .category-card:focus-within::before { border-color: rgba(244, 244, 242, 0.34); }
+  .category-card:focus-within::before { border-color: var(--category-frame-strong); }
 
   .category-card-meta {
     display: flex;
@@ -3101,7 +3120,11 @@
     letter-spacing: 0.22em;
     line-height: var(--font-mono-leading);
     text-transform: uppercase;
-    color: rgba(244, 244, 242, 0.78);
+    /* Muted rather than faint, which is what a label this size would normally
+       take. The line sits where the ramp is still fading in, so on a small card
+       over a bright photograph the faint token measured 4.1:1 — under AA for
+       text, and this line is content: it says how many entries are inside. */
+    color: var(--panel-adaptive-fg-muted);
   }
   /* The plate number. Display face, a step up from the count beside it, so the
      pair reads as a numbered plate and a caption rather than two labels. */
@@ -3109,7 +3132,7 @@
     font-family: var(--font-display-family);
     font-size: var(--step-1);
     letter-spacing: 0.08em;
-    color: var(--paper);
+    color: var(--panel-adaptive-fg-strong);
   }
 
   .category-card-rule {
@@ -3129,7 +3152,7 @@
     letter-spacing: calc(var(--font-display-tracking) * 0.6);
     line-height: 1.02;
     text-transform: uppercase;
-    color: var(--paper);
+    color: var(--panel-adaptive-fg-strong);
     word-break: break-word;
   }
   .category-card-desc {
@@ -3140,8 +3163,82 @@
     max-width: 46ch;
     margin-top: 0.8rem;
     font-size: var(--step--1);
-    color: rgba(244, 244, 242, 0.82);
+    color: var(--panel-adaptive-fg-muted);
   }
+
+  /* The dark scheme: the two washes turn round and go to near-black, and the
+     type follows through --panel-adaptive-*, which is already declared per
+     scheme in theme.css. Four declarations rather than a second copy of the
+     component — the same shape .cine-stage's dark block takes. */
+  @media (prefers-color-scheme: dark) {
+    .category-card {
+      --category-veil: linear-gradient(180deg,
+        rgba(9, 9, 12, 0.34) 0%,
+        rgba(9, 9, 12, 0.06) 40%,
+        rgba(9, 9, 12, 0.22) 100%);
+      --category-ramp: linear-gradient(180deg,
+        rgba(9, 9, 12, 0) 0%,
+        rgba(9, 9, 12, 0.86) 30%,
+        rgba(9, 9, 12, 0.94) 58%,
+        rgba(9, 9, 12, 0.96) 100%);
+      --category-frame: rgba(244, 244, 242, 0.16);
+      --category-frame-strong: rgba(244, 244, 242, 0.34);
+    }
+  }
+
+  /* -- Category masthead: a category page standing on its own picture --------
+     .photo-stage with the adaptive modifier, which brings the ground, the
+     scrim and every type colour with it; all this adds is the room the band
+     stands in and the row of subjects at the foot of it.
+
+     Deliberately not a .hero-stage: a listing page should not spend a whole
+     viewport before its first entry, and nav_reveal.js hides the bar over a
+     leading hero, which would take the navigation off every category page. */
+  .category-masthead {
+    padding-block: clamp(3.5rem, 12vh, 7rem);
+    /* A heavier wash than .photo-stage-adaptive's own, and local to this band.
+       The shared scrim is tuned for a section carrying a line or two over a
+       picture; this one carries an eyebrow, a masthead, a lede and a row of
+       chips, and its middle stops are exactly where they sit. Measured over
+       these photographs the shared values put the eyebrow at 3.1:1 and the
+       lede at 3.7:1 in dark mode — both under AA for text this size.
+
+       Set here rather than on --hero-scrim / --stage-scrim, which every other
+       photographic surface on the site reads: re-tuning those to suit one band
+       would re-dim the heroes and the page builder's bleed blocks with it. */
+    --category-band-scrim: linear-gradient(180deg,
+      rgba(250, 250, 248, 0.90) 0%,
+      rgba(250, 250, 248, 0.72) 42%,
+      rgba(250, 250, 248, 0.82) 74%,
+      rgba(250, 250, 248, 0.90) 100%);
+  }
+  /* Two class names, not one. .photo-stage-adaptive::before ties with a single
+     one and is declared in section L at the foot of the file, so an equally
+     specific rule here loses on source order and the band keeps the shared
+     scrim — which is exactly what happened, and the measured numbers did not
+     move an inch until this selector was made the more specific of the two. */
+  .photo-stage.category-masthead::before { background: var(--category-band-scrim); }
+  @media (prefers-color-scheme: dark) {
+    .category-masthead {
+      --category-band-scrim: linear-gradient(180deg,
+        rgba(9, 9, 12, 0.86) 0%,
+        rgba(9, 9, 12, 0.64) 42%,
+        rgba(9, 9, 12, 0.72) 74%,
+        rgba(9, 9, 12, 0.86) 100%);
+    }
+  }
+  .category-masthead-subjects {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.75rem;
+  }
+  /* The chips take the band's own ink rather than --fg-muted, which is set for
+     the page's ground and not for a photograph. */
+  .category-masthead .tag-chip { color: var(--panel-adaptive-fg-muted); }
+  .category-masthead .tag-chip:hover,
+  .category-masthead .tag-chip:focus-visible { color: var(--panel-adaptive-fg-strong); }
 
   /* Two columns: the lead card of each group runs the full width, two rows
      tall, and the two after it share the row beneath. A pair left over at the

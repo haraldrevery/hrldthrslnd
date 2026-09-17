@@ -117,7 +117,7 @@ title: false
   <hr class="rule-grad" style="margin-block:1.75rem 2.5rem;">
 
   <div class="category-grid">
-    {% for entry in featuredCategories %}{{ cards.category(entry, "h3") }}{% endfor %}
+    {% for entry in featuredCategories %}{{ cards.category(entry, "h3", loop.index) }}{% endfor %}
   </div>
 </section>
 {% endif %}

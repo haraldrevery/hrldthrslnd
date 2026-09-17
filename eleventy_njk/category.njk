@@ -15,29 +15,56 @@ layout: base.njk
 {% import "card.njk" as cards %}
 {% set entry = categoryPage.category %}
 
-<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
-  <p class="eyebrow"><a class="link-underline" href="/categories.html">Categories</a> — {{ entry.count }} {% if entry.count == 1 %}entry{% else %}entries{% endif %}</p>
-  <h1 class="display" style="margin-top:1rem;">{{ entry.title }}</h1>
-  {%- if entry.description %}
-  <p class="lede" style="margin-top:1.5rem;">{{ entry.description }}</p>
-  {%- endif %}
+{# The masthead stands on the category's own picture: .photo-stage with the
+   adaptive modifier, which is the site's band-over-a-photograph component —
+   washed pale under ink type in light mode, dimmed under paper type in dark,
+   with the scrim alphas that were measured for it in theme.css.
 
-  {#- The subjects this category gathers, each a way into the subject's own
-      page. Only the ones something is filed under: a subject with no entries
-      has no page to link to. The same row of filing marks a post's header
-      carries. -#}
-  {%- if entry.subjects.length %}
-  <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem; margin-top:1.75rem;">
-    {%- for subject in entry.subjects %}
-    <a class="tag-chip" href="{{ subject.href }}">{{ subject.tag }} ({{ subject.count }})</a>
-    {%- endfor %}
+   Not a .hero-stage. A hero is a full viewport and would put every entry below
+   the fold on a page whose whole job is listing them; it would also be picked
+   up by nav_reveal.js, which hides the bar over a leading hero, and a listing
+   page should not take the navigation away.
+
+   The picture is the ORIGINAL rather than the _min counterpart: a band is the
+   widest surface on the page, past what a thumbnail covers. renderBleed() in
+   blocks/render.js takes the same line for the same reason. It is eager, being
+   the first thing on the page, and its alt is empty because the title over it
+   says what it is.
+
+   With no picture the same band stands on --stage-ground, the scheme's own
+   stage gradient, which is what .hero-stage uses when it has no photograph.
+   One code path either way. #}
+<section class="photo-stage photo-stage-adaptive category-masthead">
+  {%- if entry.image %}
+  <div class="stage-media">
+    <img src="{{ entry.image }}" alt=""{{ entry.image | sizeAttrs | safe }} loading="eager" decoding="async">
   </div>
   {%- endif %}
 
-  <hr class="rule-grad" style="margin-top:2.5rem;">
+  <div class="shell">
+    <p class="eyebrow"><a class="link-underline" href="/categories.html">Categories</a> — {{ entry.count }} {% if entry.count == 1 %}entry{% else %}entries{% endif %}</p>
+    <h1 class="display" style="margin-top:1rem;">{{ entry.title }}</h1>
+    {%- if entry.description %}
+    <p class="lede" style="margin-top:1.5rem;">{{ entry.description }}</p>
+    {%- endif %}
+
+    {#- The subjects this category gathers, each a way into the subject's own
+        page. Only the ones something is filed under: a subject with no entries
+        has no page to link to. The same row of filing marks a post's header
+        carries. -#}
+    {%- if entry.subjects.length %}
+    <div class="category-masthead-subjects">
+      {%- for subject in entry.subjects %}
+      <a class="tag-chip" href="{{ subject.href }}">{{ subject.tag }} ({{ subject.count }})</a>
+      {%- endfor %}
+    </div>
+    {%- endif %}
+  </div>
 </section>
 
-<section class="shell" style="padding-bottom:2rem;">
+{#- No rule under the band: the band has an edge of its own, and the gradient
+    rule is what stands in for one on a page that has none. -#}
+<section class="shell" style="padding-block:clamp(2.5rem,6vh,4rem) 2rem;">
   {% if categoryPage.entries.length %}
   <div class="card-grid">
     {% for post in categoryPage.entries %}{{ cards.card(post, settings) }}{% endfor %}

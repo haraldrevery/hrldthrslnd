@@ -772,6 +772,7 @@ export function createConfig({
       const categoryList = declared.categories.map((category, position) => {
         const slug = categoryNames.slugs.get(categoryKey(category));
         const source = category.thumbnail || settings.default_image;
+        const thumbnail = source ? resolveThumbnail(source, root) : "";
         return {
           // 1-based and continuous across the overview's pages, for the plate
           // number a card carries.
@@ -780,7 +781,36 @@ export function createConfig({
           description: category.description,
           slug,
           href: listingHref(`${CATEGORY_PREFIX}${slug}`),
-          thumbnail: source ? resolveThumbnail(source, root) : "",
+          thumbnail,
+          /**
+           * The picture as written, which is the full-resolution file wherever
+           * there is one. The page's own header band stands on it: a band is
+           * the widest surface on the page, past what a _min counterpart
+           * covers, which is the rule renderBleed() already follows.
+           *
+           * The same as `thumbnail` when the source has no counterpart —
+           * anything in card_thumbnail/, svg/ or gif/ is already a thumbnail
+           * and there is no larger file to reach for.
+           */
+          image: source || "",
+          /**
+           * Both sizes offered to the card, so a screen that would upscale the
+           * counterpart can fetch the original instead.
+           *
+           * The large plate in the grid is about 900px wide at a 1440 viewport
+           * and up to 1130 at the full shell — against a counterpart held under
+           * 80kB, which lands at 1280px on the long side. That is a 1.8x upscale
+           * on a 2x screen, on the one picture the layout makes poster-sized.
+           * Empty when there is no second file, or when either cannot be
+           * measured: a srcset whose widths are guesses picks the wrong file.
+           */
+          srcset: (() => {
+            if (!source || !thumbnail || source === thumbnail) return "";
+            const small = imageSize(thumbnail, root);
+            const large = imageSize(source, root);
+            if (!small || !large || large.width <= small.width) return "";
+            return `${thumbnail} ${small.width}w, ${source} ${large.width}w`;
+          })(),
           // The subjects this category gathers that have a page to link to,
           // under the spelling the rest of the site shows.
           subjects: category.keys

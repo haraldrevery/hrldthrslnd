@@ -80,14 +80,27 @@
    `heading` is the level the title takes, because the same card sits under an
    h2 on the front page and directly under the page's h1 on /categories.html.
 
+   `position` is the card's 1-based place in its grid, and it is only used to
+   tell the browser how wide the picture will be drawn. Every third card
+   starting with the first is the large plate — see "Category cards" in
+   input.css — and at desktop width it is drawn twice as wide as the two beside
+   it. `sizes` is a hint, not a promise: the remainder rules can make the last
+   card of a grid wider than this says, and the cost of being wrong is one
+   step of sharpness, never a broken image.
+
    Built like the blog card: only the title is a real link, and .card-link::after
    stretches it over the whole plate. The picture is decoration — the title is
    the link's name, and alt text would read the category out a second time. #}
-{% macro category(entry, heading = "h3") %}
+{% macro category(entry, heading = "h3", position = 1) %}
+{%- set lead = position % 3 == 1 -%}
+{%- set sizes = "(min-width: 64rem) 62vw, (min-width: 40rem) 92vw, 88vw" if lead
+                else "(min-width: 64rem) 31vw, (min-width: 40rem) 45vw, 88vw" -%}
 <article class="category-card">
   <div class="category-card-media art-plate fill" aria-hidden="true">
     {%- if entry.thumbnail %}
-    <img src="{{ entry.thumbnail }}" alt=""{{ entry.thumbnail | sizeAttrs | safe }} loading="lazy" decoding="async">
+    <img src="{{ entry.thumbnail }}" alt=""{{ entry.thumbnail | sizeAttrs | safe }}
+         {%- if entry.srcset %} srcset="{{ entry.srcset }}" sizes="{{ sizes }}"{% endif %}
+         loading="lazy" decoding="async">
     {%- endif %}
   </div>
 

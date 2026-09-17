@@ -251,9 +251,23 @@ dropped without touching a single page.
 is what keeps `category: [Astronomy]` in a post's front matter doing the obvious
 thing: it lands in the category titled "Astronomy" with no list to keep in step.
 
-`thumbnail` is the card's picture, and the compressed `_min` counterpart is what
-loads, exactly as on a blog card. Leave it out and the card falls back to
-`default_image` from `site_settings.json`.
+`thumbnail` is the category's picture, and it is used in two places. The card
+loads the compressed `_min` counterpart, like every other card — but it also
+offers the original in a `srcset`, because the large plate in the grid is drawn
+up to 1130px wide and a counterpart held under 80kB lands at 1280px on the long
+side. So a 1x screen takes the small file everywhere, a 2x screen fetches the
+original for the large plate only, and a phone never does. The category's own
+page stands on the original outright: a full-width band is past what a thumbnail
+covers, which is the rule the page builder's bleed block already follows.
+
+A picture with no larger original behind it — anything in `card_thumbnail/`,
+`svg/` or `gif/` — is simply used as it is, with no `srcset`. That is right for a
+card and thin for a band, so give a category a photograph from `image/` if you
+want its page to carry one well.
+
+Leave `thumbnail` out and the card falls back to `default_image` from
+`site_settings.json`; with no picture at all, the page's header band stands on
+the scheme's own stage gradient instead.
 
 `slug` is optional and pins the URL. Without one the URL comes from the title,
 so renaming a category moves its page; with `"slug": "night"` the page stays at
@@ -272,6 +286,34 @@ otherwise be silent — a misspelt subject just quietly gathers nothing.
 
 With no `category.json` there are no categories, no overview page, and no
 section on the front page.
+
+### How they look
+
+The cards are the one place on the site where a photograph is the surface
+rather than an illustration: the picture fills the plate, the type sits on it,
+and the grid runs in groups of three — one large plate, two small — so a page of
+categories does not read as a row of equal thumbnails. **They follow the colour
+scheme**, unlike the other surfaces that stand on a photograph: in light mode
+the picture is washed towards paper and the type is ink, in dark it is dimmed
+under paper type. Both washes are two layers, a veil over the whole picture and
+a ramp under the text, and the ramp is on the text block rather than the card
+because only the block knows where the type starts.
+
+Every text colour on them was measured rather than judged, the way `--fg-muted`
+and `--fg-faint` were: over these photographs the worst case is 4.8:1 in dark
+mode and 5.1:1 in light, against the 4.5:1 AA needs. If you swap in a much
+brighter or much flatter photograph, re-check it — the numbers depend on the
+picture, and the two knobs are `--category-ramp` and `--category-veil` in
+`css/input.css`.
+
+The category page opens with the same treatment at full width: a
+`.photo-stage-adaptive` band carrying the eyebrow, the masthead, the description
+and the subjects it gathers. It is deliberately not a `.hero-stage` — a listing
+page should not spend a whole viewport before its first entry, and
+`nav_reveal.js` hides the bar over a leading hero, which would take the
+navigation off every category page. The band carries a heavier scrim than the
+shared component, set on itself: measured with the shared one, the eyebrow came
+out at 3.1:1.
 
 ---
 

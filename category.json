@@ -24,6 +24,12 @@
       "description": "Test pages and stress tests: every block and every edge case, in one place.",
       "thumbnail": "/image/padova2016.jpg",
       "tags": ["template", "test"]
+    },
+    {
+      "title": "Test",
+      "description": "Test pages and stress tests: every block and every edge case, in one place.",
+      "thumbnail": "/card_thumbnail/thumbnail_beach.jpg",
+      "tags": ["test"]
     }
   ]
 }

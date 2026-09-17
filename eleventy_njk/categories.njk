@@ -21,7 +21,7 @@ description: The subjects this site keeps coming back to, each with every entry 
 
 <section class="shell" style="padding-block:1.5rem 2rem;">
   <div class="category-grid">
-    {% for entry in categoryIndexPage.entries %}{{ cards.category(entry, "h2") }}{% endfor %}
+    {% for entry in categoryIndexPage.entries %}{{ cards.category(entry, "h2", loop.index) }}{% endfor %}
   </div>
 </section>
 
