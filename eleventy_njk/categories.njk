@@ -1,0 +1,29 @@
+---
+layout: base.njk
+title: Categories
+description: The subjects this site keeps coming back to, each with every entry filed under it.
+---
+{# The category overview: every category in category.json, as the plates the
+   front page shows its first three of, in the same editorial grid.
+
+   Paged by `per_page` in category.json — nine by default, three of the grid's
+   groups. The paging is in categories.11tydata.js and in the listings in
+   eleventy_binary/lib/eleventy_config.js. With no categories there is no page
+   at all, and the front page shows no section linking to it. #}
+{% import "card.njk" as cards %}
+
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
+  <p class="eyebrow">{{ settings.name }}</p>
+  <h1 class="display" style="margin-top:1rem;">{{ title }}</h1>
+  <p class="lede" style="margin-top:1.5rem;">{{ description }}</p>
+  <hr class="rule-grad" style="margin-top:2.5rem;">
+</section>
+
+<section class="shell" style="padding-block:1.5rem 2rem;">
+  <div class="category-grid">
+    {% for entry in categoryIndexPage.entries %}{{ cards.category(entry, "h2") }}{% endfor %}
+  </div>
+</section>
+
+{% set pager = categoryIndexPage.pager %}
+{% include "pagination.njk" %}

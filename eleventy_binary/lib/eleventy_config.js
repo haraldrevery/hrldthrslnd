@@ -22,6 +22,11 @@ import { rfc822Date, toDate } from "./format.js";
 import { stripFrontMatter } from "./front_matter.js";
 import { mergeSubjects, foldSubject } from "./subjects.js";
 import { renderPost, pageData } from "./blocks/render.js";
+import {
+  TAG_PREFIX, CATEGORY_PREFIX, CATEGORIES_BASE,
+  listingHref, occupiedBases, assignSlugs, paginate,
+} from "./listings.js";
+import { readCategories, inCategory } from "./categories.js";
 
 /**
  * Directories copied verbatim into _site.
@@ -123,9 +128,9 @@ export function createConfig({
   /**
    * Subject key -> the slug its page is published under.
    *
-   * One table, read by both routes from a subject to its URL: the tagList
-   * collection, which supplies blog-tag.njk's permalink and the chips in
-   * tag_filter.njk, and the tagSlug filter, which card.njk and post.njk use to
+   * One table, read by both routes from a subject to its URL: the tagList and
+   * tagPages collections, which supply tag.njk's permalinks and the chips in
+   * tag_filter.njk, and the tagUrl filter, which card.njk and post.njk use to
    * link a post's own subjects. Deriving the slug independently on each side
    * worked only while headingSlug was injective — and it is not, because it
    * strips punctuation: "C++" and "C#" both reduce to "c". Deduplicating on one
@@ -149,48 +154,22 @@ export function createConfig({
   const tagLabels = new Map();
 
   /**
-   * Fill both tables, resolving slug collisions by suffix.
-   *
-   * Assigned in code-unit order of the subject KEY, never in the order the
-   * subject list is displayed in. That list is sorted by how many entries carry
-   * each subject, so tying the slugs to it would let publishing one post
-   * reshuffle which subject keeps the bare URL — silently breaking every link
-   * to the one that lost it. Ordering by the key rather than by the chosen
-   * spelling matters for the same reason: the spelling can change when a page
-   * is added, and the key cannot.
-   *
-   * @param {Iterable<{key: string, tag: string}>} subjects
+   * The listings of each build, keyed by the collection API object Eleventy
+   * hands every collection callback — one per build, so a watch-mode rebuild
+   * computes afresh rather than reading the last build's answer.
    */
-  const assignTagSlugs = (subjects) => {
-    tagSlugs.clear();
-    tagLabels.clear();
-    const taken = new Set();
+  const listingsByBuild = new WeakMap();
 
-    const ordered = [...subjects].sort((a, b) =>
-      a.key < b.key ? -1 : a.key > b.key ? 1 : 0,
-    );
-
-    for (const { key, tag } of ordered) {
-      const desired = headingSlug(tag);
-      let slug = desired;
-      let suffix = 1;
-
-      while (taken.has(slug)) {
-        suffix += 1;
-        slug = `${desired}-${suffix}`;
-      }
-
-      if (slug !== desired) {
-        log.warn(
-          "tags",
-          `two subjects reduce to the same URL name "${desired}"`,
-          `"${tag}" is published at /blog_tag_${slug}.html instead`,
-        );
-      }
-
-      taken.add(slug);
-      tagSlugs.set(key, slug);
-      tagLabels.set(key, tag);
+  /** Say so when a generated page could not have the name it wanted. */
+  const reportRenamed = (scope, prefix, renamed) => {
+    for (const { name, desired, slug, blockedBy } of renamed) {
+      log.warn(
+        scope,
+        blockedBy === "page"
+          ? `a page is already published at /${prefix}${desired}.html, or at a numbered page of it`
+          : `"${name}" and "${blockedBy}" reduce to the same URL name "${desired}"`,
+        `"${name}" is published at /${prefix}${slug}.html instead`,
+      );
     }
   };
 
@@ -388,7 +367,7 @@ export function createConfig({
        *
        * Eleventy's own automatic `collections.<tag>` is NOT fed by computed
        * data and therefore knows nothing about categories. Nothing here uses
-       * it — every subject page comes from the `tagList` collection below — but
+       * it — every subject page comes from the `tagPages` collection below — but
        * that is the reason this approach works, so it is worth stating.
        *
        * `tags` is passed first so a page that already had them keeps its chips
@@ -477,18 +456,18 @@ export function createConfig({
       const date = toDate(v);
       return date ? String(date.getUTCFullYear()) : "";
     });
-    // Named tagSlug rather than "slug" so it cannot be shadowed by Eleventy's
-    // own built-in slug filter — the tag page permalinks and the links pointing
-    // at them must come from exactly the same table.
+    // The URL of a subject's page, for a chip that names it. The whole URL
+    // rather than the slug, so the /tag_ prefix is written in listings.js and
+    // nowhere else — the tag page permalinks and the links pointing at them must
+    // come from exactly the same table.
     //
-    // The fallback matters only if this is somehow called before the tagList
-    // collection has been built. Eleventy resolves every collection before it
-    // renders anything, so it should not happen; if it ever did, headingSlug is
-    // what this filter returned for years, so the failure is the old behaviour
-    // rather than a broken link.
-    eleventyConfig.addFilter("tagSlug", (tag) => {
+    // The fallback matters only if this is somehow called before the listings
+    // have been built. Eleventy resolves every collection before it renders
+    // anything, so it should not happen; if it ever did, headingSlug is the
+    // name the table would have given any subject that collides with nothing.
+    eleventyConfig.addFilter("tagUrl", (tag) => {
       const key = foldSubject(tag);
-      return tagSlugs.get(key) ?? headingSlug(String(tag).trim());
+      return listingHref(`${TAG_PREFIX}${tagSlugs.get(key) ?? headingSlug(String(tag).trim())}`);
     });
     /**
      * The site-wide spelling of a subject, for a page that holds its own.
@@ -502,20 +481,6 @@ export function createConfig({
     eleventyConfig.addFilter("tagLabel", (value) => {
       const label = (tag) => tagLabels.get(foldSubject(tag)) ?? String(tag).trim();
       return Array.isArray(value) ? value.map(label) : label(value);
-    });
-    /**
-     * Whether a page belongs on the subject page published at `slug`.
-     *
-     * Compared by slug rather than by `tagEntry.tag in post.data.tags`, which is
-     * what blog-tag.njk did. That test was an exact string match, so it silently
-     * missed every page whose spelling differed from the one the subject list
-     * settled on — which is now routine, since "Astronomy" and "astronomy" are
-     * deliberately one subject. The slug is the identity of a subject page;
-     * matching on anything else is matching on a display detail.
-     */
-    eleventyConfig.addFilter("hasSubject", (tags, slug) => {
-      if (!Array.isArray(tags)) return false;
-      return tags.some((tag) => tagSlugs.get(foldSubject(tag)) === slug);
     });
     /**
      * ` width="…" height="…" ` for an image, read off the file itself.
@@ -624,8 +589,8 @@ export function createConfig({
      * template's pagination before computed data runs — the reason
      * blog.11tydata.js has to read the settings file a second time, by hand.
      * Cut in the one place that already holds the parsed settings, the
-     * template pages over the result one item at a time, the way blog-tag.njk
-     * pages over tagList.
+     * template pages over the result one item at a time, the way tag.njk
+     * pages over tagPages.
      *
      * Never empty: a site with no posts still gets its one page, because the
      * footer links it from every page and a missing target would be a broken
@@ -706,22 +671,49 @@ export function createConfig({
         .sort((a, b) => (a.url < b.url ? -1 : a.url > b.url ? 1 : 0)),
     );
 
-    eleventyConfig.addCollection("tagList", (api) => {
-      const counts = new Map();
+    /**
+     * Subjects and categories: every page the build generates from data.
+     *
+     * Computed once per build and shared by five collections. This used to be
+     * the body of `tagList`, which filled the tag tables above as a side effect
+     * — and that held only while tagList happened to run first. Eleventy 3 does
+     * not run collections in the order they are declared; it orders them by
+     * what the templates paging over them depend on. Anything else reading the
+     * tables could have run against empty ones. So every collection asks for
+     * the listings, and whichever asks first builds them.
+     */
+    const listings = (api) => {
+      if (!listingsByBuild.has(api)) listingsByBuild.set(api, buildListings(api));
+      return listingsByBuild.get(api);
+    };
 
-      for (const item of api.getAll().filter(publishable)) {
-        for (const tag of item.data.tags ?? []) {
+    const buildListings = (api) => {
+      const posts = publishedPosts(api);
+      const perPage = settings.posts_per_page;
+
+      // The URLs real pages hold — drafts included, so a subject's URL does not
+      // depend on whether this build is a preview. A generated page that wants
+      // one of these steps aside rather than failing the build; see assignSlugs.
+      const occupied = occupiedBases(registry.all.map((record) => record.permalink));
+
+      /* -- subjects ---------------------------------------------------------- */
+      // Walked newest first, so each subject's own list of posts comes out
+      // already in the order its pages show them.
+      const subjects = new Map();
+      for (const post of posts) {
+        for (const tag of post.data.tags ?? []) {
           const key = foldSubject(tag);
           if (!key) continue;
           const name = String(tag).trim();
-          const entry = counts.get(key);
+          const entry = subjects.get(key);
 
           if (!entry) {
-            counts.set(key, { key, tag: name, count: 1 });
+            subjects.set(key, { key, tag: name, count: 1, posts: [post] });
             continue;
           }
 
           entry.count += 1;
+          entry.posts.push(post);
           // The spelling the site shows, when pages disagree about it: the one
           // that sorts first, never the one that happened to be read first.
           // Read order is the order pages come off disk, so tying the label to
@@ -730,14 +722,103 @@ export function createConfig({
         }
       }
 
-      // Every published subject is known at this point, which is the earliest
-      // the tables can be built and still be complete.
-      assignTagSlugs(counts.values());
+      const tagNames = assignSlugs(
+        [...subjects.values()].map(({ key, tag }) => ({ key, name: tag })),
+        { prefix: TAG_PREFIX, occupied },
+      );
+      reportRenamed("tags", TAG_PREFIX, tagNames.renamed);
 
-      return [...counts.values()]
-        .map((entry) => ({ ...entry, slug: tagSlugs.get(entry.key) }))
+      tagSlugs.clear();
+      tagLabels.clear();
+      for (const entry of subjects.values()) {
+        entry.slug = tagNames.slugs.get(entry.key);
+        entry.href = listingHref(`${TAG_PREFIX}${entry.slug}`);
+        tagSlugs.set(entry.key, entry.slug);
+        tagLabels.set(entry.key, entry.tag);
+      }
+
+      const subjectCard = ({ key, tag, count, slug, href }) => ({ key, tag, count, slug, href });
+
+      const tagList = [...subjects.values()]
+        .map(subjectCard)
         .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
-    });
+
+      // Pages in key order, so the same site always renders them in the same
+      // order. A subject always has at least one post, so never an empty page.
+      const tagPages = [...subjects.values()]
+        .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+        .flatMap((entry) =>
+          paginate(entry.posts, perPage, (n) => listingHref(`${TAG_PREFIX}${entry.slug}`, n))
+            .map((page) => ({ ...page, subject: subjectCard(entry) })),
+        );
+
+      /* -- categories -------------------------------------------------------- */
+      // Findings from the file are the status check's to report, once, against
+      // category.json. Here a file that does not parse simply has no categories.
+      const declared = readCategories(root);
+
+      const categoryKey = (category) =>
+        `${foldSubject(category.title)} ${String(category.index).padStart(6, "0")}`;
+      const categoryNames = assignSlugs(
+        declared.categories.map((category) => ({
+          key: categoryKey(category),
+          name: category.title,
+          slug: category.slug,
+        })),
+        { prefix: CATEGORY_PREFIX, occupied },
+      );
+      reportRenamed("categories", CATEGORY_PREFIX, categoryNames.renamed);
+
+      const categoryList = declared.categories.map((category, position) => {
+        const slug = categoryNames.slugs.get(categoryKey(category));
+        const source = category.thumbnail || settings.default_image;
+        return {
+          // 1-based and continuous across the overview's pages, for the plate
+          // number a card carries.
+          number: position + 1,
+          title: category.title,
+          description: category.description,
+          slug,
+          href: listingHref(`${CATEGORY_PREFIX}${slug}`),
+          thumbnail: source ? resolveThumbnail(source, root) : "",
+          // The subjects this category gathers that have a page to link to,
+          // under the spelling the rest of the site shows.
+          subjects: category.keys
+            .filter((key) => subjects.has(key))
+            .map((key) => subjectCard(subjects.get(key))),
+          posts: posts.filter((post) => inCategory(category, post.data.tags)),
+        };
+      });
+      for (const category of categoryList) category.count = category.posts.length;
+
+      // No categories, no overview page: nothing links to it then.
+      const categoryIndex = paginate(
+        categoryList,
+        declared.perPage,
+        (n) => listingHref(CATEGORIES_BASE, n),
+        { keepEmpty: false },
+      );
+
+      // A category with nothing in it yet still gets its page, because its card
+      // links there regardless.
+      const categoryPages = categoryList.flatMap((category) =>
+        paginate(category.posts, perPage, (n) => listingHref(`${CATEGORY_PREFIX}${category.slug}`, n))
+          .map((page) => ({ ...page, category })),
+      );
+
+      return { tagList, tagPages, categoryList, categoryIndex, categoryPages };
+    };
+
+    // The subject list, most-used first: the chips in tag_filter.njk.
+    eleventyConfig.addCollection("tagList", (api) => listings(api).tagList);
+    // One item per page of every subject, for tag.njk to page over.
+    eleventyConfig.addCollection("tagPages", (api) => listings(api).tagPages);
+    // category.json in file order, resolved: the cards.
+    eleventyConfig.addCollection("categoryList", (api) => listings(api).categoryList);
+    // The pages of /categories.html.
+    eleventyConfig.addCollection("categoryIndex", (api) => listings(api).categoryIndex);
+    // One item per page of every category, for category.njk to page over.
+    eleventyConfig.addCollection("categoryPages", (api) => listings(api).categoryPages);
 
     /* -------------------------------------------------------- shortcodes */
     /**

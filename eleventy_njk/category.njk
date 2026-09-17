@@ -1,0 +1,51 @@
+---
+layout: base.njk
+---
+{# One page of one category: every entry filed under any of the subjects it
+   gathers, newest first, as ordinary blog cards. The plates are for choosing a
+   category; once inside one, the entries are what matter.
+
+   Paging is in category.11tydata.js; membership, URLs and pages are worked out
+   in the listings in eleventy_binary/lib/eleventy_config.js.
+
+   The alias is `categoryPage`, never `category`. A page's `category` data is
+   merged into its `tags` for every template on the site (see eleventyComputed
+   in eleventy_config.js), so an object under that name would come out as a
+   subject called "[object Object]" in this page's meta tags. #}
+{% import "card.njk" as cards %}
+{% set entry = categoryPage.category %}
+
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
+  <p class="eyebrow"><a class="link-underline" href="/categories.html">Categories</a> — {{ entry.count }} {% if entry.count == 1 %}entry{% else %}entries{% endif %}</p>
+  <h1 class="display" style="margin-top:1rem;">{{ entry.title }}</h1>
+  {%- if entry.description %}
+  <p class="lede" style="margin-top:1.5rem;">{{ entry.description }}</p>
+  {%- endif %}
+
+  {#- The subjects this category gathers, each a way into the subject's own
+      page. Only the ones something is filed under: a subject with no entries
+      has no page to link to. The same row of filing marks a post's header
+      carries. -#}
+  {%- if entry.subjects.length %}
+  <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem; margin-top:1.75rem;">
+    {%- for subject in entry.subjects %}
+    <a class="tag-chip" href="{{ subject.href }}">{{ subject.tag }} ({{ subject.count }})</a>
+    {%- endfor %}
+  </div>
+  {%- endif %}
+
+  <hr class="rule-grad" style="margin-top:2.5rem;">
+</section>
+
+<section class="shell" style="padding-bottom:2rem;">
+  {% if categoryPage.entries.length %}
+  <div class="card-grid">
+    {% for post in categoryPage.entries %}{{ cards.card(post, settings) }}{% endfor %}
+  </div>
+  {% else %}
+  <p class="lede" style="padding-block:3rem;">Nothing is filed here yet.</p>
+  {% endif %}
+</section>
+
+{% set pager = categoryPage.pager %}
+{% include "pagination.njk" %}

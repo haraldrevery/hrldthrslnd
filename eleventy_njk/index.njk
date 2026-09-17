@@ -96,6 +96,32 @@ title: false
 </section>
 <div class="hero-end" id="hero-end"></div>
 
+{# ----------------------------------------------------------- categories --- #}
+{# The first three categories in category.json, in the order the file lists
+   them — reordering the file is how a category is brought forward. One group of
+   the category grid: a large plate and two small. The rest are on
+   /categories.html, which the header's button opens, in the same arrangement
+   as Latest and its "All entries".
+
+   No bottom padding: Latest below carries its own top padding, and padding
+   does not collapse, so a bottom one here would double the gap. With no
+   category.json, or none in it, the section is simply not there. #}
+{% set featuredCategories = collections.categoryList | limit(3) %}
+{% if featuredCategories.length %}
+<section class="shell" style="padding-top:clamp(3rem,8vh,5.5rem);">
+  <header class="section-head">
+    <h2 class="display-md">Categories</h2>
+    <a class="btn btn-ghost btn-accent-ultra-crimson" href="/categories.html">All categories</a>
+  </header>
+
+  <hr class="rule-grad" style="margin-block:1.75rem 2.5rem;">
+
+  <div class="category-grid">
+    {% for entry in featuredCategories %}{{ cards.category(entry, "h3") }}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {# ------------------------------------------------------------- featured --- #}
 {% set featured = collections.posts | limit(5) %}
 {% if featured.length %}

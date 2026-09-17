@@ -23,6 +23,8 @@ import {
 } from "./front_matter.js";
 import { humanBytes } from "./format.js";
 import { validatePost } from "./blocks/validate.js";
+import { readCategories, CATEGORY_FILE } from "./categories.js";
+import { foldSubject } from "./subjects.js";
 
 const REQUIRED_FRONT_MATTER = ["title", "date", "description", "tags"];
 
@@ -656,6 +658,63 @@ function checkSlugs(root, findings) {
 }
 
 /**
+ * category.json: what is wrong with the file, and which of its subjects match
+ * nothing.
+ *
+ * The file is hand-written JSON, so the likely faults are the silent ones. A
+ * trailing comma is loud — it is an error, and the categories section is not
+ * published — but a misspelt subject is not: the category renders, its card
+ * counts fewer entries than it should, and nothing looks broken. So every
+ * subject a category names is checked against what was actually published.
+ *
+ * "Published" is read from the output's search index, which lists every entry
+ * the build published with its subjects under the site-wide spelling. Reading
+ * the output rather than the sources is this module's rule, and it is what
+ * lets --check-only run the same check against a finished _site. Without an
+ * index to read, the subject check is skipped rather than guessed at.
+ */
+function checkCategories(root, outputDir, findings) {
+  const { present, categories, findings: fileFindings } = readCategories(root);
+  if (!present) return;
+  findings.push(...fileFindings);
+  if (categories.length === 0) return;
+
+  let entries;
+  try {
+    entries = JSON.parse(fs.readFileSync(path.join(outputDir, "search_index.json"), "utf8")).entries;
+  } catch {
+    return;
+  }
+  if (!Array.isArray(entries)) return;
+
+  const published = new Set();
+  for (const entry of entries) {
+    for (const tag of entry?.tags ?? []) published.add(foldSubject(tag));
+  }
+
+  for (const category of categories) {
+    const unmatched = category.subjects.filter((subject) => !published.has(foldSubject(subject)));
+    if (unmatched.length === 0) continue;
+
+    const nothing = unmatched.length === category.subjects.length;
+    findings.push({
+      level: "warn",
+      scope: "categories",
+      page: CATEGORY_FILE,
+      message: nothing
+        ? `"${category.title}" matches no published entry — its page is empty`
+        : `"${category.title}" — ${unmatched.map((s) => `"${s}"`).join(", ")} ` +
+          `${unmatched.length === 1 ? "matches" : "match"} no published entry`,
+      detail:
+        "check the spelling against the subjects on /blog.html — case is ignored, punctuation is not" +
+        (category.subjects.length === 1 && category.subjects[0] === category.title
+          ? `; with no "tags" list, a category matches its own title`
+          : ""),
+    });
+  }
+}
+
+/**
  * Source files that were registered but never became a page, and pages the
  * registry has never heard of.
  *
@@ -755,6 +814,7 @@ export async function runStatusCheck({ root, outputDir, settings, images, includ
   checkHtml(outputDir, findings, stats);
   checkAssets(outputDir, settings, findings, stats);
   checkSlugs(root, findings);
+  checkCategories(root, outputDir, findings);
   checkPostFolderPaths(root, findings);
   checkUnpublished(root, outputDir, includeDrafts, findings);
 

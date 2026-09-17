@@ -20,7 +20,7 @@
   <div class="tag-filter-list"{% if not collapsible %} style="max-height:none;"{% endif %}>
     <a class="tag-chip" href="/blog.html"{% if not currentTag %} aria-current="page"{% endif %}>All</a>
     {% for entry in collections.tagList %}
-    <a class="tag-chip" href="/blog_tag_{{ entry.slug }}.html"
+    <a class="tag-chip" href="{{ entry.href }}"
        {% if currentTag == entry.slug %}aria-current="page"{% endif %}>{{ entry.tag }} ({{ entry.count }})</a>
     {% endfor %}
   </div>

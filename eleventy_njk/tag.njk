@@ -1,0 +1,35 @@
+---
+layout: base.njk
+---
+{# One page of one subject. Paging is in tag.11tydata.js; the subjects, their
+   URLs and their pages are cut in the listings in
+   eleventy_binary/lib/eleventy_config.js.
+
+   Subject filtering is done at build time, one run of pages per subject. That
+   keeps the filter working with scripting disabled and gives every subject a
+   real URL.
+
+   The entries arrive already chosen. Membership used to be tested here, post
+   by post, against every published post — which could not be paged, because a
+   template can only page over one list and this one was already paging over
+   the subjects. #}
+{% import "card.njk" as cards %}
+
+<section class="shell" style="padding-block:clamp(3rem,9vh,5rem) 1rem;">
+  <p class="eyebrow"><a class="link-underline" href="/blog.html">Journal</a> — subject</p>
+  <h1 class="display" style="margin-top:1rem;">{{ tagPage.subject.tag }}</h1>
+
+  {% set currentTag = tagPage.subject.slug %}
+  {% include "tag_filter.njk" %}
+
+  <hr class="rule-grad" style="margin-top:2.5rem;">
+</section>
+
+<section class="shell" style="padding-bottom:2rem;">
+  <div class="card-grid">
+    {% for post in tagPage.entries %}{{ cards.card(post, settings) }}{% endfor %}
+  </div>
+</section>
+
+{% set pager = tagPage.pager %}
+{% include "pagination.njk" %}

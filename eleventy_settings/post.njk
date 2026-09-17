@@ -32,7 +32,7 @@ layout: base.njk
         {% if tags.length %}<span class="tag-sep" aria-hidden="true">|</span>{% endif %}
       </span>
       {% for tag in tags | tagLabel %}
-      <a class="tag-chip" href="/blog_tag_{{ tag | tagSlug }}.html">{{ tag }}</a>
+      <a class="tag-chip" href="{{ tag | tagUrl }}">{{ tag }}</a>
       {% endfor %}
     </div>
 

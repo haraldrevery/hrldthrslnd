@@ -18,6 +18,7 @@ import {
   publishedPathForSource,
   sourcePathForPublished,
 } from "../eleventy_binary/lib/slugs.js";
+import log from "../eleventy_binary/lib/log.js";
 import { makeProject, removeProject, quietly, frontMatter } from "./helpers.js";
 
 const created = [];
@@ -206,14 +207,45 @@ describe("buildRegistry — names the built-in pages own", () => {
     expect(registry.bySlug.get("status_check").permalink).toBe("/status_check.html");
   });
 
+  test("categories is reserved even though its permalink is computed elsewhere", () => {
+    // Reserved whether or not the project has a category.json: adding one later
+    // must not take the URL of a page already published at that name.
+    const root = project({ "input_markdown/categories.md": post("mine") });
+    const registry = quietly(() => buildRegistry(root));
+    expect(registry.bySlug.has("categories")).toBe(false);
+    expect(registry.bySlug.has("categories_2")).toBe(true);
+  });
+
   test("a name in the generated range keeps its URL, and is only warned about", () => {
     // Reserving the prefix would rename files that collide with nothing, and a
     // rename is a URL change — the harm this module exists to prevent.
-    const root = project({ "input_markdown/blog_tag_thoughts.md": post("mine") });
+    const root = project({
+      "input_markdown/blog_page_7.md": post("mine"),
+      "input_markdown/full_index_page_2.md": post("mine"),
+      "input_markdown/categories_page_3.md": post("mine"),
+    });
     const registry = quietly(() => buildRegistry(root));
-    expect(registry.bySlug.get("blog_tag_thoughts").permalink).toBe(
-      "/blog_tag_thoughts.html",
-    );
+    expect(registry.bySlug.get("blog_page_7").permalink).toBe("/blog_page_7.html");
+    expect(registry.bySlug.get("full_index_page_2").permalink).toBe("/full_index_page_2.html");
+    expect(registry.bySlug.get("categories_page_3").permalink).toBe("/categories_page_3.html");
+  });
+
+  test("a name in a tag or category's range keeps its URL and is NOT warned about", () => {
+    // These two are not a collision waiting to happen: the generated page takes
+    // a suffix instead (see assignSlugs in listings.js), so the file is safe and
+    // a warning on every note called tag_* would be noise.
+    const root = project({
+      "input_markdown/tag_ideas.md": post("mine"),
+      "input_markdown/category_theory.md": post("mine"),
+    });
+    const before = log.entries.length;
+    const registry = quietly(() => buildRegistry(root));
+    expect(registry.bySlug.get("tag_ideas").permalink).toBe("/tag_ideas.html");
+    expect(registry.bySlug.get("category_theory").permalink).toBe("/category_theory.html");
+    const warned = log.entries
+      .slice(before)
+      .some((entry) => /generates for itself/.test(entry.message));
+    expect(warned).toBe(false);
   });
 
   test("a project with no eleventy_njk folder still builds", () => {

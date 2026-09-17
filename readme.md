@@ -75,7 +75,7 @@ draft: false
 
 They are two names for one thing. Both are merged into a single list before
 anything renders, so a page can use either or both and the result is the same:
-one chip per subject, one `/blog_tag_*.html` page per subject, one entry in the
+one chip per subject, one `/tag_*.html` page per subject, one entry in the
 feed, the search index and the JSON-LD keywords. A page filed only under
 `category` is a properly filed page; the status check accepts either key.
 
@@ -94,13 +94,21 @@ tags: test, template        # a bare scalar, split on commas and trimmed
 shows it everywhere, so a card chip can never read one thing while the page it
 opens is titled another. Without this, adding `category: [Survival]` to a site
 that already published a `survival` tag would have taken over that page's URL
-and pushed the original to `/blog_tag_survival-2.html`, breaking every link to
+and pushed the original to `/tag_survival-2.html`, breaking every link to
 it silently.
 
 Punctuation *is* part of it: `C++` and `C#` stay two subjects, and because both
 reduce to the same URL name one of them is published with a `-2` suffix and the
-build says so. That is the only remaining case where a subject does not get the
-name it asked for.
+build says so.
+
+The other case is a page that already publishes at the name a subject wants: a
+note called `Tag Ideas.md` is `/tag_ideas.html`, which is where the subject
+"ideas" would go. The **page keeps its URL** and the subject page takes the
+suffix, because a file's URL is the one a reader may have bookmarked. The build
+says which, and it is not a failure — before this, it stopped the build.
+
+A subject page shows `posts_per_page` entries, like the journal, and runs on to
+`/tag_<name>_page_2.html` and so on.
 
 A subject that genuinely contains a comma has to be written as an explicit list
 item — `tags: ["Wine, women and song"]` — because a bare scalar is split.
@@ -207,6 +215,63 @@ file is never written. Use `--drafts` to preview them locally:
 > This implementation uses the conventional reading: **`draft: true` is hidden.**
 > Say the word if you want it the other way and it is a one-line change in
 > `eleventy_binary/lib/eleventy_config.js`.
+
+---
+
+## Categories
+
+A category is a handful of subjects put forward together: a title, a
+description, a photograph, and the subjects it gathers. The first three are
+shown on the front page above Latest; `/categories.html` shows them all. Each
+one has a page of its own at `/category_<name>.html`, listing every entry filed
+under any of its subjects, newest first and paginated like the journal.
+
+They are declared in **`category.json`** at the project root:
+
+```json
+{
+  "per_page": 9,
+  "categories": [
+    {
+      "title": "Night Sky",
+      "description": "Stars, planets and the long exposures that catch them.",
+      "thumbnail": "/image/milky_way.jpg",
+      "tags": ["astronomy", "astrophotography"]
+    }
+  ]
+}
+```
+
+**Nothing is written on a post.** A post is in a category when any of its
+subjects is one of the category's `tags`, ignoring case — so filing a post under
+a category is just tagging it, and a category can be regrouped, renamed or
+dropped without touching a single page.
+
+`tags` is optional. Leave it out and the category matches its own title, which
+is what keeps `category: [Astronomy]` in a post's front matter doing the obvious
+thing: it lands in the category titled "Astronomy" with no list to keep in step.
+
+`thumbnail` is the card's picture, and the compressed `_min` counterpart is what
+loads, exactly as on a blog card. Leave it out and the card falls back to
+`default_image` from `site_settings.json`.
+
+`slug` is optional and pins the URL. Without one the URL comes from the title,
+so renaming a category moves its page; with `"slug": "night"` the page stays at
+`/category_night.html` whatever the title says.
+
+`per_page` is how many categories a page of `/categories.html` shows — nine by
+default, which is three of the grid's groups of a large plate and two small. A
+multiple of three keeps each page's pattern whole.
+
+The file is ordinary JSON, so it has no comments — a key starting with `//` is
+ignored and is the place to leave a note. **A fault in it costs the categories,
+never the build:** a file that does not parse is reported as an error and the
+site renders without the section. The status check also names any subject a
+category asks for that nothing is filed under, which is the failure that would
+otherwise be silent — a misspelt subject just quietly gathers nothing.
+
+With no `category.json` there are no categories, no overview page, and no
+section on the front page.
 
 ---
 
@@ -769,6 +834,8 @@ It ships with `SITE_NAME` and `https://example.com` placeholders. Fill them in
 before publishing — the URL drives the sitemap, the RSS feed and every Open
 Graph tag.
 
+Categories have a file of their own, `category.json`; see **Categories** above.
+
 ---
 
 ## Checking the site
@@ -810,6 +877,7 @@ rules are in [`pagebuilder_app/readme.md`](pagebuilder_app/readme.md).
 input_markdown/       markdown posts; subfolders become URL folders
 input_custom_html/    hand-written pages, incl. the block test pages
 input_custom_post/    page folders: post_x.json (page builder) or post_x.html
+category.json         the categories: title, description, picture, subjects
 css/                  theme.css + input.css  ->  main.css, main_max.css
 javascript/           the three site scripts, plus glightbox
 image/  image_min/    photographs and their compressed counterparts

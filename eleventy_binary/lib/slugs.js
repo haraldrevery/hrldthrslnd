@@ -66,33 +66,41 @@ const isHidden = (name) => name.startsWith(".");
  * from site_settings.json and Eleventy resolves pagination before computed data.
  * `full_index` is set in eleventy_njk/full_index.11tydata.js for the same
  * reason: a paginated page computes its URL, and a computed URL cannot be read
- * out of front matter.
+ * out of front matter. `categories` likewise, in categories.11tydata.js — and
+ * it is reserved even on a site with no category.json, so that adding one later
+ * cannot take the URL of a page that was already published there.
  *
  * `status_check` is deliberately NOT here. That name is protected the other way
  * round: writeStatusPage() refuses to overwrite a page it did not write, so an
  * author who wants /status_check.html keeps it and loses the report. Reserving
  * it would reverse that decision and rename a page that works today.
  */
-const RESERVED_EXTRA = ["/blog.html", "/full_index.html"];
+const RESERVED_EXTRA = ["/blog.html", "/full_index.html", "/categories.html"];
 
 /**
  * Prefixes the build generates pages under, from data rather than from files:
- * one page per subject, and one per page after the first of the journal and of
- * the full index.
+ * one per page after the first of the journal, the full index and the category
+ * overview.
  *
  * The full index numbers its later pages /full_index_page_N.html rather than
  * /full_index_N.html because `_N` is the suffix a collision below is resolved
  * with: a note called full_index.md is renamed full_index_2, and that URL has
  * to stay free for it.
  *
- * Warned about rather than reserved. The set is open — it depends on which tags
- * exist and how many entries there are — so reserving the prefix would rename
- * files that do not actually collide with anything, and a rename is a URL
- * change, which is the exact harm this module exists to prevent. A name that
- * really does collide is caught by Eleventy's duplicate-permalink check; this
- * warning is what gives the author notice before that happens.
+ * Warned about rather than reserved. The set is open — it depends on how many
+ * entries there are — so reserving the prefix would rename files that do not
+ * actually collide with anything, and a rename is a URL change, which is the
+ * exact harm this module exists to prevent. A name that really does collide is
+ * caught by Eleventy's duplicate-permalink check; this warning is what gives
+ * the author notice before that happens.
+ *
+ * `tag_` and `category_` are not here, although the build publishes under both.
+ * Those pages are named in listings.js, AFTER this registry exists, and a page
+ * that wants a name a file already holds takes a suffix instead — the file
+ * keeps its URL and nothing collides. Warning about every note whose name
+ * happens to start "tag_" would be noise about a problem that cannot occur.
  */
-const GENERATED_PREFIXES = ["blog_tag_", "blog_page_"];
+const GENERATED_PREFIXES = ["blog_page_", "full_index_page_", "categories_page_"];
 
 /**
  * Whether a value is usable as a permalink exactly as written.
@@ -163,13 +171,12 @@ function builtInPages(root) {
       const value = wholeValue(block, "permalink");
       if (!value) continue;
 
-      // A computed permalink — blog-tag.njk writes its under `eleventyComputed:`,
-      // and blog.njk's and full_index.njk's live in their .11tydata.js files —
-      // is not readable here at all,
-      // and must not be half-read either: a template expression is not a name
-      // worth reserving, and reserving a garbled one would rename a page that
-      // does not actually collide with anything. Those two are covered by
-      // RESERVED_EXTRA and GENERATED_PREFIXES above.
+      // A computed permalink — every paginated page in eleventy_njk/ keeps its
+      // in a .11tydata.js file — is not readable here at all, and must not be
+      // half-read either: a template expression is not a name worth reserving,
+      // and reserving a garbled one would rename a page that does not actually
+      // collide with anything. Those are covered by RESERVED_EXTRA and
+      // GENERATED_PREFIXES above, and by listings.js for tags and categories.
       const clean = value.replace(/^['"]|['"]$/g, "");
       if (permalinkFault(clean) === null) permalinks.add(clean);
     }
@@ -489,9 +496,10 @@ export function buildRegistry(root = process.cwd()) {
       log.warn(
         "slugs",
         `"${slug}" is in the range of names the build generates for itself`,
-        `${candidate.inputPath} — subject, journal and index pages are published as ` +
-          `/blog_tag_*.html, /blog_page_*.html and /full_index_page_*.html; this page keeps its URL, but ` +
-          `will collide the moment one is generated under the same name`,
+        `${candidate.inputPath} — later pages of the journal, the full index and the ` +
+          `category overview are published as /blog_page_N.html, /full_index_page_N.html and ` +
+          `/categories_page_N.html; this page keeps its URL, but will collide the moment one ` +
+          `is generated under the same name`,
       );
     }
     if (desired !== candidate.base) {

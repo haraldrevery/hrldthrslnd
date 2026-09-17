@@ -1,23 +1,30 @@
 {# Pagination.
 
    Pure links, generated at build time — no client-side paging, so it works
-   with scripting disabled and each page is independently crawlable. #}
-{% if pagination and pagination.pages.length > 1 %}
+   with scripting disabled and each page is independently crawlable.
+
+   Reads `pager` when the including template sets one, and Eleventy's own
+   `pagination` otherwise. A template that pages over pre-cut pages one at a
+   time — tag.njk, category.njk — gets an Eleventy `pagination` describing the
+   whole run of every subject or category, so it hands over the pager for its
+   own run instead. Both have the same shape as far as this file reads it. #}
+{% set p = pager or pagination %}
+{% if p and p.hrefs.length > 1 %}
 <nav class="shell pagination" aria-label="Pagination">
-  {% if pagination.href.previous %}
-  <a class="page-link" href="{{ pagination.href.previous }}" rel="prev" aria-label="Previous page">←</a>
+  {% if p.href.previous %}
+  <a class="page-link" href="{{ p.href.previous }}" rel="prev" aria-label="Previous page">←</a>
   {% else %}
   <span class="page-link" aria-disabled="true" aria-hidden="true">←</span>
   {% endif %}
 
-  {% for pageEntry in pagination.hrefs %}
+  {% for pageEntry in p.hrefs %}
   <a class="page-link" href="{{ pageEntry }}"
      {% if pageEntry == page.url %}aria-current="page"{% endif %}
      aria-label="Page {{ loop.index }}">{{ loop.index }}</a>
   {% endfor %}
 
-  {% if pagination.href.next %}
-  <a class="page-link" href="{{ pagination.href.next }}" rel="next" aria-label="Next page">→</a>
+  {% if p.href.next %}
+  <a class="page-link" href="{{ p.href.next }}" rel="next" aria-label="Next page">→</a>
   {% else %}
   <span class="page-link" aria-disabled="true" aria-hidden="true">→</span>
   {% endif %}

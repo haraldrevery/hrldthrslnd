@@ -30,7 +30,7 @@
         with three or more tags shows none of them here — raise the limit if a
         category should always be visible on a card. -#}
     {% for tag in post.data.tags | tagLabel | limit(3) %}
-    <a class="tag-chip" href="/blog_tag_{{ tag | tagSlug }}.html">{{ tag }}</a>
+    <a class="tag-chip" href="{{ tag | tagUrl }}">{{ tag }}</a>
     {% endfor %}
   </div>
 </article>
@@ -61,9 +61,53 @@
     {%- if subjects.length %}
     <p class="index-row-tags">
       {%- for tag in subjects %}
-      <a class="tag-chip" href="/blog_tag_{{ tag | tagSlug }}.html">{{ tag }}</a>
+      <a class="tag-chip" href="{{ tag | tagUrl }}">{{ tag }}</a>
       {%- endfor %}
     </p>
+    {%- endif %}
+  </div>
+</article>
+{% endmacro %}
+
+{# Category card, for the plates on the front page and /categories.html. See
+   "Category cards" in input.css for the grid they sit in and why the picture is
+   behind the text rather than above it.
+
+   `entry` is one item of collections.categoryList — already resolved: URL,
+   thumbnail, entry count and plate number are all worked out in the listings,
+   so nothing about a category is decided here.
+
+   `heading` is the level the title takes, because the same card sits under an
+   h2 on the front page and directly under the page's h1 on /categories.html.
+
+   Built like the blog card: only the title is a real link, and .card-link::after
+   stretches it over the whole plate. The picture is decoration — the title is
+   the link's name, and alt text would read the category out a second time. #}
+{% macro category(entry, heading = "h3") %}
+<article class="category-card">
+  <div class="category-card-media art-plate fill" aria-hidden="true">
+    {%- if entry.thumbnail %}
+    <img src="{{ entry.thumbnail }}" alt=""{{ entry.thumbnail | sizeAttrs | safe }} loading="lazy" decoding="async">
+    {%- endif %}
+  </div>
+
+  {#- The text stands in its own block, and the block carries the ramp that
+      makes it legible. On the card as a whole the ramp cannot know where the
+      type starts: a short card puts its title where a tall one is still
+      showing photograph, and the plate number landed on bright snow. -#}
+  <div class="category-card-body">
+    <p class="category-card-meta">
+      <span class="category-card-number" aria-hidden="true">{% if entry.number < 10 %}0{% endif %}{{ entry.number }}</span>
+      <span>{{ entry.count }} {% if entry.count == 1 %}entry{% else %}entries{% endif %}</span>
+    </p>
+    <span class="category-card-rule" aria-hidden="true"></span>
+
+    <{{ heading }} class="category-card-title">
+      <a class="card-link" href="{{ entry.href }}">{{ entry.title }}</a>
+    </{{ heading }}>
+
+    {%- if entry.description %}
+    <p class="category-card-desc">{{ entry.description }}</p>
     {%- endif %}
   </div>
 </article>

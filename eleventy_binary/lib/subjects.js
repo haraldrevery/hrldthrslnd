@@ -5,7 +5,7 @@
  * them as one list and publishes one page per subject. This module is the only
  * place that turns whatever an author wrote into that list, because three
  * different consumers have to reach the same answer: the data cascade (which
- * feeds every template), the tagList collection (which decides what subject
+ * feeds every template), the listings in eleventy_config.js (which decide what subject
  * pages exist and what they are called) and the status check (which runs over
  * raw sources before Eleventy has parsed anything). A rule that lived in any
  * two of those would drift, and the way it drifts is a post that is counted
@@ -89,7 +89,7 @@ export function foldSubject(value) {
  * a post that already had tags.
  *
  * This settles duplicates WITHIN one page. Two pages spelling the same subject
- * differently are reconciled by the tagList collection, which picks one
+ * differently are reconciled by the listings in eleventy_config.js, which pick one
  * canonical spelling for the whole site.
  */
 export function mergeSubjects(...values) {
