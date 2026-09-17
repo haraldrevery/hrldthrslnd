@@ -224,7 +224,8 @@ A category is a handful of subjects put forward together: a title, a
 description, a photograph, and the subjects it gathers. The first three are
 shown on the front page above Latest; `/categories.html` shows them all. Each
 one has a page of its own at `/category_<name>.html`, listing every entry filed
-under any of its subjects, newest first and paginated like the journal.
+under any of its subjects, newest first by default and paginated like the
+journal.
 
 They are declared in **`category.json`** at the project root:
 
@@ -236,7 +237,8 @@ They are declared in **`category.json`** at the project root:
       "title": "Night Sky",
       "description": "Stars, planets and the long exposures that catch them.",
       "thumbnail": "/image/milky_way.jpg",
-      "tags": ["astronomy", "astrophotography"]
+      "tags": ["astronomy", "astrophotography"],
+      "sort": "date"
     }
   ]
 }
@@ -272,6 +274,32 @@ the scheme's own stage gradient instead.
 `slug` is optional and pins the URL. Without one the URL comes from the title,
 so renaming a category moves its page; with `"slug": "night"` the page stays at
 `/category_night.html` whatever the title says.
+
+`sort` is the order the category's own page lists its entries in: `"date"`,
+newest first, which is what every other listing on the site does and what you
+get by saying nothing, or `"title"`, A-Z. It is per category on purpose — a run
+of photographs reads by date and a set of reference notes reads by name, and one
+site can want both. Two things follow from it that are worth knowing:
+
+- **Sorting is localised, and the locale is `date_locale` from
+  `site_settings.json`.** Languages genuinely disagree about where a letter
+  goes — Swedish puts `Å` after `Z`, English files it with `A` — so the order is
+  settled by the tag the site declares rather than by whatever locale the
+  machine building it happens to run under. Numbers read as numbers: "Note 2"
+  comes before "Note 10".
+- **An entry with no title sorts last, not first**, and two entries with the
+  same title stay in date order.
+
+Changing `sort` never moves a URL — a category's pages are named from its slug
+and its page number, not from what is on them. What it does move is which entry
+sits on which numbered page, once a category has more entries than
+`posts_per_page`. On a category that fits on one page, nothing but the order
+changes.
+
+The cards still show each entry's date, and nothing on the page announces which
+order it is in. That is fine for a handful of entries and gets less obvious as a
+category grows; if an A-Z category ever reads as a broken date list, that is the
+thing to fix.
 
 `per_page` is how many categories a page of `/categories.html` shows — nine by
 default, which is three of the grid's groups of a large plate and two small. A

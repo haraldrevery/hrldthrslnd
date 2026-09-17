@@ -2,9 +2,10 @@
  * Listings — the pages the build generates from data rather than from files:
  * one run of pages per subject, one per category, and the category overview.
  *
- * Pure on purpose — no Eleventy, no filesystem — so the two decisions that can
- * silently break a URL are testable on their own: which name a generated page
- * is published under, and how a list is cut into numbered pages.
+ * Pure on purpose — no Eleventy, no filesystem — so the decisions that can
+ * silently change a generated page are testable on their own: which name it is
+ * published under, how a list is cut into numbered pages, and what order the
+ * list was in when it was cut.
  *
  *   /tag_<slug>.html              /tag_<slug>_page_2.html …
  *   /category_<slug>.html         /category_<slug>_page_2.html …
@@ -114,6 +115,43 @@ export function assignSlugs(items, { prefix, occupied = new Set() }) {
   }
 
   return { slugs, renamed };
+}
+
+/**
+ * Compare two titles for an A-Z listing. Returns the comparator rather than
+ * being one, so a build makes a single collator and every comparison shares it.
+ *
+ * The locale is REQUIRED to be passed rather than defaulted, because that is
+ * the whole point of this function existing. `String#localeCompare` with no
+ * locale follows whatever the host machine runs under, so the same content
+ * would order one way on the author's machine and another wherever the site is
+ * next built — survivable while collation was only a tie-break between posts
+ * sharing a date, not once it decides a page's whole order.
+ *
+ * Two rules beyond the collator's own:
+ *
+ *   untitled last   An empty title sorts to the end rather than the front. A
+ *                   page with no title is already an error in the status check;
+ *                   it should not also be the first thing a reader is shown.
+ *                   This is the same choice postTime() makes for undated pages
+ *                   — "missing" is one definite position, not a hole.
+ *   numeric         "Note 2" before "Note 10", not after it.
+ *
+ * Equal titles compare 0, so a stable sort leaves them in the order they
+ * arrived — which for a category's entries is newest first. Date stays the
+ * tie-break without being spelled out.
+ *
+ * @param {string} locale  a full BCP-47 tag
+ * @returns {(a: unknown, b: unknown) => number}
+ */
+export function byTitle(locale) {
+  const collator = new Intl.Collator(locale, { numeric: true });
+  return (a, b) => {
+    const left = String(a ?? "").trim();
+    const right = String(b ?? "").trim();
+    if (!left || !right) return left ? -1 : right ? 1 : 0;
+    return collator.compare(left, right);
+  };
 }
 
 /**

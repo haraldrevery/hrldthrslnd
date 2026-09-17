@@ -15,6 +15,7 @@ import {
   parseCategories,
   inCategory,
   DEFAULT_PER_PAGE,
+  DEFAULT_SORT,
 } from "../eleventy_binary/lib/categories.js";
 import { makeProject, removeProject } from "./helpers.js";
 
@@ -121,6 +122,46 @@ describe("parseCategories", () => {
       expect(perPage).toBe(DEFAULT_PER_PAGE);
       expect(messages(findings).some((m) => m.includes("per_page"))).toBe(true);
     }
+  });
+
+  test("sort defaults to date, and says so by saying nothing", () => {
+    const { categories, findings } = parseCategories(
+      JSON.parse(doc([{ title: "A", description: "d", thumbnail: "/i.jpg" }])),
+    );
+    expect(categories[0].sort).toBe(DEFAULT_SORT);
+    expect(categories[0].sort).toBe("date");
+    expect(messages(findings).some((m) => m.includes("sort"))).toBe(false);
+  });
+
+  test("sort takes the known orders, whatever case they are written in", () => {
+    for (const [written, expected] of [["date", "date"], ["title", "title"], ["TITLE", "title"], [" Title ", "title"]]) {
+      const { categories, findings } = parseCategories(
+        JSON.parse(doc([{ title: "A", description: "d", thumbnail: "/i.jpg", sort: written }])),
+      );
+      expect(categories[0].sort).toBe(expected);
+      expect(messages(findings).some((m) => m.includes("sort"))).toBe(false);
+    }
+  });
+
+  test("an unknown sort is a warning and the default, never a refusal", () => {
+    // The whole rule of this file: a fault costs the thing that was misspelt,
+    // not the category and not the build. "alphabetic" is the likely near miss.
+    for (const bad of ["alphabetic", "az", "newest", "", 3, null, true]) {
+      const { categories, findings } = parseCategories(
+        JSON.parse(doc([{ title: "A", description: "d", thumbnail: "/i.jpg", sort: bad }])),
+      );
+      expect(categories).toHaveLength(1);
+      expect(categories[0].sort).toBe(DEFAULT_SORT);
+      expect(messages(findings).some((m) => m.includes('"sort" is not a known order'))).toBe(true);
+      expect(findings.every((f) => f.level !== "error")).toBe(true);
+    }
+  });
+
+  test("sort is a known key, so using it draws no unknown-key warning", () => {
+    const { findings } = parseCategories(
+      JSON.parse(doc([{ title: "A", description: "d", thumbnail: "/i.jpg", sort: "title" }])),
+    );
+    expect(messages(findings).some((m) => m.includes("unknown key"))).toBe(false);
   });
 
   test("a document of the wrong shape is refused with one error", () => {

@@ -24,7 +24,7 @@ import { mergeSubjects, foldSubject } from "./subjects.js";
 import { renderPost, pageData } from "./blocks/render.js";
 import {
   TAG_PREFIX, CATEGORY_PREFIX, CATEGORIES_BASE,
-  listingHref, occupiedBases, assignSlugs, paginate,
+  listingHref, occupiedBases, assignSlugs, paginate, byTitle,
 } from "./listings.js";
 import { readCategories, inCategory } from "./categories.js";
 
@@ -758,7 +758,7 @@ export function createConfig({
       const declared = readCategories(root);
 
       const categoryKey = (category) =>
-        `${foldSubject(category.title)} ${String(category.index).padStart(6, "0")}`;
+        `${foldSubject(category.title)}\u0000${String(category.index).padStart(6, "0")}`;
       const categoryNames = assignSlugs(
         declared.categories.map((category) => ({
           key: categoryKey(category),
@@ -768,6 +768,17 @@ export function createConfig({
         { prefix: CATEGORY_PREFIX, occupied },
       );
       reportRenamed("categories", CATEGORY_PREFIX, categoryNames.renamed);
+
+      /**
+       * A-Z for the categories whose `sort` asks for it: one collator for the
+       * whole build, on the locale the site declares rather than the one the
+       * machine happens to run under. The rule itself is in listings.js, with
+       * the reasoning and the tests.
+       *
+       * `date_locale` is the only full BCP-47 tag site_settings.json carries.
+       * Sorting gets a tag of its own the day the two need to disagree.
+       */
+      const compareTitles = byTitle(settings.date_locale);
 
       const categoryList = declared.categories.map((category, position) => {
         const slug = categoryNames.slugs.get(categoryKey(category));
@@ -816,7 +827,23 @@ export function createConfig({
           subjects: category.keys
             .filter((key) => subjects.has(key))
             .map((key) => subjectCard(subjects.get(key))),
-          posts: posts.filter((post) => inCategory(category, post.data.tags)),
+          /**
+           * The site's order, filtered — then re-sorted where the category
+           * asked for A-Z. Sorted in place, which is safe: `filter` has just
+           * handed back an array of this category's own, and `posts` itself is
+           * never touched.
+           *
+           * This is the ONLY place a category's order is decided. The page's
+           * URL does not come from it — category.11tydata.js takes the
+           * permalink from `categoryPage.href`, which paginate() works out from
+           * the slug and the page number — so changing the order moves entries
+           * between numbered pages without ever moving a page.
+           */
+          posts: (() => {
+            const entries = posts.filter((post) => inCategory(category, post.data.tags));
+            if (category.sort !== "title") return entries;
+            return entries.sort((a, b) => compareTitles(a.data.title, b.data.title));
+          })(),
         };
       });
       for (const category of categoryList) category.count = category.posts.length;

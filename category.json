@@ -1,35 +1,40 @@
 {
-  "//": "Categories group subjects that posts already carry. A post is in a category when any of its tags or categories is in the category's \"tags\" (case is ignored). Leave \"tags\" out to match the title itself. The first three categories are shown on the front page; all of them on /categories.html, \"per_page\" at a time. Optional per category: \"slug\" pins the URL (/category_<slug>.html) so renaming the title does not move the page. See readme.md, Categories.",
+  "//": "Categories group subjects that posts already carry. A post is in a category when any of its tags or categories is in the category's \"tags\" (case is ignored). Leave \"tags\" out to match the title itself. The first three categories are shown on the front page; all of them on /categories.html, \"per_page\" at a time. Optional per category: \"slug\" pins the URL (/category_<slug>.html) so renaming the title does not move the page; \"sort\" is \"date\" (newest first, the default) or \"title\" (A-Z). See readme.md, Categories.",
   "per_page": 9,
   "categories": [
     {
       "title": "Astronomy",
       "description": "Night skies, long exposures and the occasional argument with orbital mechanics.",
-      "thumbnail": "/image/summersunset2018w.jpg"
+      "thumbnail": "/image/summersunset2018w.jpg",
+      "sort": "date"
     },
     {
       "title": "Field Notes",
       "description": "Staying warm, dry and fed a long way from anywhere — and the house to come back to.",
       "thumbnail": "/image/2016nicemountains.jpg",
-      "tags": ["survival", "house"]
+      "tags": ["survival", "house"],
+      "sort": "date"
     },
     {
       "title": "Galleries",
       "description": "Runs of photographs, laid out to be looked at rather than read.",
       "thumbnail": "/image/2016romestreets.jpg",
-      "tags": ["gallery", "reference"]
+      "tags": ["gallery", "reference"],
+      "sort": "title"
     },
     {
       "title": "Templates",
       "description": "Test pages and stress tests: every block and every edge case, in one place.",
       "thumbnail": "/image/padova2016.jpg",
-      "tags": ["template", "test"]
+      "tags": ["template", "test"],
+      "sort": "date"
     },
     {
       "title": "Test",
       "description": "Test pages and stress tests: every block and every edge case, in one place.",
       "thumbnail": "/card_thumbnail/thumbnail_beach.jpg",
-      "tags": ["test"]
+      "tags": ["test"],
+      "sort": "title"
     }
   ]
 }

@@ -16,6 +16,7 @@ import {
   occupiedBases,
   assignSlugs,
   paginate,
+  byTitle,
 } from "../eleventy_binary/lib/listings.js";
 
 describe("listingHref", () => {
@@ -140,5 +141,50 @@ describe("paginate", () => {
   test("a size that is not a positive whole number puts everything on one page", () => {
     expect(paginate(items, 0, href)).toHaveLength(1);
     expect(paginate(items, undefined, href)[0].entries).toHaveLength(5);
+  });
+});
+
+describe("byTitle", () => {
+  const compare = byTitle("en-GB");
+  const sorted = (titles) => [...titles].sort(compare);
+
+  test("A-Z, and the collator does the work rather than code-unit order", () => {
+    expect(sorted(["Zodiac", "apogee", "Nebula"])).toEqual(["apogee", "Nebula", "Zodiac"]);
+  });
+
+  test("numbers read as numbers", () => {
+    // Code-unit order puts "Note 10" before "Note 2"; a reader does not.
+    expect(sorted(["Note 10", "Note 2", "Note 1"])).toEqual(["Note 1", "Note 2", "Note 10"]);
+  });
+
+  test("an untitled entry sorts last rather than first", () => {
+    // The failure this prevents: "" is smaller than every real title, so a post
+    // that forgot its title would otherwise head the page as a blank card.
+    expect(sorted(["Beta", "", "Alpha"])).toEqual(["Alpha", "Beta", ""]);
+    expect(sorted(["Beta", "   ", "Alpha"])).toEqual(["Alpha", "Beta", "   "]);
+    expect(sorted(["Beta", null, "Alpha"])).toEqual(["Alpha", "Beta", null]);
+    // `undefined` never reaches the comparator at all — Array#sort moves it to
+    // the end itself — so it lands with the rest of the untitled either way.
+    expect(sorted(["Beta", undefined, "Alpha"])).toEqual(["Alpha", "Beta", undefined]);
+  });
+
+  test("equal titles compare 0, so a stable sort keeps the order they arrived in", () => {
+    // That order is newest first, which is how date stays the tie-break without
+    // this comparator having to know anything about dates.
+    expect(compare("Same", "Same")).toBe(0);
+    const entries = [
+      { title: "Same", date: "2026-03-01" },
+      { title: "Same", date: "2025-01-01" },
+    ];
+    expect([...entries].sort((a, b) => compare(a.title, b.title)).map((e) => e.date))
+      .toEqual(["2026-03-01", "2025-01-01"]);
+  });
+
+  test("the locale is honoured, not the host's", () => {
+    // The point of the function: two locales genuinely disagree about where a
+    // letter goes, and the build must not inherit that answer from the machine.
+    // Swedish sorts a-ring after z; English sorts it with a.
+    expect(byTitle("sv")("\u00c5ngstrom", "Zodiac")).toBeGreaterThan(0);
+    expect(byTitle("en")("\u00c5ngstrom", "Zodiac")).toBeLessThan(0);
   });
 });

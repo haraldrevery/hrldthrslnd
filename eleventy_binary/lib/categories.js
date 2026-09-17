@@ -30,6 +30,12 @@
  * `slug` is optional too. Without it the URL comes from the title, so renaming a
  * category moves its page; set `slug` to pin it.
  *
+ * `sort` is how the category's own page orders its entries: "date", newest
+ * first, which is what every other listing on the site does, or "title", A-Z.
+ * It is the one thing here that changes a page rather than describing it, and
+ * it is per category on purpose — a run of photographs reads by date, a set of
+ * reference notes reads by name, and the same site can want both.
+ *
  * Read from the project root, beside site_settings.json, and never from a path
  * baked into the binary. A missing file is not a fault — it means the site has
  * no categories. A file that cannot be read is reported and ignored, so a stray
@@ -50,7 +56,17 @@ export const CATEGORY_FILE = "category.json";
  */
 export const DEFAULT_PER_PAGE = 9;
 
-const KNOWN_KEYS = new Set(["title", "description", "thumbnail", "tags", "slug"]);
+/**
+ * How a category's page orders its entries.
+ *
+ * "date" is the site's own order — newest first, the one publishedPosts()
+ * settles for every listing — and stays the default, so a category that says
+ * nothing reads exactly as it did before this key existed.
+ */
+export const SORTS = ["date", "title"];
+export const DEFAULT_SORT = "date";
+
+const KNOWN_KEYS = new Set(["title", "description", "thumbnail", "tags", "slug", "sort"]);
 const KNOWN_ROOT_KEYS = new Set(["categories", "per_page"]);
 
 /** Keys that start with "//" are notes to the reader, the package.json way. */
@@ -89,7 +105,7 @@ export function readCategories(root = process.cwd()) {
  * tested without a file.
  *
  * Every entry is normalised into:
- *   { index, title, description, thumbnail, subjects, keys, slug }
+ *   { index, title, description, thumbnail, subjects, keys, slug, sort }
  * where `subjects` is the list as written (or the title) and `keys` is the same
  * list folded, which is what membership is decided on.
  */
@@ -184,6 +200,23 @@ export function parseCategories(doc) {
       }
     }
 
+    // An unknown order is a warning and the default, never a refusal: the rule
+    // this file is built on is that a fault costs the categories nothing but
+    // the thing that was misspelt.
+    let sort = DEFAULT_SORT;
+    if (entry.sort !== undefined) {
+      const written = String(entry.sort).trim().toLowerCase();
+      if (SORTS.includes(written)) {
+        sort = written;
+      } else {
+        findings.push(finding(
+          "warn",
+          `${label} — "sort" is not a known order, using "${DEFAULT_SORT}"`,
+          `known orders: ${SORTS.map((name) => `"${name}"`).join(", ")}`,
+        ));
+      }
+    }
+
     categories.push({
       index,
       title,
@@ -192,6 +225,7 @@ export function parseCategories(doc) {
       subjects,
       keys: [...new Set(subjects.map(foldSubject))],
       slug,
+      sort,
     });
   });
 

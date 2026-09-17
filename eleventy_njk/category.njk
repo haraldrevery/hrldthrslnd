@@ -2,8 +2,14 @@
 layout: base.njk
 ---
 {# One page of one category: every entry filed under any of the subjects it
-   gathers, newest first, as ordinary blog cards. The plates are for choosing a
-   category; once inside one, the entries are what matter.
+   gathers, as ordinary blog cards. The plates are for choosing a category;
+   once inside one, the entries are what matter.
+
+   The order is the category's own `sort` in category.json — newest first
+   unless it asks for "title" — and it is settled in the listings before this
+   template sees anything. Nothing here announces which order it is: the cards
+   carry dates either way, so an A-Z category reads as an A-Z category only
+   from its titles.
 
    Paging is in category.11tydata.js; membership, URLs and pages are worked out
    in the listings in eleventy_binary/lib/eleventy_config.js.
