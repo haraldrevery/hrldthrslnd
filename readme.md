@@ -299,6 +299,14 @@ under paper type. Both washes are two layers, a veil over the whole picture and
 a ramp under the text, and the ramp is on the text block rather than the card
 because only the block knows where the type starts.
 
+The short rule over each title cycles through four of the palette's arcs, the
+way a blog card cycles the edge it draws on hover — four over groups of three,
+so no group repeats one and each lead plate differs from the last. At rest only
+the first 3rem of the bar shows, which is why all four arcs open on the
+palette's dark side: an arc starting on mint or green is nearly invisible
+against the light scheme's pale ramp. The colours count position on the grid,
+not the category, and they classify nothing.
+
 Every text colour on them was measured rather than judged, the way `--fg-muted`
 and `--fg-faint` were: over these photographs the worst case is 4.8:1 in dark
 mode and 5.1:1 in light, against the 4.5:1 AA needs. If you swap in a much

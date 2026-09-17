@@ -467,6 +467,8 @@
     var(--c-mint) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
   --grad-flow-e: linear-gradient(115deg,
     var(--c-green) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
+  --grad-flow-f: linear-gradient(115deg,
+    var(--c-crimson) 0%, var(--c-orange) 33%, var(--c-amber) 67%, var(--c-mint) 100%);
   --accent-grad: var(--grad-flow);
   --grad-heat: linear-gradient(90deg, var(--c-lemon), var(--c-orange), var(--c-crimson));
   --grad-cool: linear-gradient(90deg, var(--c-mint), var(--c-teal), var(--c-ultra));
@@ -2056,12 +2058,24 @@
     display: block;
     height: 2px;
     margin-block: 0.9rem 1.1rem;
-    background: var(--grad-flow);
+    background: var(--accent-grad);
     clip-path: inset(0 calc(100% - 3rem) 0 0);
     transition: clip-path var(--dur-slow) var(--ease-liquid);
   }
   .category-card:hover .category-card-rule, .category-card:focus-within .category-card-rule {
     clip-path: inset(0 0 0 0);
+  }
+  .category-grid > .category-card:nth-child(4n + 1) {
+    --accent-grad: var(--grad-flow-a);
+  }
+  .category-grid > .category-card:nth-child(4n + 2) {
+    --accent-grad: var(--grad-flow-b);
+  }
+  .category-grid > .category-card:nth-child(4n + 3) {
+    --accent-grad: var(--grad-flow-c);
+  }
+  .category-grid > .category-card:nth-child(4n + 4) {
+    --accent-grad: var(--grad-flow-f);
   }
   .category-card-title {
     font-family: var(--font-display-family);
@@ -2101,8 +2115,8 @@
     padding-block: clamp(3.5rem, 12vh, 7rem);
     --category-band-scrim: linear-gradient(180deg,
       rgba(250, 250, 248, 0.90) 0%,
-      rgba(250, 250, 248, 0.72) 42%,
-      rgba(250, 250, 248, 0.82) 74%,
+      rgba(250, 250, 248, 0.60) 40%,
+      rgba(250, 250, 248, 0.80) 80%,
       rgba(250, 250, 248, 0.90) 100%);
   }
   .photo-stage.category-masthead::before {

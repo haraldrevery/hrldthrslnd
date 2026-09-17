@@ -3139,12 +3139,47 @@
     display: block;
     height: 2px;
     margin-block: 0.9rem 1.1rem;
-    background: var(--grad-flow);
+    background: var(--accent-grad);
     clip-path: inset(0 calc(100% - 3rem) 0 0);
     transition: clip-path var(--dur-slow) var(--ease-liquid);
   }
   .category-card:hover .category-card-rule,
   .category-card:focus-within .category-card-rule { clip-path: inset(0 0 0 0); }
+
+  /* Which arc each plate's rule carries, the way .card cycles the edge it
+     draws on hover — so a page of plates does not look stamped from one
+     template.
+
+     FOUR over groups of THREE, and both numbers matter. The grid runs in
+     groups of a lead plate and two small ones, and four is coprime with three,
+     so no group ever repeats an arc (three consecutive values of a four-cycle
+     are always distinct) and the lead plate takes a different one in each of
+     four successive groups before the pattern comes round.
+
+     The cards use the short arcs rather than --grad-flow's full sweep, which
+     is what the default --accent-grad holds. At rest the clip shows only the
+     first 3rem of the bar — one or two hues — and seven stops crammed into
+     that read as a rainbow chip rather than as a colour.
+
+     WHICH FOUR IS NOT ARBITRARY. What shows at rest is each arc's FIRST stop,
+     so every arc here begins on the palette's dark side — orange, magenta,
+     azure, crimson — which keeps the resting dash visible against the pale
+     ramp of the light scheme. -d and -e open on mint and green, which sit at
+     about 1.6 contrast on paper and would leave two plates in four looking as
+     though their rule had not been drawn. They are still in the rotation, just
+     not at the front of it: -f below is -d's run of hues entered from the
+     other end.
+
+     Counted on the grid, not on the category: a plate's arc comes from where
+     it sits, so the same category shows a different one on the front page than
+     on a later page of the overview. That is deliberate and it is what the
+     blog cards do — these colours classify nothing, and a stable colour per
+     category is exactly the promise that would make a reader look for a rule
+     behind them. */
+  .category-grid > .category-card:nth-child(4n + 1) { --accent-grad: var(--grad-flow-a); }
+  .category-grid > .category-card:nth-child(4n + 2) { --accent-grad: var(--grad-flow-b); }
+  .category-grid > .category-card:nth-child(4n + 3) { --accent-grad: var(--grad-flow-c); }
+  .category-grid > .category-card:nth-child(4n + 4) { --accent-grad: var(--grad-flow-f); }
 
   .category-card-title {
     font-family: var(--font-display-family);
@@ -3208,8 +3243,8 @@
        would re-dim the heroes and the page builder's bleed blocks with it. */
     --category-band-scrim: linear-gradient(180deg,
       rgba(250, 250, 248, 0.90) 0%,
-      rgba(250, 250, 248, 0.72) 42%,
-      rgba(250, 250, 248, 0.82) 74%,
+      rgba(250, 250, 248, 0.60) 40%,
+      rgba(250, 250, 248, 0.80) 80%,
       rgba(250, 250, 248, 0.90) 100%);
   }
   /* Two class names, not one. .photo-stage-adaptive::before ties with a single

@@ -429,6 +429,14 @@
     var(--c-mint) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
   --grad-flow-e: linear-gradient(115deg,
     var(--c-green) 0%, var(--c-amber) 33%, var(--c-orange) 67%, var(--c-crimson) 100%);
+  /* -d's run of hues entered from the other end, so it OPENS on the dark side.
+     It exists for a bar that is revealed a piece at a time rather than drawn
+     all at once: the category card's rule shows only its first 3rem at rest,
+     and an arc opening on mint or green sits at about 1.6 contrast against the
+     light scheme's pale ramp — the plate reads as though its rule were
+     missing. Same four hues, same straddle, different first impression. */
+  --grad-flow-f: linear-gradient(115deg,
+    var(--c-crimson) 0%, var(--c-orange) 33%, var(--c-amber) 67%, var(--c-mint) 100%);
   /* The accent edge, as one token. Every rule and marker that identifies a
      block — the card's top edge, the slice's left edge, the index row's hover
      marker, the feature panel's rule — paints with this rather than naming a
