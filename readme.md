@@ -318,29 +318,60 @@ section on the front page.
 ### How they look
 
 The cards are the one place on the site where a photograph is the surface
-rather than an illustration: the picture fills the plate, the type sits on it,
-and the grid runs in groups of three — one large plate, two small — so a page of
-categories does not read as a row of equal thumbnails. **They follow the colour
-scheme**, unlike the other surfaces that stand on a photograph: in light mode
-the picture is washed towards paper and the type is ink, in dark it is dimmed
-under paper type. Both washes are two layers, a veil over the whole picture and
-a ramp under the text, and the ramp is on the text block rather than the card
-because only the block knows where the type starts.
+rather than an illustration: the picture fills the plate, a frosted label is
+pinned to it carrying the type, and the grid runs in groups of three — one large
+plate, two small — so a page of categories does not read as a row of equal
+thumbnails. **They follow the colour scheme**, unlike the other surfaces that
+stand on a photograph: in light mode the label is frosted paper and the type is
+ink, in dark it is a near-black glass under paper type.
+
+The label is inset from all four edges, so the photograph is whole around it.
+There is no gradient anywhere on the card. It used to carry two — a ramp under
+the text and a graded veil over the picture — and the ramp is what the label
+replaced: a ramp has to be tuned to where the type starts, which is a different
+place on a short card than on a tall one, and it spent the bottom third of every
+photograph doing it. The veil is still there and still settles the picture, but
+it is a single flat wash now rather than three stops.
+
+**The small plates show no description.** Only the large plate does, and every
+plate at phone width. On a small one the description was a third of the label
+and left barely any picture showing; the number, the count and the title are
+what a small plate is for, and the sentence is the first thing on the page it
+opens.
 
 The short rule over each title cycles through four of the palette's arcs, the
 way a blog card cycles the edge it draws on hover — four over groups of three,
 so no group repeats one and each lead plate differs from the last. At rest only
 the first 3rem of the bar shows, which is why all four arcs open on the
 palette's dark side: an arc starting on mint or green is nearly invisible
-against the light scheme's pale ramp. The colours count position on the grid,
+against the light scheme's pale label. The colours count position on the grid,
 not the category, and they classify nothing.
 
-Every text colour on them was measured rather than judged, the way `--fg-muted`
-and `--fg-faint` were: over these photographs the worst case is 4.8:1 in dark
-mode and 5.1:1 in light, against the 4.5:1 AA needs. If you swap in a much
-brighter or much flatter photograph, re-check it — the numbers depend on the
-picture, and the two knobs are `--category-ramp` and `--category-veil` in
-`css/input.css`.
+Unlike every other art plate on the site, the picture does **not** ease in on
+hover. A blurred backdrop is drawn once and kept for as long as what is behind
+it holds still; move the picture and it is redrawn every frame, across nine
+labels on a full page. The rule drawing out and the label's edge lighting up are
+the whole hover.
+
+**The blur is a finish, never the legibility.** The label's tint alone holds AA
+over the worst photograph there could be — measured against this site's own ink
+tokens over a pure white frame in dark mode and a pure black one in light: 6.5
+for the title and 5.0 for the meta line and description in dark, 8.0 and 5.0 in
+light. Over an ordinary photograph both sit near 8. So there is no `@supports`
+gate on it and a browser that ignores `backdrop-filter` draws the tint and the
+card is still readable.
+
+That is not caution for its own sake. Firefox reports
+`CSS.supports('backdrop-filter', 'blur(2px)')` as **true** and then renders no
+blur at all when it is compositing in software — which is what a blocklisted
+driver, a virtual machine or a remote desktop falls back to. `@supports` cannot
+see that, so nothing legibility depends on may be put behind it anywhere on this
+site. (Firefox also does not support `-webkit-backdrop-filter`, so a guard
+written anywhere has to test both spellings.)
+
+The knob is `--category-glass` in `css/input.css`, and the numbers above are a
+composite — the tint over white or black, then the ink over that. If you lighten
+it, re-measure rather than eyeball it; the meta line is the first to fail.
 
 The category page opens with the same treatment at full width: a
 `.photo-stage-adaptive` band carrying the eyebrow, the masthead, the description

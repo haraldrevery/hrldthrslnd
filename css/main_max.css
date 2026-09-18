@@ -286,6 +286,10 @@
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
   }
+  .backdrop-filter {
+    -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+    backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+  }
   .transition {
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
@@ -1977,35 +1981,43 @@
   .category-card {
     --category-title: clamp(1.5rem, 6.2vw, 2.1rem);
     --category-desc-lines: 3;
-    --category-body-top: clamp(3rem, 7vw, 5.5rem);
-    --category-veil: linear-gradient(180deg,
-      rgba(250, 250, 248, 0.30) 0%,
-      rgba(250, 250, 248, 0.10) 40%,
-      rgba(250, 250, 248, 0.26) 100%);
-    --category-ramp: linear-gradient(180deg,
-      rgba(250, 250, 248, 0) 0%,
-      rgba(250, 250, 248, 0.88) 30%,
-      rgba(250, 250, 248, 0.96) 58%,
-      rgba(250, 250, 248, 0.97) 100%);
+    --category-plate-inset: clamp(0.9rem, 3vw, 1.4rem);
+    --category-plate-pad: clamp(1.1rem, 2.4vw, 1.6rem);
+    --category-veil: rgba(250, 250, 248, 0.16);
+    --category-glass: rgba(250, 250, 248, 0.62);
+    --category-edge: rgba(255, 255, 255, 0.60);
     --category-frame: rgba(13, 13, 16, 0.16);
     --category-frame-strong: rgba(13, 13, 16, 0.34);
     position: relative;
     isolation: isolate;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: 17rem;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    min-height: 19rem;
     overflow: hidden;
     background: var(--stage-ground);
     color: var(--panel-adaptive-fg);
   }
-  .category-card-body {
-    padding: clamp(1.5rem, 3vw, 2.5rem);
-    padding-top: var(--category-body-top);
-    background: var(--category-ramp);
-  }
   .category-grid > .category-card:nth-child(3n + 1) {
     min-height: 22rem;
+  }
+  .category-card-frost, .category-card-body {
+    grid-area: 2 / 1;
+    margin: var(--category-plate-inset);
+  }
+  .category-card-frost {
+    z-index: -1;
+    background: var(--category-glass);
+    border: var(--hairline-width) solid var(--category-frame);
+    box-shadow: inset 0 var(--hairline-width) var(--category-edge), 0 1.25rem 2.5rem -1.25rem rgba(0, 0, 0, 0.45);
+    -webkit-backdrop-filter: blur(18px) saturate(125%);
+    backdrop-filter: blur(18px) saturate(125%);
+    transition: border-color var(--dur-slow) var(--ease-liquid);
+  }
+  .category-card:hover .category-card-frost, .category-card:focus-within .category-card-frost {
+    border-color: var(--category-frame-strong);
+  }
+  .category-card-body {
+    padding: var(--category-plate-pad);
   }
   .category-card-media {
     position: absolute;
@@ -2013,28 +2025,12 @@
     z-index: -1;
     background: var(--stage-ground);
   }
-  .category-card:hover .category-card-media img, .category-card:focus-within .category-card-media img {
-    transform: scale(1.04);
-  }
-  .category-card::after {
+  .category-card-media::after {
     content: "";
     position: absolute;
     inset: 0;
-    z-index: -1;
     background: var(--category-veil);
     pointer-events: none;
-  }
-  .category-card::before {
-    content: "";
-    position: absolute;
-    inset: clamp(0.55rem, 1vw, 0.8rem);
-    z-index: 0;
-    border: var(--hairline-width) solid var(--category-frame);
-    pointer-events: none;
-    transition: border-color var(--dur-slow) var(--ease-liquid);
-  }
-  .category-card:hover::before, .category-card:focus-within::before {
-    border-color: var(--category-frame-strong);
   }
   .category-card-meta {
     display: flex;
@@ -2087,7 +2083,7 @@
     word-break: break-word;
   }
   .category-card-desc {
-    display: -webkit-box;
+    display: var(--category-desc-display, -webkit-box);
     -webkit-box-orient: vertical;
     -webkit-line-clamp: var(--category-desc-lines);
     overflow: hidden;
@@ -2098,15 +2094,9 @@
   }
   @media (prefers-color-scheme: dark) {
     .category-card {
-      --category-veil: linear-gradient(180deg,
-        rgba(9, 9, 12, 0.34) 0%,
-        rgba(9, 9, 12, 0.06) 40%,
-        rgba(9, 9, 12, 0.22) 100%);
-      --category-ramp: linear-gradient(180deg,
-        rgba(9, 9, 12, 0) 0%,
-        rgba(9, 9, 12, 0.86) 30%,
-        rgba(9, 9, 12, 0.94) 58%,
-        rgba(9, 9, 12, 0.96) 100%);
+      --category-veil: rgba(9, 9, 12, 0.18);
+      --category-glass: rgba(9, 9, 12, 0.68);
+      --category-edge: rgba(255, 255, 255, 0.14);
       --category-frame: rgba(244, 244, 242, 0.16);
       --category-frame-strong: rgba(244, 244, 242, 0.34);
     }
@@ -2150,21 +2140,22 @@
       grid-auto-rows: minmax(var(--category-row), auto);
     }
     .category-grid > .category-card {
-      --category-desc-lines: 2;
-      --category-body-top: clamp(2rem, 3.4vw, 3.2rem);
+      --category-desc-display: none;
       grid-column: span 3;
       min-height: 0;
     }
     .category-grid > .category-card:nth-child(3n + 1) {
       --category-title: clamp(2rem, 4.4vw, 3.2rem);
+      --category-desc-display: -webkit-box;
       --category-desc-lines: 4;
-      --category-body-top: clamp(3rem, 6vw, 5rem);
+      --category-plate-inset: clamp(1.25rem, 3vw, 2.25rem);
       grid-column: span 6;
       grid-row: span 2;
       min-height: 0;
     }
     .category-grid > .category-card:nth-child(3n + 1):nth-last-child(2) {
       --category-title: clamp(1.5rem, 3vw, 2.1rem);
+      --category-desc-display: none;
       grid-column: span 3;
       grid-row: span 1;
     }
@@ -2177,17 +2168,19 @@
     }
     .category-grid > .category-card:nth-child(3n + 1) {
       --category-title: clamp(2.2rem, 3.4vw, 3.6rem);
+      --category-plate-inset: clamp(1.5rem, 2.6vw, 2.5rem);
       grid-column: span 4;
       grid-row: span 2;
     }
     .category-grid > .category-card:nth-child(3n + 1):last-child {
+      --category-desc-display: none;
       grid-column: 1 / -1;
       grid-row: span 1;
     }
     .category-grid > .category-card:nth-child(3n + 1):nth-last-child(2), .category-grid > .category-card:nth-child(3n + 1):nth-last-child(2) + .category-card {
       --category-title: clamp(1.6rem, 2.4vw, 2.4rem);
-      --category-desc-lines: 3;
-      --category-body-top: clamp(2.5rem, 4vw, 4rem);
+      --category-desc-display: none;
+      --category-plate-inset: clamp(1.1rem, 2.4vw, 1.8rem);
       grid-column: span 3;
       grid-row: span 1;
     }
@@ -4609,6 +4602,42 @@ html[data-width="18"] {
   syntax: "*";
   inherits: false;
 }
+@property --tw-backdrop-blur {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-brightness {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-contrast {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-grayscale {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-hue-rotate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-invert {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-opacity {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-saturate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-sepia {
+  syntax: "*";
+  inherits: false;
+}
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
@@ -4646,6 +4675,15 @@ html[data-width="18"] {
       --tw-drop-shadow-color: initial;
       --tw-drop-shadow-alpha: 100%;
       --tw-drop-shadow-size: initial;
+      --tw-backdrop-blur: initial;
+      --tw-backdrop-brightness: initial;
+      --tw-backdrop-contrast: initial;
+      --tw-backdrop-grayscale: initial;
+      --tw-backdrop-hue-rotate: initial;
+      --tw-backdrop-invert: initial;
+      --tw-backdrop-opacity: initial;
+      --tw-backdrop-saturate: initial;
+      --tw-backdrop-sepia: initial;
     }
   }
 }

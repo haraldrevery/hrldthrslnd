@@ -2985,29 +2985,93 @@
   /* -- Category cards: the subjects the site puts forward ---------------------
      category.json names a handful of subjects and this is how they are shown:
      on the front page above Latest, and on /categories.html. They are meant to
-     read as a step above a blog card — a photographic plate the size of a
-     small poster, the title set over it — so the grid is an editorial one
-     rather than the card ladder: groups of three, one large plate and two
-     small, the large one changing sides from one group to the next.
+     read as a step above a blog card — a photographic plate the size of a small
+     poster, with the title on a frosted label pinned to it — so the grid is an
+     editorial one rather than the card ladder: groups of three, one large plate
+     and two small, the large one changing sides from one group to the next.
 
-     A fixed-dark surface in both schemes, like .plate-caption and
-     .hero-stage-photo, and for the same reason: the type stands on a
-     photograph, and a photograph has no colour scheme. So everything here is
-     --paper on a scrim, never --fg.
+     The card follows the colour scheme. It reads --panel-adaptive-* for every
+     ink and turns its two washes round in the dark block at the foot of this
+     component, the same shape .cine-stage takes. It is NOT one of the
+     fixed-dark surfaces; .plate-caption and .hero-stage-photo are, and they are
+     right to be, because their type stands directly on a photograph. Here the
+     type stands on a label that carries its own ground, so it can follow the
+     reader's setting like the rest of the page.
 
-     CONSTRUCTION. The card is `isolation: isolate` and its picture sits at
-     z-index -1 under the in-flow text, with the scrim above it. That is what
-     keeps the text box un-positioned, and it has to be: .card-link::after
-     stretches to the nearest positioned ancestor to make the whole plate one
-     click target, and a positioned text box would shrink that to the text.
+     A LABEL, NOT A FADE. The text used to sit on a four-stop ramp washing the
+     bottom of the picture towards opaque. A ramp has to be tuned to where the
+     type starts, which is a different place on a short card than on a tall one,
+     and the bottom third of every photograph was spent paying for it. The label
+     is inset from all four edges instead: the picture is whole, the plate has
+     an edge you can see, and nothing about it depends on the card's height.
 
-     MOTION. On hover or focus, the photograph eases in by the same 4% every
-     art plate on the site does, and the rule over the title draws out to its
-     full width. At rest that rule shows only its first 3rem — two hues of the
-     seven-stop --grad-flow — and the hover reveals the whole sweep. A clip
-     rather than a scaleX, because scaling would squeeze all seven stops into
-     the short bar and the rest state would be a rainbow chip. Both moves
-     answer to the reduced-motion block at the foot of this file.             */
+     CONSTRUCTION, and every piece of it is load-bearing.
+
+       The card is a GRID, `1fr auto`. The frost and the text are two elements
+       in the SAME cell — the idiom .feature-overlay already uses and states its
+       reasons for — so the frost takes exactly the label's box without being
+       absolutely positioned and without either one having to know the other's
+       height. `1fr auto` is what `justify-content: flex-end` used to do.
+
+       The frost is its OWN element rather than a background on the text block,
+       and that is the whole reason this component has an extra div in it. A
+       backdrop-filter makes an element a containing block for absolutely
+       positioned descendants. Put it on the text block and .card-link::after —
+       which stretches to the nearest positioned ancestor to make the whole
+       plate one click target — collapses from the plate to the line of type.
+       Measured: 400x300 before, 400x38 after. A pseudo-element does not save
+       it either; the text block is unpositioned, so an `inset: 0` pseudo
+       resolves against the CARD and frosts the entire picture.
+
+       The frost sits at `z-index: -1`, which a grid item honours without being
+       positioned — so it paints over the picture and under the type, and the
+       text block stays unpositioned and the click target stays the whole plate.
+
+       The veil over the picture is .category-card-media::after and not the
+       card's own ::after, which is where it used to be. The card's ::after is
+       later in tree order than the frost and at the same z-index, so it painted
+       ON TOP of the glass. Inside the media it is part of the picture's own
+       stacking context and is behind the frost, where it belongs.
+
+     THE BLUR IS THE FINISH, NEVER THE LEGIBILITY. --category-glass alone holds
+     AA over the worst photograph there could be — a pure white frame in the
+     dark scheme, a pure black one in light. Measured against this site's own
+     ink tokens over that worst case: 6.47 for the title and 4.99 for the meta
+     line and the description in dark, 8.02 and 4.99 in light. Over an ordinary
+     mid-grey photograph both sit near 8. So there is no @supports gate here and
+     there does not need to be one: a browser that ignores backdrop-filter draws
+     the tint and the card is still legible.
+
+     That is not caution for its own sake. Firefox reports
+     `CSS.supports('backdrop-filter', 'blur(2px)')` as TRUE and then renders no
+     blur at all when it is compositing in software — which is what a
+     blocklisted driver, a virtual machine or a remote desktop falls back to.
+     @supports cannot see that, so nothing legibility depends on may be put
+     behind it. Every other glass surface on this site already keeps this
+     contract by accident: .glass-card stands on the flat #101115 of
+     .glass-surface, and --panel-adaptive-glass-photo is 0.74/0.78 opaque.
+
+     Note also that Firefox does NOT support -webkit-backdrop-filter, so a gate
+     written anywhere on this site has to test both spellings.
+
+     If --category-glass is ever lightened, re-measure it. The numbers above are
+     a composite of the tint over white or black and then the ink over that;
+     they are not something to eyeball, and the meta line is the first to fail.
+
+     MOTION. On hover or focus the rule over the title draws out to its full
+     width and the label's edge lights up. At rest that rule shows only its
+     first 3rem — two hues of the seven-stop --grad-flow — and the hover reveals
+     the whole sweep. A clip rather than a scaleX, because scaling would squeeze
+     all seven stops into the short bar and the rest state would be a rainbow
+     chip. Both moves answer to the reduced-motion block at the foot of this
+     file.
+
+     The 4% push on the photograph that every other art plate takes is
+     deliberately NOT here. A blurred backdrop is rasterised once and cached for
+     as long as what is behind it holds still; move the picture and it is redrawn
+     every frame of the transition, which at --dur-slow is about fifty of them,
+     across nine labels on a full page of /categories.html. The rule and the
+     edge are enough of an answer, and the plates stay cheap to look at.       */
   .category-grid {
     --category-gap: clamp(0.75rem, 1.4vw, 1.25rem);
     --category-row: clamp(15rem, 20vw, 21rem);
@@ -3018,60 +3082,92 @@
 
   .category-card {
     --category-title: clamp(1.5rem, 6.2vw, 2.1rem);
+    /* Only ever the phone case and the lead plate's; every other plate switches
+       the description off entirely rather than clamping it shorter. */
     --category-desc-lines: 3;
-    /* How far down the card the ramp starts. The picture is what is left above
-       it, so it is tuned per card size below: on a small card the same value
-       that suits a poster-sized plate leaves almost no photograph showing. */
-    --category-body-top: clamp(3rem, 7vw, 5.5rem);
+    /* How far the label stands in from the card's edges, and therefore how much
+       photograph is left around it. Tuned per card size below: the same figure
+       that frames a poster-sized plate leaves a small card almost no room to
+       set its title in. */
+    --category-plate-inset: clamp(0.9rem, 3vw, 1.4rem);
+    --category-plate-pad: clamp(1.1rem, 2.4vw, 1.6rem);
 
     /* The light scheme's values; the dark ones are four declarations at the
-       foot of this component. Two layers do the work — a veil over the whole
-       picture and a ramp under the text — and in light mode both wash the
-       photograph towards paper so ink can stand on it, which is the same
-       bargain .photo-stage-adaptive strikes with --hero-scrim-pale.
+       foot of this component.
 
-       The alphas are NOT the dark ones inverted. Near-black type needs more of
-       the photograph taken out from under it than near-white type does, which
-       is why --hero-scrim-pale is heavier than --hero-scrim at every stop; the
-       ramp below follows it. The veil is the other way round: mixing a picture
-       towards white flattens it fast, so the middle of the frame is left
-       nearly clear and the wash is spent at the edges. */
-    --category-veil: linear-gradient(180deg,
-      rgba(250, 250, 248, 0.30) 0%,
-      rgba(250, 250, 248, 0.10) 40%,
-      rgba(250, 250, 248, 0.26) 100%);
-    --category-ramp: linear-gradient(180deg,
-      rgba(250, 250, 248, 0) 0%,
-      rgba(250, 250, 248, 0.88) 30%,
-      rgba(250, 250, 248, 0.96) 58%,
-      rgba(250, 250, 248, 0.97) 100%);
+       The veil settles the picture so a field of plates does not shout, and it
+       is FLAT — a single wash, not a gradient. It used to be three stops
+       reaching 0.30 at the top and 0.26 at the foot, because it was also doing
+       half the work of holding the type up. The label carries its own ground
+       now, so the only job left is the even one, and a graded wash was making
+       the sky of every photograph paler than its own middle for no reason a
+       reader could see. Flat at about what those stops averaged, so the field
+       reads the same from across the room and each picture reads better close
+       to. It is also the last gradient this card had: the ramp under the type
+       is gone, and so is this one.
+
+       --category-glass is the label's ground and is the value the contrast
+       numbers in the note above were measured at. In light mode it washes
+       towards paper so ink can stand on it, in dark towards the old matte. */
+    --category-veil: rgba(250, 250, 248, 0.16);
+    --category-glass: rgba(250, 250, 248, 0.62);
+    /* The light caught on the label's top edge — one pixel, inside the border.
+       .glass-card's own `inset 0 1px` highlight, and it is a hairline here for
+       the reason it is one there AND for a reason of this component's own: the
+       155deg corner wash .glass-card pairs it with would lie directly under the
+       meta line, and at a tenth of white it took that line from 4.99 to 4.35 in
+       the dark scheme. An edge light sits above the label's padding and costs
+       the type nothing. */
+    --category-edge: rgba(255, 255, 255, 0.60);
     --category-frame: rgba(13, 13, 16, 0.16);
     --category-frame-strong: rgba(13, 13, 16, 0.34);
 
     position: relative;
     isolation: isolate;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: 17rem;
+    /* Two rows: the picture's share, then the label, which is as tall as what
+       is written on it. See CONSTRUCTION above for why both the frost and the
+       text sit in the second one. */
+    display: grid;
+    grid-template-rows: 1fr auto;
+    /* 19rem, not the 17 this card used to take. The label is a fixed block of
+       type now rather than a ramp that could be tuned thinner, so the card has
+       to find the photograph's share itself: at 17rem a phone-width plate was
+       left with 69px of picture above its label, a strip rather than a plate. */
+    min-height: 19rem;
     overflow: hidden;
     /* The ground a card with no picture stands on, and the scheme's own: the
        pale stage in light, the old matte in dark. */
     background: var(--stage-ground);
     color: var(--panel-adaptive-fg);
   }
-
-  /* The text block, and the ramp that holds it up. The ramp is on the block
-     rather than on the card because only the block knows where the type
-     starts: at the same stops on the card, a short card's plate number sat on
-     bright snow while a tall one's was well inside the dark. Same reasoning as
-     .plate-caption, which moved its own ramp for the same reason. */
-  .category-card-body {
-    padding: clamp(1.5rem, 3vw, 2.5rem);
-    padding-top: var(--category-body-top);
-    background: var(--category-ramp);
-  }
   .category-grid > .category-card:nth-child(3n + 1) { min-height: 22rem; }
+
+  /* One cell, two elements, one margin. The margin is what insets the label
+     from the card's edges, and it is declared once for both so the frost cannot
+     drift out of register with the type it is holding up. */
+  .category-card-frost,
+  .category-card-body {
+    grid-area: 2 / 1;
+    margin: var(--category-plate-inset);
+  }
+
+  .category-card-frost {
+    z-index: -1;
+    background: var(--category-glass);
+    border: var(--hairline-width) solid var(--category-frame);
+    box-shadow: inset 0 var(--hairline-width) var(--category-edge),
+                0 1.25rem 2.5rem -1.25rem rgba(0, 0, 0, 0.45);
+    /* No @supports gate — see the note above. saturate() keeps the photograph's
+       colour alive through the glass instead of letting the blur grey it out,
+       and a browser that draws neither simply gets the tint. */
+    -webkit-backdrop-filter: blur(18px) saturate(125%);
+    backdrop-filter: blur(18px) saturate(125%);
+    transition: border-color var(--dur-slow) var(--ease-liquid);
+  }
+  .category-card:hover .category-card-frost,
+  .category-card:focus-within .category-card-frost { border-color: var(--category-frame-strong); }
+
+  .category-card-body { padding: var(--category-plate-pad); }
 
   .category-card-media {
     position: absolute;
@@ -3079,36 +3175,16 @@
     z-index: -1;
     background: var(--stage-ground);
   }
-  .category-card:hover .category-card-media img,
-  .category-card:focus-within .category-card-media img { transform: scale(1.04); }
-
-  /* A light veil over the whole picture, under the text block's own ramp. It
-     does two things the ramp cannot: it keeps the top corners from being the
-     brightest thing in a field of cards, and it settles a photograph that
-     would otherwise compete with the type below it. */
-  .category-card::after {
+  /* Inside the media rather than on the card, so it is behind the frost. The
+     reason is in CONSTRUCTION above; it is a paint-order requirement, not a
+     preference. .art-plate clips it, so it never reaches past the picture. */
+  .category-card-media::after {
     content: "";
     position: absolute;
     inset: 0;
-    z-index: -1;
     background: var(--category-veil);
     pointer-events: none;
   }
-
-  /* A hairline frame set in from the edge — the mount a print sits in. Above
-     the text layer but well clear of it (the padding is always larger than
-     the inset), and under the link overlay, which is z-index 1. */
-  .category-card::before {
-    content: "";
-    position: absolute;
-    inset: clamp(0.55rem, 1vw, 0.8rem);
-    z-index: 0;
-    border: var(--hairline-width) solid var(--category-frame);
-    pointer-events: none;
-    transition: border-color var(--dur-slow) var(--ease-liquid);
-  }
-  .category-card:hover::before,
-  .category-card:focus-within::before { border-color: var(--category-frame-strong); }
 
   .category-card-meta {
     display: flex;
@@ -3121,9 +3197,9 @@
     line-height: var(--font-mono-leading);
     text-transform: uppercase;
     /* Muted rather than faint, which is what a label this size would normally
-       take. The line sits where the ramp is still fading in, so on a small card
-       over a bright photograph the faint token measured 4.1:1 — under AA for
-       text, and this line is content: it says how many entries are inside. */
+       take. This line is content — it says how many entries are inside — and
+       over the worst photograph the faint token measures 3.9:1 against the
+       label's ground where the muted one measures 4.99. */
     color: var(--panel-adaptive-fg-muted);
   }
   /* The plate number. Display face, a step up from the count beside it, so the
@@ -3164,7 +3240,7 @@
      WHICH FOUR IS NOT ARBITRARY. What shows at rest is each arc's FIRST stop,
      so every arc here begins on the palette's dark side — orange, magenta,
      azure, crimson — which keeps the resting dash visible against the pale
-     ramp of the light scheme. -d and -e open on mint and green, which sit at
+     label of the light scheme. -d and -e open on mint and green, which sit at
      about 1.6 contrast on paper and would leave two plates in four looking as
      though their rule had not been drawn. They are still in the rotation, just
      not at the front of it: -f below is -d's run of hues entered from the
@@ -3190,8 +3266,20 @@
     color: var(--panel-adaptive-fg-strong);
     word-break: break-word;
   }
+  /* Shown on the lead plate and at phone width; switched off on the small
+     plates by --category-desc-display in the two blocks at the foot of this
+     component. A small plate is an index entry — the number, the count and the
+     title — and on one the description was 81 of the label's 237 pixels, which
+     left 28px of photograph showing and made the card a bordered box on a
+     picture rather than a label pinned to one. Nothing is lost: the sentence is
+     the first thing on the page the card opens.
+
+     Switched with a property rather than a `display: none` rule of its own,
+     because the selectors that know which plates are small are the ones in
+     those blocks already, and a second set written to match them is a second
+     set to keep in step. */
   .category-card-desc {
-    display: -webkit-box;
+    display: var(--category-desc-display, -webkit-box);
     -webkit-box-orient: vertical;
     -webkit-line-clamp: var(--category-desc-lines);
     overflow: hidden;
@@ -3201,21 +3289,23 @@
     color: var(--panel-adaptive-fg-muted);
   }
 
-  /* The dark scheme: the two washes turn round and go to near-black, and the
-     type follows through --panel-adaptive-*, which is already declared per
-     scheme in theme.css. Four declarations rather than a second copy of the
-     component — the same shape .cine-stage's dark block takes. */
+  /* The dark scheme: the wash and the label's ground turn round and go to
+     near-black, and the type follows through --panel-adaptive-*, which is
+     already declared per scheme in theme.css. Five declarations rather than a
+     second copy of the component — the same shape .cine-stage's dark block
+     takes.
+
+     0.68 against light's 0.62 is not a transcription error. The alphas are not
+     each other inverted: near-white type over a darkened picture needs more of
+     that picture taken out from under it than near-black type over a lightened
+     one does, which is the same asymmetry --hero-scrim-pale already records
+     against --hero-scrim. Both land the meta line at 4.99 over the worst case,
+     which is the number the two were actually tuned to. */
   @media (prefers-color-scheme: dark) {
     .category-card {
-      --category-veil: linear-gradient(180deg,
-        rgba(9, 9, 12, 0.34) 0%,
-        rgba(9, 9, 12, 0.06) 40%,
-        rgba(9, 9, 12, 0.22) 100%);
-      --category-ramp: linear-gradient(180deg,
-        rgba(9, 9, 12, 0) 0%,
-        rgba(9, 9, 12, 0.86) 30%,
-        rgba(9, 9, 12, 0.94) 58%,
-        rgba(9, 9, 12, 0.96) 100%);
+      --category-veil: rgba(9, 9, 12, 0.18);
+      --category-glass: rgba(9, 9, 12, 0.68);
+      --category-edge: rgba(255, 255, 255, 0.14);
       --category-frame: rgba(244, 244, 242, 0.16);
       --category-frame-strong: rgba(244, 244, 242, 0.34);
     }
@@ -3285,21 +3375,26 @@
       grid-auto-rows: minmax(var(--category-row), auto);
     }
     .category-grid > .category-card {
-      --category-desc-lines: 2;
-      --category-body-top: clamp(2rem, 3.4vw, 3.2rem);
+      --category-desc-display: none;
       grid-column: span 3;
       min-height: 0;
     }
     .category-grid > .category-card:nth-child(3n + 1) {
       --category-title: clamp(2rem, 4.4vw, 3.2rem);
+      --category-desc-display: -webkit-box;
       --category-desc-lines: 4;
-      --category-body-top: clamp(3rem, 6vw, 5rem);
+      /* The lead plate stands its label further in. The inset is a share of a
+         card this size, not a fixed border: at the small cards' figure the
+         label sat almost flush against a plate twice their width and stopped
+         reading as something pinned to the picture. */
+      --category-plate-inset: clamp(1.25rem, 3vw, 2.25rem);
       grid-column: span 6;
       grid-row: span 2;
       min-height: 0;
     }
     .category-grid > .category-card:nth-child(3n + 1):nth-last-child(2) {
       --category-title: clamp(1.5rem, 3vw, 2.1rem);
+      --category-desc-display: none;
       grid-column: span 3;
       grid-row: span 1;
     }
@@ -3324,18 +3419,20 @@
     }
     .category-grid > .category-card:nth-child(3n + 1) {
       --category-title: clamp(2.2rem, 3.4vw, 3.6rem);
+      --category-plate-inset: clamp(1.5rem, 2.6vw, 2.5rem);
       grid-column: span 4;
       grid-row: span 2;
     }
     .category-grid > .category-card:nth-child(3n + 1):last-child {
+      --category-desc-display: none;
       grid-column: 1 / -1;
       grid-row: span 1;
     }
     .category-grid > .category-card:nth-child(3n + 1):nth-last-child(2),
     .category-grid > .category-card:nth-child(3n + 1):nth-last-child(2) + .category-card {
       --category-title: clamp(1.6rem, 2.4vw, 2.4rem);
-      --category-desc-lines: 3;
-      --category-body-top: clamp(2.5rem, 4vw, 4rem);
+      --category-desc-display: none;
+      --category-plate-inset: clamp(1.1rem, 2.4vw, 1.8rem);
       grid-column: span 3;
       grid-row: span 1;
     }

@@ -70,8 +70,9 @@
 {% endmacro %}
 
 {# Category card, for the plates on the front page and /categories.html. See
-   "Category cards" in input.css for the grid they sit in and why the picture is
-   behind the text rather than above it.
+   "Category cards" in input.css for the grid they sit in, why the picture is
+   behind the text rather than above it, and why the frosted label below is a
+   div of its own rather than a background or a pseudo-element.
 
    `entry` is one item of collections.categoryList — already resolved: URL,
    thumbnail, entry count and plate number are all worked out in the listings,
@@ -104,10 +105,18 @@
     {%- endif %}
   </div>
 
-  {#- The text stands in its own block, and the block carries the ramp that
-      makes it legible. On the card as a whole the ramp cannot know where the
-      type starts: a short card puts its title where a tall one is still
-      showing photograph, and the plate number landed on bright snow. -#}
+  {#- The frosted label the text is set on. An element of its own, and the only
+      piece of markup this card carries purely for the stylesheet — see
+      "Category cards" in input.css, under CONSTRUCTION, for why it cannot be a
+      background on the block below or a pseudo-element on anything. Short
+      version: a backdrop-filter on the text block would shrink the whole-plate
+      click target to the line of type, and an absolutely positioned pseudo
+      would frost the entire picture rather than the label. -#}
+  <div class="category-card-frost"></div>
+
+  {#- The text. It sits in the same grid cell as the frost and stays
+      unpositioned, which is what keeps .card-link::after stretched over the
+      whole plate. -#}
   <div class="category-card-body">
     <p class="category-card-meta">
       <span class="category-card-number" aria-hidden="true">{% if entry.number < 10 %}0{% endif %}{{ entry.number }}</span>
