@@ -333,13 +333,22 @@ place on a short card than on a tall one, and it spent the bottom third of every
 photograph doing it. The veil is still there and still settles the picture, but
 it is a single flat wash now rather than three stops.
 
-**The small plates show no description.** Only the large plate does, and every
-plate at phone width. On a small one the description was a third of the label
-and left barely any picture showing; the number, the count and the title are
-what a small plate is for, and the sentence is the first thing on the page it
-opens.
+Every plate reads the same way down: the title, the coloured rule under it as
+its underline, then the description. **The entry count is the large plate's
+line only** — it also shows at phone width, where every plate is full width. It
+used to sit above the title paired with a plate number set large in the display
+face, and that pair cost 46px of a small plate's label for two pieces of
+furniture; dropping it is what made room for the description on the small
+plates, which is the better of the two on a card someone is choosing from.
 
-The short rule over each title cycles through four of the palette's arcs, the
+**The large plate alternates sides**, left in one group of three and right in
+the next. It could not while the plates were numbered — in a mirrored group the
+eye met 05 and 06 before the 04 beside them — so the numbers going is what
+unlocked it. The columns are stated rather than spanned and the grid packs
+`dense`; both are load-bearing, and `css/input.css` says why at the 64rem
+block.
+
+The short rule under each title cycles through four of the palette's arcs, the
 way a blog card cycles the edge it draws on hover — four over groups of three,
 so no group repeats one and each lead plate differs from the last. At rest only
 the first 3rem of the bar shows, which is why all four arcs open on the

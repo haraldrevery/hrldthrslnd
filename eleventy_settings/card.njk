@@ -75,8 +75,8 @@
    div of its own rather than a background or a pseudo-element.
 
    `entry` is one item of collections.categoryList — already resolved: URL,
-   thumbnail, entry count and plate number are all worked out in the listings,
-   so nothing about a category is decided here.
+   thumbnail and entry count are all worked out in the listings, so nothing
+   about a category is decided here.
 
    `heading` is the level the title takes, because the same card sits under an
    h2 on the front page and directly under the page's h1 on /categories.html.
@@ -85,9 +85,11 @@
    tell the browser how wide the picture will be drawn. Every third card
    starting with the first is the large plate — see "Category cards" in
    input.css — and at desktop width it is drawn twice as wide as the two beside
-   it. `sizes` is a hint, not a promise: the remainder rules can make the last
-   card of a grid wider than this says, and the cost of being wrong is one
-   step of sharpness, never a broken image.
+   it. WHICH SIDE it lands on alternates from group to group and does not matter
+   here: a mirrored group is the same two widths, swapped. `sizes` is a hint,
+   not a promise: the remainder rules can make the last card of a grid wider
+   than this says, and the cost of being wrong is one step of sharpness, never a
+   broken image.
 
    Built like the blog card: only the title is a real link, and .card-link::after
    stretches it over the whole plate. The picture is decoration — the title is
@@ -118,15 +120,20 @@
       unpositioned, which is what keeps .card-link::after stretched over the
       whole plate. -#}
   <div class="category-card-body">
-    <p class="category-card-meta">
-      <span class="category-card-number" aria-hidden="true">{% if entry.number < 10 %}0{% endif %}{{ entry.number }}</span>
-      <span>{{ entry.count }} {% if entry.count == 1 %}entry{% else %}entries{% endif %}</span>
-    </p>
-    <span class="category-card-rule" aria-hidden="true"></span>
-
     <{{ heading }} class="category-card-title">
       <a class="card-link" href="{{ entry.href }}">{{ entry.title }}</a>
     </{{ heading }}>
+
+    {#- The rule sits UNDER the title now and reads as its underline. It used to
+        separate a caption above the title from the title itself; there is no
+        caption above any more. -#}
+    <span class="category-card-rule" aria-hidden="true"></span>
+
+    {#- Emitted on every card and hidden by the stylesheet on the small ones,
+        where the room it takes is worth more to the description. It is one line
+        of markup either way, and which plates are small is something only the
+        grid knows. -#}
+    <p class="category-card-meta">{{ entry.count }} {% if entry.count == 1 %}entry{% else %}entries{% endif %}</p>
 
     {%- if entry.description %}
     <p class="category-card-desc">{{ entry.description }}</p>

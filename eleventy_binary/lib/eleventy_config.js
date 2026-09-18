@@ -780,14 +780,11 @@ export function createConfig({
        */
       const compareTitles = byTitle(settings.date_locale);
 
-      const categoryList = declared.categories.map((category, position) => {
+      const categoryList = declared.categories.map((category) => {
         const slug = categoryNames.slugs.get(categoryKey(category));
         const source = category.thumbnail || settings.default_image;
         const thumbnail = source ? resolveThumbnail(source, root) : "";
         return {
-          // 1-based and continuous across the overview's pages, for the plate
-          // number a card carries.
-          number: position + 1,
           title: category.title,
           description: category.description,
           slug,
