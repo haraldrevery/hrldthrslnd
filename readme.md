@@ -707,6 +707,22 @@ says. That is what `hero-in-rise` is for.
 No script is involved in any of it. Nothing waits on a scroll position, so
 nothing is ever left hidden behind an observer that did not fire.
 
+### The gradient rules
+
+Every `.rule-grad` pans on the same 16s leg and the same ease, and that ease
+rests at both ends. Started together, the rules on a page rested together and
+swept together, so the page pulsed as one. Each rule now enters the cycle at a
+different point, a negative delay held in `--flow-phase`. Only the start point
+differs, never the speed, so rules that start out of step stay out of step.
+
+Nothing in a template names a phase. It comes from where the rule sits: the
+position of the section it is a direct child of, in a cycle of four, plus fixed
+values for the footer, the two columns of a row, and the post masthead. The
+collage ruler and the feature panel's top edge carry fixed offsets of their
+own. The values and the reasons for them are under "Rules and dividers" in
+`css/input.css`. Under reduced motion every delay is zeroed, so the rules stand
+still on the same first frame they always did.
+
 ### Browser support
 
 The stylesheet deliberately avoids recent CSS. Transforms use `transform`

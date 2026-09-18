@@ -355,14 +355,51 @@
   }
   @keyframes flow { to { background-position: 100% 0; } }
 
-  /* -- Rules and dividers -------------------------------------------------- */
+  /* -- Rules and dividers --------------------------------------------------
+     Every gradient rule pans on the same 16s leg and the same ease, and the
+     ease dwells at both ends — about a fifth of each leg nearly still at the
+     start, a quarter at the end. Started together, the rules on a page rest
+     together and sweep together, and the whole page pulses as one. So each
+     rule enters the cycle at a different point.
+
+     --flow-phase is that point, as a NEGATIVE delay: the rule starts part-way
+     through its leg rather than waiting for it. Offset only — every rule keeps
+     the same speed, so rules that start out of step stay out of step.
+
+     The phase comes from where the rule sits, not from the markup, so no
+     template or renderer has to name one. Almost every rule on the site is a
+     direct child of a top-level section — a page header, the front page's
+     Categories and Latest, a page-builder heading block — so the section's
+     place on the page picks it, in a cycle of four. The values are fifths of
+     the leg, 3.2s apart, and the fifth fifth is the footer's. They are ordered
+     for the front page, where the pairs that share a screen — Categories and
+     Latest, Latest and the footer — get the widest gap there is between
+     fifths, 6.4s; every other pair is at least 3.2s apart.
+
+     The rules that are not a section's child set their own: the footer and
+     the two columns of a row here, and the post masthead at
+     .post-header > .rule-grad, which restates the whole animation and reads
+     the same property. A rule anywhere else takes 0s, which is where every
+     rule used to start.
+
+     Reduced motion zeroes every delay at the foot of this file, so there the
+     rules rest on the same first frame as before. */
   .rule-grad {
     height: 2px;
     border: 0;
     background: var(--grad-flow);
     background-size: 200% 100%;
-    animation: flow 16s var(--ease-liquid) infinite alternate;
+    animation: flow 16s var(--ease-liquid) var(--flow-phase, 0s) infinite alternate;
   }
+  section:nth-of-type(4n + 1) > .rule-grad { --flow-phase: 0s; }
+  section:nth-of-type(4n + 2) > .rule-grad { --flow-phase: -9.6s; }
+  section:nth-of-type(4n + 3) > .rule-grad { --flow-phase: -3.2s; }
+  section:nth-of-type(4n + 4) > .rule-grad { --flow-phase: -6.4s; }
+  .site-footer .rule-grad                   { --flow-phase: -12.8s; }
+  /* Side by side, so these two take half a leg between them — the widest
+     stagger there is. A row holds two columns at most (render.js). */
+  .block-col > .rule-grad                   { --flow-phase: -4.8s; }
+  .block-col + .block-col > .rule-grad      { --flow-phase: -12.8s; }
   .hairline { border-top: var(--hairline-width) solid var(--hairline); }
 
   /* -- Buttons ---------------------------------------------------------------
@@ -1301,10 +1338,16 @@
      gradient panning along the rule, which .rule-grad already carries and
      which runs forever; the draw is the entrance. They touch different
      properties — background-position and clip-path — so neither is fighting
-     the other for a frame. */
+     the other for a frame.
+
+     The pan's phase goes in through --flow-phase, inside the first entry, and
+     it has to: a plain `animation-delay: -6.4s` here is one value for a list
+     of two, so it would repeat onto the draw and the masthead's rule would
+     arrive already drawn. See "Rules and dividers" for the phase itself. */
   .post-header > .rule-grad {
+    --flow-phase: -6.4s;
     animation:
-      flow 16s var(--ease-liquid) infinite alternate,
+      flow 16s var(--ease-liquid) var(--flow-phase, 0s) infinite alternate,
       hero-in-draw calc(var(--dur-entrance) * 1.1) cubic-bezier(0.65, 0, 0.35, 1)
         calc(var(--entrance-lead) + var(--hero-in-beat, 0) * var(--entrance-step)) both;
   }
@@ -2625,7 +2668,11 @@
     height: min(64vh, 34rem);
   }
   /* The accent rule along the panel's top edge. ::after, because .glass-card
-     already spends ::before on its sheen. */
+     already spends ::before on its sheen.
+
+     Entered half a leg in. Its 14s leg drifts away from the 16s rules around
+     it on its own, but they all start together at load, and the first sweep
+     is the one that reads as a page pulsing in step. See "Rules and dividers". */
   .feature-overlay-panel::after {
     content: "";
     position: absolute;
@@ -2635,7 +2682,7 @@
     height: 3px;
     background: var(--accent-grad);
     background-size: 200% 100%;
-    animation: flow 14s var(--ease-liquid) infinite alternate;
+    animation: flow 14s var(--ease-liquid) -7s infinite alternate;
   }
 
   /* Below this width the panel is nearly as wide as the picture and the overlap
@@ -5921,14 +5968,19 @@
      and there is still no hex here to keep in step with theme.css.
 
      Decorative, so mark the track aria-hidden and put whatever it measures in
-     the labels beside it.                                                     */
+     the labels beside it.
+
+     Entered 1.6s into its leg, on the same 16s as .rule-grad. The ruler
+     closes a collage hero, the page's first section, so the rule it shares a
+     screen with is the second section's, which enters at 9.6s — half a leg
+     away, the widest stagger there is. See "Rules and dividers".              */
   .scrubber {
     display: flex;
     align-items: stretch;
     height: 3px;
     background: var(--grad-flow);
     background-size: 200% 100%;
-    animation: flow 16s var(--ease-liquid) infinite alternate;
+    animation: flow 16s var(--ease-liquid) -1.6s infinite alternate;
   }
   .scrubber > * { display: block; }
   .scrubber .seg-gap { flex: none; width: 2px; background: var(--bg); }
@@ -7099,8 +7151,11 @@ html[data-width="18"]  { --reading-width: 18%; }
 
      Zeroed globally rather than per component, because the correct behaviour
      is the same everywhere: with the motion gone, the beat it was counting
-     has nothing left to count. Nothing on the site uses animation-delay for
-     anything but staggering motion, so there is nothing here to except. */
+     has nothing left to count. The site uses animation-delay for two things,
+     staggering motion and the negative phase that keeps the gradient rules
+     out of step (see "Rules and dividers"), and both are only about motion,
+     so there is nothing here to except. With the phase zeroed every rule
+     rests on its first frame, the same one it always rested on. */
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-delay: 0s !important;

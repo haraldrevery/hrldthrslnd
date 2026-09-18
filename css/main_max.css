@@ -694,7 +694,28 @@
     border: 0;
     background: var(--grad-flow);
     background-size: 200% 100%;
-    animation: flow 16s var(--ease-liquid) infinite alternate;
+    animation: flow 16s var(--ease-liquid) var(--flow-phase, 0s) infinite alternate;
+  }
+  section:nth-of-type(4n + 1) > .rule-grad {
+    --flow-phase: 0s;
+  }
+  section:nth-of-type(4n + 2) > .rule-grad {
+    --flow-phase: -9.6s;
+  }
+  section:nth-of-type(4n + 3) > .rule-grad {
+    --flow-phase: -3.2s;
+  }
+  section:nth-of-type(4n + 4) > .rule-grad {
+    --flow-phase: -6.4s;
+  }
+  .site-footer .rule-grad {
+    --flow-phase: -12.8s;
+  }
+  .block-col > .rule-grad {
+    --flow-phase: -4.8s;
+  }
+  .block-col + .block-col > .rule-grad {
+    --flow-phase: -12.8s;
   }
   .hairline {
     border-top: var(--hairline-width) solid var(--hairline);
@@ -1163,7 +1184,8 @@
     position: relative;
   }
   .post-header > .rule-grad {
-    animation: flow 16s var(--ease-liquid) infinite alternate, hero-in-draw calc(var(--dur-entrance) * 1.1) cubic-bezier(0.65, 0, 0.35, 1) calc(var(--entrance-lead) + var(--hero-in-beat, 0) * var(--entrance-step)) both;
+    --flow-phase: -6.4s;
+    animation: flow 16s var(--ease-liquid) var(--flow-phase, 0s) infinite alternate, hero-in-draw calc(var(--dur-entrance) * 1.1) cubic-bezier(0.65, 0, 0.35, 1) calc(var(--entrance-lead) + var(--hero-in-beat, 0) * var(--entrance-step)) both;
   }
   .post-body .prose {
     animation: hero-in-fade calc(var(--dur-entrance) * 1.15) var(--ease-entrance) calc(var(--entrance-lead) + 5 * var(--entrance-step)) both;
@@ -1712,7 +1734,7 @@
     height: 3px;
     background: var(--accent-grad);
     background-size: 200% 100%;
-    animation: flow 14s var(--ease-liquid) infinite alternate;
+    animation: flow 14s var(--ease-liquid) -7s infinite alternate;
   }
   @media (max-width: 60rem) {
     .feature-overlay {
@@ -3545,7 +3567,7 @@
     height: 3px;
     background: var(--grad-flow);
     background-size: 200% 100%;
-    animation: flow 16s var(--ease-liquid) infinite alternate;
+    animation: flow 16s var(--ease-liquid) -1.6s infinite alternate;
   }
   .scrubber > * {
     display: block;
