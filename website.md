@@ -33,6 +33,8 @@ User can make a new post/article in three ways:
 
 - For any section/block container that has text, use justified text alignment.
 
+- Avoid solutions that are risky or have technical debts that prevents easy maintenance or makes it difficult to do updates to the sites logic. Keep it modular to avoid entangled dependencies and keeping the risk of potential damage / data losses / errors low. If risk mitigation or feature leads to potential over-engineering, consider simpler pipelines to avoid instabilities. 
+
 
 
 ## Dashboard and page builder app
@@ -252,6 +254,7 @@ Something like this to keep it clean an easy to navigate the project.
     ├── status_check.sh    <-- warns if pages missing links to media files and file sizes, missing meta data etc on linux
     ├── status_check.bat   <-- warns if pages missing links to media files and file sizes, missing meta data etc on windows
     ├── site_settings.json <-- Website settings
+    ├── category.json <-- Category settings
     ├── tailwindcss-linux-x64                <-- Tailwind binary for Linux
     ├── tailwindcss-windows-x64.exe        <-- Tailwind binary for Windows
     └── readme.md  
@@ -275,9 +278,9 @@ Some comments:
 
 - On markdown generated post has an image, the image thumbnail (on the generated html page) is automatically referred to the mirrored `*_min.jpg` file in `image_min/` folder. On build, it should warn the user that there was missing mirrored `*_min.jpg` and that a generated one was made for said file. Note: User can either maintain their own  `image_min/` folder or let the builder complement genererade the missing counterpart in  `image/`, either choice, the generated site should have a a mirrored `image_min/` and `image/` folder in `_site/`.
 
-- If more than one image is placed after each other on a markdown post, render those images as a justified image gallery grid (with said image slider when clicking on an image). Note: make sure the image gallery grid logic still looks visually intact no matter the reader width setting the user has. 
+- If more than one image is placed after each other on a markdown post, render those images as a justified image gallery grid (with said image slider when clicking on an image). Note: make sure the image gallery grid logic still looks visually intact no matter the reader width setting the user has.
 
-
+- `category.json` is used to generate special feature pages for certain set of tags. The json file contains data to set each category page as: Title, description text, image thumbnail, tags and how to order the cards (date or alphabetic). Note: The layout for the category cards should be look distinctly different from the blog card layout.
 
 
 
