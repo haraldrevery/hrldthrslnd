@@ -4679,8 +4679,19 @@
   }
 
   /* -- Corner controls (outline toggle + width cycler) ------------------------
-     The outline toggle is pure CSS and is REQUIRED to work without JS.       */
+     The outline toggle is pure CSS and is REQUIRED to work without JS.
+
+     Spacing: the open panel's bottom edge, the >< and the X are meant to stand
+     an equal distance apart, ink to ink. No flex gap, because a gap is added
+     on top of padding the buttons already have. Between two buttons that
+     meant the gap PLUS both paddings, against the gap plus one padding under
+     the panel. That came to 62px against 31px. With no gap, the buttons'
+     block padding alone spaces them, and the panel's margin-bottom (below)
+     makes up the other side. --dock-pad-block is that padding. It is a
+     property rather than a literal because all three rules have to read the
+     same value.                                                              */
   .corner-dock {
+    --dock-pad-block: 0.6rem;
     position: fixed;
     right: 1.25rem;
     bottom: 1.25rem;
@@ -4688,7 +4699,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.6rem;
+    gap: 0;
   }
   /* A dock holding only the width cycler would have no visible element to
      hover, so give it a minimum target. */
@@ -4709,14 +4720,22 @@
   /* Both dock controls are bare glyphs: no border, no raised ground, no
      shadow. The padding stays — it is the hit target, not decoration — and so
      it still reads as a button to a pointer even though nothing is drawn
-     around it. With no border to darken, hover moves the colour instead.     */
+     around it. With no border to darken, hover moves the colour instead.
+
+     line-height: 1, not the inherited body leading. That leading is 1.6 on
+     desktop and 1.4 on mobile, and its half-leading sits as extra air around
+     each glyph. Air that changes with the breakpoint would break the equal
+     spacing set up above, and at 1.6 it also spread the buttons 53px apart.
+     At 1 each button is still 2.8rem tall on desktop and 2.6rem on mobile,
+     both comfortable touch targets.                                          */
   .dock-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: calc(0.6rem + var(--optical-shift-caps)) 0.95rem
-             calc(0.6rem - var(--optical-shift-caps));
+    padding: calc(var(--dock-pad-block) + var(--optical-shift-caps)) 0.95rem
+             calc(var(--dock-pad-block) - var(--optical-shift-caps));
+    line-height: 1;
     background: none;
     border: 0;
     font-family: var(--font-mono-family);
@@ -4758,7 +4777,7 @@
      is what decides.                                                         */
   .width-cycle {
     display: none;
-    padding: 0.6rem 0.95rem;
+    padding: var(--dock-pad-block) 0.95rem;
     letter-spacing: 0;
   }
   html.js-width .width-cycle {
@@ -4804,6 +4823,14 @@
        the `.outline-toggle:checked ~` sibling selectors below depend on.     */
     order: -1;
     display: none;
+    /* The button padding that separates the buttons, plus 0.5625em for the
+       glyphs themselves: >< sits on the maths axis, above the middle of its
+       line box, while E and X are full cap height. That term was measured and
+       not derived. It holds to within half a pixel at both breakpoints. em is
+       the glyphs' em here only because .dock-btn sets --step-0 and the panel
+       inherits the body size, which is the same token. If the button size
+       changes, re-measure this. */
+    margin-bottom: calc(var(--dock-pad-block) + 0.5625em);
     width: min(20rem, calc(100vw - 2.5rem));
     max-height: min(60vh, 32rem);
     overflow-y: auto;
