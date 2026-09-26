@@ -1,10 +1,16 @@
 # Generated output — rebuilt from scratch on every run of site_generate.
-# _site.tmp/ is where a build is staged before it replaces _site, and
-# _site.previous/ holds the old copy for the moment the swap takes; neither
-# should survive a finished build, but an interrupted one can leave them.
+# _site/ is the site, _site_drafts/ a --drafts preview, _site_report/ the build
+# report. <folder>.tmp/ is where a build is staged before it replaces the
+# folder, and <folder>.previous/ holds the old copy for the moment the swap
+# takes; neither should survive a finished build, but an interrupted one can
+# leave them.
 _site/
 _site.tmp/
 _site.previous/
+_site_drafts/
+_site_drafts.tmp/
+_site_drafts.previous/
+_site_report/
 
 # Development only. Site generation never touches these.
 node_modules/

@@ -7,6 +7,11 @@
  *   - A document is written to a temporary file beside it and renamed into
  *     place. A crash mid-write leaves the old document intact and a .tmp file
  *     to notice, never a half-written page.
+ *   - A save names the version it was edited from (its stamp). If the file on
+ *     disk is no longer that version, because another tab saved, a text editor
+ *     changed it or git replaced it, the save is refused with a conflict rather
+ *     than written over the newer file. Overwriting anyway is an explicit
+ *     choice, and it keeps the version it replaces as a revision.
  *   - Before a document is replaced, the version being replaced is copied to
  *     `.revisions/` inside the post folder. The folder starts with a dot, so
  *     every walker in the build skips it and nothing in it is ever published.
@@ -18,6 +23,7 @@
  * Folder names are checked against one pattern before they touch a path, so a
  * request cannot name a folder outside input_custom_post/.
  */
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -34,10 +40,22 @@ const REVISIONS = ".revisions";
 const AUTOSAVE_REVISION_GAP_MS = 15 * 60 * 1000;
 
 export class StoreError extends Error {
-  constructor(status, message) {
+  constructor(status, message, extra = {}) {
     super(message);
     this.status = status;
+    Object.assign(this, extra);
   }
+}
+
+/**
+ * Which version of a document a text is: a hash of its exact bytes.
+ *
+ * A hash rather than a modification time, so a file rewritten with the same
+ * contents (a git checkout, a touch, a save that changed nothing) is still the
+ * same version and does not raise a conflict nobody could resolve.
+ */
+export function stampOf(text) {
+  return text == null ? "" : crypto.createHash("sha256").update(text).digest("hex").slice(0, 32);
 }
 
 export function assertFolderName(name) {
@@ -93,7 +111,7 @@ export function readPost(root, folder) {
   if (!fs.existsSync(file)) throw new StoreError(404, `no document at input_custom_post/${folder}/${folder}.json`);
   const raw = fs.readFileSync(file, "utf8");
   try {
-    return { doc: JSON.parse(raw), raw };
+    return { doc: JSON.parse(raw), raw, stamp: stampOf(raw) };
   } catch (error) {
     throw new StoreError(422, `the document is not valid JSON: ${error.message}`);
   }
@@ -106,25 +124,52 @@ export function readPost(root, folder) {
  * @param {boolean} options.revision  always keep a revision (an explicit save);
  *   otherwise one is kept only if the last is older than the autosave gap, so a
  *   session of small edits does not leave hundreds of near-identical copies.
+ * @param {string} [options.base]  the stamp of the version this document was
+ *   edited from, as readPost() or the previous writePost() returned it. When
+ *   given, and the file on disk is a different version, nothing is written and
+ *   a 409 StoreError with `conflict: true` is thrown. The editor always passes
+ *   it; leaving it out is for callers that own the file outright.
+ * @param {boolean} options.force  write over a newer version anyway. The
+ *   version on disk is always kept as a revision first, so the choice loses
+ *   nothing.
  */
-export function writePost(root, folder, doc, { revision = false } = {}) {
+export function writePost(root, folder, doc, { revision = false, base, force = false } = {}) {
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new StoreError(400, "the document must be a JSON object");
   const dir = folderDir(root, folder);
   if (!fs.existsSync(dir)) throw new StoreError(404, `no post folder input_custom_post/${folder}/`);
 
   const file = docPath(root, folder);
   const serialised = `${JSON.stringify(doc, null, 2)}\n`;
+  const previous = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
+
+  if (base !== undefined && !force && stampOf(previous) !== base) {
+    throw new StoreError(
+      409,
+      `input_custom_post/${folder}/${folder}.json was changed outside the editor since it was opened`,
+      { conflict: true, stamp: stampOf(previous) },
+    );
+  }
 
   let kept = null;
-  if (fs.existsSync(file)) {
-    const previous = fs.readFileSync(file, "utf8");
-    if (previous !== serialised) kept = keepRevision(dir, folder, previous, revision);
-  }
+  if (previous !== null && previous !== serialised) kept = keepRevision(dir, folder, previous, revision || force);
 
   const tmp = `${file}.tmp`;
   fs.writeFileSync(tmp, serialised, "utf8");
   fs.renameSync(tmp, file);
-  return { bytes: serialised.length, revision: kept };
+  return { bytes: serialised.length, revision: kept, stamp: stampOf(serialised) };
+}
+
+/**
+ * Keep a document as a revision without making it the current version.
+ *
+ * For the editor's side of a conflict: when the author takes the version on
+ * disk, the edits they are setting aside go into History rather than away.
+ */
+export function saveRevision(root, folder, doc) {
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new StoreError(400, "the document must be a JSON object");
+  const dir = folderDir(root, folder);
+  if (!fs.existsSync(dir)) throw new StoreError(404, `no post folder input_custom_post/${folder}/`);
+  return keepRevision(dir, folder, `${JSON.stringify(doc, null, 2)}\n`, true);
 }
 
 function keepRevision(dir, folder, contents, force) {
@@ -134,10 +179,18 @@ function keepRevision(dir, folder, contents, force) {
     const newest = listRevisions(dir)[0];
     if (newest && Date.now() - newest.mtimeMs < AUTOSAVE_REVISION_GAP_MS) return null;
   }
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const name = `${folder}.${stamp}.json`;
-  fs.writeFileSync(path.join(revDir, name), contents, "utf8");
-  return name;
+  // `wx`, and a counter on a clash: two revisions kept in the same millisecond
+  // would otherwise share a name, and the second would replace the first.
+  const time = new Date().toISOString().replace(/[:.]/g, "-");
+  for (let n = 1; ; n += 1) {
+    const name = `${folder}.${time}${n > 1 ? `-${n}` : ""}.json`;
+    try {
+      fs.writeFileSync(path.join(revDir, name), contents, { encoding: "utf8", flag: "wx" });
+      return name;
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+    }
+  }
 }
 
 /** Newest first. */

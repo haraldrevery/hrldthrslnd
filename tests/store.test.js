@@ -11,7 +11,7 @@ import path from "node:path";
 
 import {
   writePost, readPost, createPost, listPosts, listAssets, writeAsset, freeName,
-  revisionsOf, readRevision, StoreError, REVISIONS,
+  revisionsOf, readRevision, saveRevision, stampOf, StoreError, REVISIONS,
 } from "../eleventy_binary/lib/editor/store.js";
 import { makeProject, removeProject, quietly } from "./helpers.js";
 
@@ -76,6 +76,83 @@ describe("documents", () => {
       expect(() => readPost(root, bad)).toThrow(StoreError);
     }
     expect(() => readRevision(root, "trip", "../../site_settings.json")).toThrow(StoreError);
+  });
+});
+
+describe("a save never overwrites a version it did not load", () => {
+  const file = (root) => path.join(root, "input_custom_post/trip/trip.json");
+
+  test("a save from the loaded version goes through and hands back the next stamp", () => {
+    const root = project({});
+    createPost(root, "trip", doc("v1"));
+    const { stamp } = readPost(root, "trip");
+    const first = writePost(root, "trip", doc("v2"), { base: stamp });
+    expect(first.stamp).toBe(readPost(root, "trip").stamp);
+    writePost(root, "trip", doc("v3"), { base: first.stamp });
+    expect(readPost(root, "trip").doc.meta.title).toBe("v3");
+  });
+
+  test("a change made elsewhere since loading refuses the save and survives it", () => {
+    const root = project({});
+    createPost(root, "trip", doc("v1"));
+    const { stamp } = readPost(root, "trip");
+    fs.writeFileSync(file(root), JSON.stringify(doc("edited by hand")));
+
+    let thrown = null;
+    try {
+      writePost(root, "trip", doc("from a stale tab"), { base: stamp });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(StoreError);
+    expect(thrown.status).toBe(409);
+    expect(thrown.conflict).toBe(true);
+    expect(readPost(root, "trip").doc.meta.title).toBe("edited by hand");
+  });
+
+  test("a save that names no version is treated as stale", () => {
+    const root = project({});
+    createPost(root, "trip", doc("v1"));
+    expect(() => writePost(root, "trip", doc("v2"), { base: null })).toThrow(StoreError);
+  });
+
+  test("overwriting on purpose keeps the version it replaces, whatever the autosave gap", () => {
+    const root = project({});
+    createPost(root, "trip", doc("v1"));
+    const { stamp } = readPost(root, "trip");
+    writePost(root, "trip", doc("v2"), { base: stamp, revision: true }); // a revision a moment ago
+    fs.writeFileSync(file(root), JSON.stringify(doc("edited by hand")));
+
+    writePost(root, "trip", doc("mine"), { base: stamp, force: true });
+    expect(readPost(root, "trip").doc.meta.title).toBe("mine");
+    const kept = revisionsOf(root, "trip").map((r) => readRevision(root, "trip", r.name).meta.title);
+    expect(kept).toContain("edited by hand");
+  });
+
+  test("setting edits aside keeps them as a revision and leaves the page alone", () => {
+    const root = project({});
+    createPost(root, "trip", doc("v1"));
+    const name = saveRevision(root, "trip", doc("set aside"));
+    expect(readRevision(root, "trip", name).meta.title).toBe("set aside");
+    expect(readPost(root, "trip").doc.meta.title).toBe("v1");
+  });
+
+  test("two revisions in the same moment both survive", () => {
+    const root = project({});
+    createPost(root, "trip", doc("v1"));
+    const a = saveRevision(root, "trip", doc("a"));
+    const b = saveRevision(root, "trip", doc("b"));
+    expect(a).not.toBe(b);
+    expect(revisionsOf(root, "trip")).toHaveLength(2);
+  });
+
+  test("the same bytes are the same version, so a checkout that changed nothing is no conflict", () => {
+    const root = project({});
+    createPost(root, "trip", doc("v1"));
+    const before = readPost(root, "trip");
+    fs.writeFileSync(file(root), before.raw);
+    expect(stampOf(fs.readFileSync(file(root), "utf8"))).toBe(before.stamp);
+    expect(() => writePost(root, "trip", doc("v2"), { base: before.stamp })).not.toThrow();
   });
 });
 

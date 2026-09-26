@@ -360,6 +360,70 @@ function inlineImageRule(md, resolver) {
   };
 }
 
+/**
+ * Inline TeX with a break opportunity after every top-level comma.
+ *
+ * KaTeX breaks inline maths only after a relation or a binary operator, as TeX
+ * does. A formula made of a list, such as `$\alpha, \beta, \gamma, …$`, has neither,
+ * so it came out as one unbreakable run. On a phone that run went past the edge
+ * of the column, and because the page clips horizontal overflow (body is
+ * overflow-x: hidden), the end of the formula could not be seen at all.
+ *
+ * `\allowbreak` is TeX's own way to say "a line may end here". KaTeX supports
+ * it, and output with it is the same width as output without it, so it changes
+ * nothing unless the line really has to break at that point.
+ *
+ * Only commas outside every group are touched: not inside braces, where
+ * `\text{…}` would print the command literally, and not inside ( ) [ ] \{ \} or
+ * \left…\right, where breaking between `f(x,` and `y)` would be worse than the
+ * overflow. A backslash escape is skipped as a unit, so `\,` stays a thin space.
+ * `\verb` is left alone because its argument is not TeX at all.
+ *
+ * Display maths does not need this: .katex-display scrolls sideways instead.
+ */
+export function breakableCommas(tex) {
+  const source = String(tex ?? "");
+  if (!source.includes(",") || source.includes("\\verb")) return source;
+
+  let out = "";
+  let braces = 0;
+  let delimiters = 0;
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    if (char === "\\") {
+      const command = /^\\([A-Za-z]+|.)/.exec(source.slice(i))?.[0] ?? "\\";
+      if (command === "\\left" || command === "\\{") delimiters += 1;
+      else if ((command === "\\right" || command === "\\}") && delimiters > 0) delimiters -= 1;
+      out += command;
+      i += command.length - 1;
+      continue;
+    }
+    if (char === "{") braces += 1;
+    else if (char === "}" && braces > 0) braces -= 1;
+    else if ((char === "(" || char === "[") && braces === 0) delimiters += 1;
+    else if ((char === ")" || char === "]") && braces === 0 && delimiters > 0) delimiters -= 1;
+    out += char;
+    if (char === "," && braces === 0 && delimiters === 0) out += "\\allowbreak ";
+  }
+  return out;
+}
+
+/** Inline maths is rendered from breakableCommas() of its source, not the source itself. */
+function breakableInlineMath(md) {
+  const render = md.renderer.rules.math_inline;
+  if (!render) return;
+  md.renderer.rules.math_inline = function (tokens, idx, ...rest) {
+    const token = tokens[idx];
+    const written = token.content;
+    token.content = breakableCommas(written);
+    try {
+      return render(tokens, idx, ...rest);
+    } finally {
+      token.content = written;
+    }
+  };
+}
+
 /** External links open in a new tab and disown the opener; internal ones do not. */
 function externalLinkRule(md) {
   const fallback = md.renderer.rules.link_open;
@@ -409,6 +473,7 @@ export function createMarkdownLibrary(rootOrResolver = process.cwd()) {
     strict: false,
     trust: false,
   });
+  breakableInlineMath(md);
 
   md.use(footnotePlugin);
   md.use(deflistPlugin);

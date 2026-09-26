@@ -35,7 +35,8 @@ python3 -m http.server 8080 --directory _site
 
 Three ways, all sharing one URL namespace. The slug comes from the filename, so
 `input_markdown/mountains.md` publishes as `/mountains.html`. If two inputs want
-the same name the build warns and adds a suffix.
+the same name the build warns and adds a suffix — to the newcomer, never to a
+page that is already published (see **Keeping URLs stable** below).
 
 **Subfolders are allowed, and the folders become part of the URL.**
 `input_markdown/travel/iceland.md` publishes as `/travel/iceland.html`, as deep
@@ -174,9 +175,14 @@ file, add front matter, rebuild. `block_test_page_a.html` and
 
 ### 3. Page folders — `input_custom_post/post_x/`
 
-A folder holding the page plus its own images and media. Everything beside the
-page is copied to `/post_x/`, and `_min` counterparts are generated beside the
-originals rather than in a mirror.
+A folder holding the page plus its own images and media. Its files are copied
+to `/post_x/`, and `_min` counterparts are generated beside the originals rather
+than in a mirror. For a page-builder folder only the files the built site
+actually uses are published: a picture you imported and then took off the page
+stays in the folder but is not put online. The page builder's Files tab marks
+those "unused · not published", and the build lists them in a note. A
+hand-written folder publishes everything, because its page may load files in
+ways the build cannot see.
 
 The page is one of two things:
 
@@ -207,7 +213,32 @@ file is never written. Use `--drafts` to preview them locally:
 
 ```bash
 ./site_generate --drafts
+python3 -m http.server 8080 --directory _site_drafts
 ```
+
+A drafts build is written to **`_site_drafts/`**, never to `_site/`, so the
+folder you deploy cannot contain an unpublished page, whatever you built last.
+`bun run dev` and the page builder's "Include drafts" option do the same.
+
+### Keeping URLs stable
+
+A page keeps the URL it was first published at. After every build that
+publishes, the build records each page's URL in **`published_urls.json`**, and
+the next build hands those out first. So if you add `input_markdown/trip.md`
+while a page folder already publishes `/trip.html`, the page folder keeps
+`/trip.html` and the new note becomes `/trip_2.html`, with a warning. Without
+the record, whichever file happened to be read first would win, and the
+existing page (pictures included) would move.
+
+- **Commit it** with the rest of the site. It changes only when pages are
+  added, removed or renamed, one line per page.
+- **Renaming or moving a file is a new URL**: the old entry is dropped because
+  its source is gone. To keep an old address, set `permalink:` in the front
+  matter.
+- A draft is recorded only once it has been published.
+- If the file cannot be read (a bad merge, say), the build reports an error,
+  holds no URLs that run, and leaves the file alone so nothing is forgotten.
+  `git diff published_urls.json` shows what changed.
 
 > **A note on the spec.** `website.md` says *"If `draft = false`, the page is not
 > generated"*, which is inverted from the usual meaning and would have hidden
@@ -710,7 +741,11 @@ nothing is ever left hidden behind an observer that did not fire.
 ### The gradient rules
 
 Every `.rule-grad` pans on the same 16s leg and the same ease, and that ease
-rests at both ends. Started together, the rules on a page rested together and
+rests at both ends. It pans for `--ambient-cycles` legs (theme.css, 2 by
+default: one sweep there and back) and then rests, as do the `.text-flow`
+headlines and the cinematic stage's grain (`--grain-cycles`). Motion that never
+ends keeps the browser drawing frames for as long as the page is open, which is
+battery on a laptop or phone for a decoration nobody is watching. Started together, the rules on a page rested together and
 swept together, so the page pulsed as one. Each rule now enters the cycle at a
 different point, a negative delay held in `--flow-phase`. Only the start point
 differs, never the speed, so rules that start out of step stay out of step.
@@ -959,7 +994,9 @@ the page — `en-GB` for "9 September 1999", `en-US` for "September 9, 1999". A
 language code alone does not determine a date order, so the two are not derived
 from each other.
 
-`asset_folders` is the list of directories copied verbatim into `_site/`. Add
+`asset_folders` is the list of directories copied verbatim into `_site/`.
+Everything in them is published whether or not a page links to it, so keep
+nothing private there. Add
 your own — `photos/`, `sketches/`, whatever — and it is a settings change rather
 than a code change. A folder listed but not present is reported as a note, not
 an error.
@@ -979,15 +1016,17 @@ Categories have a file of their own, `category.json`; see **Categories** above.
 ```
 
 Reports broken local links, images with no alt text, missing `_min`
-counterparts, oversized assets, missing or malformed front matter, duplicate
-slugs, missing meta descriptions, page-builder documents that fail validation,
-and anything that reaches outside your own domain. Exits non-zero on errors, so
-it can gate a deploy.
+counterparts, oversized assets, photographs that still carry GPS location,
+missing or malformed front matter, duplicate slugs, missing meta descriptions,
+page-builder documents that fail validation, and anything that reaches outside
+your own domain. Exits non-zero on errors, so it can gate a deploy.
 
-The same findings are written to **`_site/status_check.html`** — open it
-directly in a browser after a build. It is not linked from anywhere and carries
-`noindex`. **`_site/status_check.json`** holds the same report as data, for a
-deploy script or a test; `./site_generate --json` prints it on the last line.
+The same findings are written to **`_site_report/status_check.html`**, beside
+the site rather than inside it: the report names draft files and source paths,
+and nothing in it belongs on the web. Open it straight from disk; the build
+prints its path as a link. **`_site_report/status_check.json`** holds the same
+report as data, for a deploy script or a test; `./site_generate --json` prints
+it on the last line.
 
 ---
 
@@ -1022,11 +1061,14 @@ licence_and_legal/    legal.md plus every bundled licence -> legal.html
 eleventy_njk/         page templates
 eleventy_settings/    layouts and partials
 eleventy_binary/      the generator, the page builder, and the script that compiles them
-_site/                generated output — never edit by hand
+published_urls.json   the URL every published page keeps (written by the build; commit it)
+_site/                the site — the only folder you deploy; never edit by hand
+_site_drafts/         a --drafts preview; never deploy it
+_site_report/         the build report
 ```
 
-`_site/` is deleted and rebuilt on every run, so a page you renamed or a draft
-you previewed does not linger and keep being served.
+Each output folder is rebuilt from scratch on every run, so a page you renamed
+does not linger and keep being served.
 
 ---
 
@@ -1038,7 +1080,7 @@ node_modules** — that is what the binary is for.
 ```bash
 bun install                        # once
 bun run build                      # same as ./site_generate
-bun run build:drafts               # include drafts
+bun run build:drafts               # include drafts, into _site_drafts/
 bun run css:watch                  # rebuild CSS on change
 bun run vendor                     # re-copy KaTeX + glightbox into the repo
 ./eleventy_binary/compile.sh       # rebuild site_generate and site_generate.exe

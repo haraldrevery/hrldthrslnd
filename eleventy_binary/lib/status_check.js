@@ -5,8 +5,8 @@
  * visitor would actually hit: a link that resolves in the templates but points
  * at a file nobody copied is exactly the failure this is meant to catch.
  *
- * The same findings are printed to the terminal and rendered into
- * _site/status_check.html.
+ * The same findings are printed to the terminal and written to
+ * _site_report/status_check.html and .json — beside the site, never inside it.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -25,6 +25,8 @@ import { humanBytes } from "./format.js";
 import { validatePost } from "./blocks/validate.js";
 import { readCategories, CATEGORY_FILE } from "./categories.js";
 import { foldSubject } from "./subjects.js";
+import { safeDecode, attributeRefs } from "./references.js";
+import { readExif } from "./exif.js";
 
 const REQUIRED_FRONT_MATTER = ["title", "date", "description", "tags"];
 
@@ -82,35 +84,6 @@ const SUBRESOURCE = /<(?:(?:img|script|iframe|source|video|audio|embed|track)\b[
 const quotedValue = (match, dq = 1, sq = 2) => match[dq] ?? match[sq];
 
 /**
- * Files this build writes *after* the check has already walked the output.
- *
- * status_check.html is the report itself: it can only be rendered once the
- * findings exist, so at the moment the link check runs it is legitimately not
- * on disk yet. Treating that as a broken link meant that the moment the author
- * put a "Status" entry in the site nav, every single page in the build reported
- * an error pointing at a file that was sitting in _site by the time they went
- * to look — the exact shape of false positive that teaches you to stop reading
- * the report.
- */
-const WRITTEN_AFTER_CHECK = new Set(["status_check.html"]);
-
-/**
- * decodeURIComponent, but a malformed escape is not a crash.
- *
- * A literal `%` in a filename (`/100%_guide.html`) makes the real one throw
- * URIError, which took down the whole build with a stack trace and no hint
- * about which page held the link. An undecodable reference is just used as
- * written — if that path is not on disk it gets reported like any other.
- */
-function safeDecode(value) {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
-/**
  * Every target an in-page link can land on: `id` anywhere, plus `name` on an
  * anchor, which is how pages written before HTML5 name their sections and which
  * browsers still honour.
@@ -124,20 +97,6 @@ const FRAGMENT_TARGET = /\bid\s*=\s*(?:"([^"]*)"|'([^']*)')|<a\b[^>]*?\bname\s*=
  * spec's "indicated part" rules, so neither is broken.
  */
 const ALWAYS_RESOLVES = new Set(["", "top"]);
-
-/** The candidate URLs in one attribute value. Only srcset holds more than one. */
-function attributeRefs(attr, value) {
-  if (attr !== "srcset") return [value];
-  // "url 400w, url 2x" — each candidate is a URL followed by an optional
-  // descriptor. Commas inside a URL are legal but vanishingly rare in a static
-  // site that names its own files; splitting on them is what the browser does.
-  return value
-    .split(",")
-    .map((candidate) => candidate.trim().split(/\s+/)[0])
-    .filter(Boolean);
-}
-
-
 
 /**
  * Front matter checks run against the SOURCE files, because that is where the
@@ -427,8 +386,8 @@ function checkHtml(outputDir, findings, stats) {
           ? path.join(outputDir, withoutQuery)
           : path.resolve(pageDir, withoutQuery);
 
-        // A reference that climbs out of _site cannot resolve for a visitor
-        // however it looks on this disk.
+        // A reference that climbs out of the built site cannot resolve for a
+        // visitor however it looks on this disk.
         const insideOutput = path.relative(outputDir, target);
         if (insideOutput.startsWith("..") || path.isAbsolute(insideOutput)) {
           findings.push({
@@ -436,13 +395,10 @@ function checkHtml(outputDir, findings, stats) {
             scope: "broken link",
             page: pageUrl,
             message: raw,
-            detail: "resolves to a path outside _site",
+            detail: "resolves to a path outside the built site",
           });
           continue;
         }
-
-        // Written by this build once the findings are in; see WRITTEN_AFTER_CHECK.
-        if (WRITTEN_AFTER_CHECK.has(insideOutput.split(path.sep).join("/"))) continue;
 
         if (fs.existsSync(target)) continue;
         // A bare directory link resolves to its index.html.
@@ -453,7 +409,7 @@ function checkHtml(outputDir, findings, stats) {
           scope: "broken link",
           page: pageUrl,
           message: raw,
-          detail: "no such file in _site",
+          detail: "no such file in the built site",
         });
       }
     }
@@ -576,7 +532,38 @@ function budgetFor(relative, limits) {
   return null; // svg, fonts, css, js: counted below, but no budget is declared
 }
 
-/** Oversized assets, and _min counterparts that blew the budget. */
+/**
+ * How much of a JPEG to read for its metadata. EXIF and XMP sit in APP
+ * segments before the image data, each at most 64 kB.
+ */
+const METADATA_HEAD = 256 * 1024;
+
+/**
+ * Whether a published JPEG says where it was taken, in EXIF or in XMP.
+ *
+ * Only the page builder's importer strips location, so a photograph added to
+ * image/ or beside a note is published exactly as exported. A _min counterpart
+ * is a fresh encode with no metadata, and is not read. Other formats are not
+ * checked: cameras and phones write location into JPEG (and HEIC, which a
+ * browser cannot show anyway).
+ */
+export function carriesLocation(file) {
+  if (!/\.jpe?g$/i.test(file) || isMinName(file)) return false;
+  let fd = null;
+  try {
+    fd = fs.openSync(file, "r");
+    const head = Buffer.alloc(Math.min(fs.fstatSync(fd).size, METADATA_HEAD));
+    fs.readSync(fd, head, 0, head.length, 0);
+    const exif = readExif(head);
+    return Boolean(exif.hasGps || exif.xmpGps);
+  } catch {
+    return false;
+  } finally {
+    if (fd !== null) fs.closeSync(fd);
+  }
+}
+
+/** Oversized assets, _min counterparts that blew the budget, and location data. */
 function checkAssets(outputDir, settings, findings, stats) {
   const limits = settings.status_check;
 
@@ -590,6 +577,19 @@ function checkAssets(outputDir, settings, findings, stats) {
     const size = fs.statSync(path.join(outputDir, relative)).size;
     stats.totalAssetBytes += size;
     stats.assetCount += 1;
+
+    if (carriesLocation(path.join(outputDir, relative))) {
+      findings.push({
+        level: "warn",
+        scope: "privacy",
+        page: `/${relative}`,
+        message: "the photograph carries GPS location data",
+        detail:
+          "anyone who downloads it can read where it was taken. Pictures imported in the page " +
+          "builder are cleaned automatically; for this one, export without location (Lightroom: " +
+          "Metadata > Remove Location Info) or run: exiftool -gps:all= -xmp:geotag= <file>",
+      });
+    }
 
     const budget = budgetFor(relative, limits);
     if (!budget || !Number.isFinite(budget.limit) || size <= budget.limit) continue;
@@ -642,11 +642,15 @@ function checkAssets(outputDir, settings, findings, stats) {
  * legitimately named `test_post_2.md`, on every build — a permanent false
  * positive, which is the fastest way to teach an author to skim past the
  * report.
+ *
+ * A page holding a name recorded in published_urls.json is skipped: that is
+ * the URL it was published under, kept on purpose, and it was reported once,
+ * on the build that first gave it the suffix.
  */
 function checkSlugs(root, findings) {
   const registry = getRegistry(root);
   for (const record of registry.all) {
-    if (record.slug === record.desired) continue;
+    if (record.slug === record.desired || record.locked) continue;
     findings.push({
       level: "warn",
       scope: "slug",
@@ -805,7 +809,7 @@ export async function runStatusCheck({ root, outputDir, settings, images, includ
   };
 
   if (!fs.existsSync(outputDir)) {
-    log.error("status", "_site does not exist", "nothing to check");
+    log.error("status", `${path.basename(outputDir)} does not exist`, "nothing to check");
     return { findings, ...stats };
   }
 
@@ -844,35 +848,19 @@ export async function runStatusCheck({ root, outputDir, settings, images, includ
 const sevClass = { error: "sev-error", warn: "sev-warn" };
 
 /**
- * The line that identifies a status page THIS build wrote.
- *
- * `status_check.html` is an ordinary name and an author may legitimately claim
- * it, so the write below has to tell its own output apart from somebody else's
- * page. Tested by content rather than by existence because --check-only runs
- * against a finished _site where the previous run's report is already sitting
- * at that path and must be replaced.
- */
-const STATUS_MARKER = '<meta name="generator" content="site_generate/status_check">';
-
-/**
- * Write _site/status_check.html.
- *
- * A standalone document rather than an Eleventy template: it reports on the
- * finished output, so it can only be produced after Eleventy has already run.
- * It links the site stylesheet and reuses the site's own classes.
- */
-/**
  * The same report as data, for anything that is not a person reading a page:
  * the editor's status panel, a deploy script, a test. Written beside the HTML
- * report as _site/status_check.json. The shape is the return value of
- * runStatusCheck() plus the thumbnail totals and a timestamp, and nothing in it
- * is derived from the HTML — the two are written from the same findings.
+ * report as status_check.json. The shape is the return value of
+ * runStatusCheck() plus the thumbnail totals, the folder that was checked and a
+ * timestamp, and nothing in it is derived from the HTML — the two are written
+ * from the same findings.
  */
-export function statusReport({ status, images }) {
+export function statusReport({ status, images, checked = "" }) {
   const errors = status.findings.filter((f) => f.level === "error").length;
   const warnings = status.findings.filter((f) => f.level === "warn").length;
   return {
     generated: new Date().toISOString(),
+    checked,
     verdict: errors > 0 ? "error" : warnings > 0 ? "warn" : "ok",
     pages: status.pageCount,
     assets: status.assetCount,
@@ -888,17 +876,66 @@ export function statusReport({ status, images }) {
   };
 }
 
-export function writeStatusPage({ outputDir, settings, status, images }) {
+/**
+ * The report's own stylesheet, inline.
+ *
+ * The report lives outside the site (see output_dirs.js) and is opened straight
+ * from disk, where the site's root-relative /css/main.css does not resolve. So
+ * it carries a small sheet of its own, follows the system colour scheme, and
+ * uses system fonts. It also means main.css no longer carries rules that only
+ * this one page used.
+ */
+const REPORT_CSS = `
+:root { color-scheme: light dark; --bg: #f6f5f1; --fg: #17171a; --muted: #5b5b63; --line: #d9d7d0;
+  --raised: #ffffff; --err: #b3261e; --warn: #8a5a00; --ok: #1d6b43; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0e0e11; --fg: #ececea; --muted: #a3a3ab;
+  --line: #2c2c33; --raised: #16161b; --err: #ff8a80; --warn: #f5c26b; --ok: #7fd6a4; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 system-ui, sans-serif; }
+main { max-width: 76rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+h1 { font-size: 2rem; margin: 0.4rem 0 0; }
+h2 { font-size: 1.15rem; margin: 2.5rem 0 0.75rem; }
+p, ul { max-width: 60rem; }
+.eyebrow, th, .sev, .stats span { font: 600 0.72rem/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.12em; text-transform: uppercase; }
+.muted, th, .stats span { color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem; margin-top: 1.5rem; }
+.stats div { background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
+.stats b { display: block; font-size: 1.5rem; font-weight: 600; margin-top: 0.3rem; }
+.sev { display: inline-block; padding: 0.2rem 0.6rem; border: 1px solid currentColor; border-radius: 999px; }
+.sev-error { color: var(--err); } .sev-warn { color: var(--warn); } .sev-ok { color: var(--ok); }
+.table { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+td .muted { display: block; margin-top: 0.2rem; }
+code { font: 0.85em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+`;
+
+/**
+ * Write status_check.html and status_check.json into `reportDir`.
+ *
+ * A standalone document rather than an Eleventy template: it reports on the
+ * finished output, so it can only be produced after Eleventy has already run.
+ *
+ * It is written beside the site, never into it. The report names draft files,
+ * source paths and asset problems, and a copy inside the site would be
+ * published with it. Outside, it can also never collide with an author's own
+ * page at /status_check.html.
+ *
+ * @param {object} options
+ * @param {string} options.reportDir  where to write, normally _site_report/
+ * @param {string} options.checked    the folder the findings describe, as the
+ *   author knows it ("_site", "_site_drafts"), for the heading
+ * @param {string} [options.note]     one extra line for the heading, such as
+ *   why the build was not published
+ */
+export function writeStatusPage({ reportDir, checked, note = "", settings, status, images }) {
   const errors = status.findings.filter((f) => f.level === "error");
   const warnings = status.findings.filter((f) => f.level === "warn");
 
-  // The data copy is written whatever happens to the HTML one below: nothing
-  // an author writes can be published at status_check.json, because slugify()
-  // never produces that name.
-  fs.mkdirSync(outputDir, { recursive: true });
+  fs.mkdirSync(reportDir, { recursive: true });
   fs.writeFileSync(
-    path.join(outputDir, "status_check.json"),
-    `${JSON.stringify(statusReport({ status, images }), null, 2)}\n`,
+    path.join(reportDir, "status_check.json"),
+    `${JSON.stringify(statusReport({ status, images, checked }), null, 2)}\n`,
     "utf8",
   );
 
@@ -916,9 +953,7 @@ export function writeStatusPage({ outputDir, settings, status, images }) {
         <td><span class="sev ${sevClass[f.level]}">${f.level}</span></td>
         <td>${escapeHtml(f.scope)}</td>
         <td><code>${escapeHtml(f.page)}</code></td>
-        <td>${escapeHtml(f.message)}${
-          f.detail ? `<br><span style="color:var(--fg-muted);">${escapeHtml(f.detail)}</span>` : ""
-        }</td>
+        <td>${escapeHtml(f.message)}${f.detail ? `<span class="muted">${escapeHtml(f.detail)}</span>` : ""}</td>
       </tr>`,
     )
     .join("");
@@ -940,126 +975,96 @@ export function writeStatusPage({ outputDir, settings, status, images }) {
   // gallery, and no amount of rebuilding fixes it.
   const collisions = images.reports.flatMap((r) => r.collisions ?? []);
 
+  const section = (title, intro, items) =>
+    items.length
+      ? `<section>
+    <h2>${title}</h2>
+    <p class="muted">${intro}</p>
+    <ul>
+      ${items.map((item) => `<li>${item}</li>`).join("\n      ")}
+    </ul>
+  </section>`
+      : "";
+
+  const stat = (label, value) => `<div><span>${label}</span><b>${value}</b></div>`;
+
   const html = `<!doctype html>
 <html lang="${escapeHtml(settings.language)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-${STATUS_MARKER}
 <title>Status — ${escapeHtml(settings.name)}</title>
-<link rel="stylesheet" href="/css/main.css">
+<style>${REPORT_CSS}</style>
 </head>
-<body class="grain">
-<main class="shell" style="padding-block:3rem 5rem;">
+<body>
+<main>
 
-  <p class="eyebrow">${escapeHtml(settings.name)} — build report</p>
-  <h1 class="display" style="margin-top:1rem;">Status</h1>
-  <p class="lede" style="margin-top:1.5rem;">
-    Generated ${escapeHtml(new Date().toISOString().replace("T", " ").slice(0, 19))} UTC.
-    It reports on the build that produced the site around it, and is rewritten
-    from scratch every time that build runs.
+  <p class="eyebrow muted">${escapeHtml(settings.name)} — build report</p>
+  <h1>Status</h1>
+  <p class="muted">
+    Generated ${escapeHtml(new Date().toISOString().replace("T", " ").slice(0, 19))} UTC, for the
+    build in <code>${escapeHtml(checked)}/</code>. Rewritten from scratch every time a build or a
+    check runs.${note ? `<br>${escapeHtml(note)}` : ""}
   </p>
 
-  <p style="margin-top:1.5rem;"><span class="sev ${verdict.klass}">${escapeHtml(verdict.text)}</span></p>
+  <p><span class="sev ${verdict.klass}">${escapeHtml(verdict.text)}</span></p>
 
-  <hr class="rule-grad" style="margin-block:2.5rem;">
-
-  <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(12rem,100%),1fr));">
-    <div><p class="micro" style="color:var(--fg-muted);">Pages</p>
-         <p class="display-sm" style="margin-top:0.5rem;">${status.pageCount}</p></div>
-    <div><p class="micro" style="color:var(--fg-muted);">Assets</p>
-         <p class="display-sm" style="margin-top:0.5rem;">${status.assetCount}</p></div>
-    <div><p class="micro" style="color:var(--fg-muted);">Asset weight</p>
-         <p class="display-sm" style="margin-top:0.5rem;">${humanBytes(status.totalAssetBytes)}</p></div>
-    <div><p class="micro" style="color:var(--fg-muted);">Errors</p>
-         <p class="display-sm" style="margin-top:0.5rem;">${errors.length}</p></div>
-    <div><p class="micro" style="color:var(--fg-muted);">Warnings</p>
-         <p class="display-sm" style="margin-top:0.5rem;">${warnings.length}</p></div>
-    <div><p class="micro" style="color:var(--fg-muted);">Thumbnails made</p>
-         <p class="display-sm" style="margin-top:0.5rem;">${images.totals.generated}</p></div>
-    <div><p class="micro" style="color:var(--fg-muted);">Stale thumbnails</p>
-         <p class="display-sm" style="margin-top:0.5rem;">${images.totals.stale ?? 0}</p></div>
+  <div class="stats">
+    ${stat("Pages", status.pageCount)}
+    ${stat("Assets", status.assetCount)}
+    ${stat("Asset weight", humanBytes(status.totalAssetBytes))}
+    ${stat("Errors", errors.length)}
+    ${stat("Warnings", warnings.length)}
+    ${stat("Thumbnails made", images.totals.generated)}
+    ${stat("Stale thumbnails", images.totals.stale ?? 0)}
   </div>
 
-  ${
-    collisions.length
-      ? `<section style="margin-top:3rem;">
-    <h2 class="display-md">Thumbnail name collisions</h2>
-    <p class="lede" style="margin-top:1rem; font-size:var(--step--1);">
-      A <code>_min</code> counterpart is always a JPEG, so two images whose names
-      differ only in extension want the same file. Only the first one has a
-      thumbnail; the second is showing it. Rename one of each pair.
-    </p>
-    <ul class="prose" style="margin-top:1rem;">
-      ${collisions
-        .map(
-          (entry) =>
-            `<li><code>${escapeHtml(entry.first)}</code> and ` +
-            `<code>${escapeHtml(entry.second)}</code> both reduce to ` +
-            `<code>${escapeHtml(entry.target)}</code></li>`,
-        )
-        .join("\n      ")}
-    </ul>
-  </section>`
-      : ""
-  }
+  ${section(
+    "Thumbnail name collisions",
+    "A <code>_min</code> counterpart is always a JPEG, so two images whose names differ only in " +
+      "extension want the same file. Only the first one has a thumbnail; the second is showing " +
+      "it. Rename one of each pair.",
+    collisions.map(
+      (entry) =>
+        `<code>${escapeHtml(entry.first)}</code> and <code>${escapeHtml(entry.second)}</code> ` +
+        `both reduce to <code>${escapeHtml(entry.target)}</code>`,
+    ),
+  )}
 
-  ${
-    stale.length
-      ? `<section style="margin-top:3rem;">
-    <h2 class="display-md">Stale thumbnails</h2>
-    <p class="lede" style="margin-top:1rem; font-size:var(--step--1);">
-      These <code>_min</code> files may no longer match the images they were
-      made from, so cards, galleries and social cards could be showing the
-      previous picture. They are never regenerated automatically, in case you
-      compressed them by hand — delete one to have a fresh counterpart made on
-      the next build.
-    </p>
-    <ul class="prose" style="margin-top:1rem;">
-      ${stale
-        .map(
-          (entry) =>
-            `<li><code>${escapeHtml(entry.file)}</code> — ` +
-            `${entry.certain ? "replaced" : "possibly replaced"}: ` +
-            `<span style="color:var(--fg-muted);">${escapeHtml(entry.detail)}</span></li>`,
-        )
-        .join("\n      ")}
-    </ul>
-  </section>`
-      : ""
-  }
+  ${section(
+    "Stale thumbnails",
+    "These <code>_min</code> files may no longer match the images they were made from, so cards, " +
+      "galleries and social cards could be showing the previous picture. They are never " +
+      "regenerated automatically, in case you compressed them by hand — delete one to have a " +
+      "fresh counterpart made on the next build.",
+    stale.map(
+      (entry) =>
+        `<code>${escapeHtml(entry.file)}</code> — ${entry.certain ? "replaced" : "possibly replaced"}: ` +
+        `<span class="muted">${escapeHtml(entry.detail)}</span>`,
+    ),
+  )}
 
-  ${
-    generated.length
-      ? `<section style="margin-top:3rem;">
-    <h2 class="display-md">Thumbnails generated this build</h2>
-    <p class="lede" style="margin-top:1rem; font-size:var(--step--1);">
-      These <code>_min</code> files were missing and the builder made them. Commit
-      them, or replace them with your own compression, to keep builds reproducible.
-    </p>
-    <ul class="prose" style="margin-top:1rem;">
-      ${generated.map((g) => `<li><code>${escapeHtml(g)}</code></li>`).join("\n      ")}
-    </ul>
-  </section>`
-      : ""
-  }
+  ${section(
+    "Thumbnails generated this build",
+    "These <code>_min</code> files were missing and the builder made them. Commit them, or replace " +
+      "them with your own compression, to keep builds reproducible.",
+    generated.map((g) => `<code>${escapeHtml(g)}</code>`),
+  )}
 
-  <section style="margin-top:3rem;">
-    <h2 class="display-md">Findings</h2>
+  <section>
+    <h2>Findings</h2>
     ${
       rows
-        ? `<div class="table-scroll" style="margin-top:1.5rem;">
-      <table class="status-table">
+        ? `<div class="table">
+      <table>
         <thead><tr><th>Level</th><th>Kind</th><th>Where</th><th>What</th></tr></thead>
         <tbody>${rows}
         </tbody>
       </table>
     </div>`
-        : `<p class="lede" style="margin-top:1.5rem;">
-      Nothing to report. Every link resolves, every image has a counterpart and
-      alt text, and no page reaches outside this domain.
-    </p>`
+        : `<p>Nothing to report. Every link resolves, every image has a counterpart and alt text,
+      and no page reaches outside this domain.</p>`
     }
   </section>
 
@@ -1068,38 +1073,7 @@ ${STATUS_MARKER}
 </html>
 `;
 
-  const target = path.join(outputDir, "status_check.html");
-
-  // Never overwrite a page somebody else wrote.
-  //
-  // Eleventy renders every page before this runs, so a post or hand-written
-  // page published at /status_check.html is already on disk by the time we get
-  // here. Eleventy's own duplicate-permalink check cannot catch that collision,
-  // because this write happens outside Eleventy — so the author's page was
-  // silently destroyed while the sitemap and the search index went on pointing
-  // at it, and the build reported no error at all. Refusing to write is the
-  // right way round: the author's content is what has to survive, and the
-  // report is the thing that can be regenerated.
-  if (fs.existsSync(target)) {
-    let existing = "";
-    try {
-      existing = fs.readFileSync(target, "utf8");
-    } catch {
-      existing = "";
-    }
-    if (existing && !existing.includes(STATUS_MARKER)) {
-      log.error(
-        "status",
-        "another page is already published at /status_check.html — the build report was not written",
-        "rename that page, or drop the Status entry from footer_nav in site_settings.json",
-      );
-      return false;
-    }
-  }
-
-  fs.mkdirSync(outputDir, { recursive: true });
-  fs.writeFileSync(target, html, "utf8");
-  return true;
+  fs.writeFileSync(path.join(reportDir, "status_check.html"), html, "utf8");
 }
 
 export default runStatusCheck;

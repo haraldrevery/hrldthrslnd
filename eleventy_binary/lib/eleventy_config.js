@@ -27,6 +27,7 @@ import {
   listingHref, occupiedBases, assignSlugs, paginate, byTitle,
 } from "./listings.js";
 import { readCategories, inCategory } from "./categories.js";
+import { OUTPUT_DIR, DRAFTS_DIR, REPORT_DIR } from "./output_dirs.js";
 
 /**
  * Directories copied verbatim into _site.
@@ -51,7 +52,12 @@ const PASSTHROUGH_DIRS = [
 const IGNORED = [
   "node_modules/**",
   "node_modules.off/**",
-  "_site/**",
+  // Everything a build writes: the site, the drafts preview, the report. The
+  // report in particular is an .html file at the project root's level of
+  // nesting, and read back as input it would be published as a page.
+  `${OUTPUT_DIR}/**`,
+  `${DRAFTS_DIR}/**`,
+  `${REPORT_DIR}/**`,
   // Any scratch copy of the output — a backup taken before a risky build must
   // not become input on the next one.
   "_site*/**",

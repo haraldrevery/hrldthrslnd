@@ -11,7 +11,7 @@
 import { test, expect, describe, afterEach } from "bun:test";
 import path from "node:path";
 
-import { createMarkdownLibrary } from "../eleventy_binary/lib/markdown.js";
+import { createMarkdownLibrary, breakableCommas } from "../eleventy_binary/lib/markdown.js";
 import { makeProject, removeProject } from "./helpers.js";
 
 const created = [];
@@ -135,5 +135,38 @@ describe("captions and alt text", () => {
     expect(html).toContain('alt="Salt &amp; Pepper"');
     expect(html).toContain("<figcaption>Titles &amp; captions</figcaption>");
     expect(html).not.toContain("&amp;amp;");
+  });
+});
+
+describe("long inline maths can wrap", () => {
+  test("a top-level comma becomes a break opportunity", () => {
+    expect(breakableCommas("\\alpha, \\beta")).toBe("\\alpha,\\allowbreak  \\beta");
+  });
+
+  test("commas inside a group, a delimiter pair or \\left…\\right are left alone", () => {
+    for (const tex of ["x_{1,2}", "\\text{a, b}", "f(x, y)", "[0, 1)", "\\{a, b\\}", "\\left. a, b \\right)"]) {
+      expect(breakableCommas(tex)).toBe(tex);
+    }
+  });
+
+  test("an escape is one unit, so a thin space is not a comma", () => {
+    expect(breakableCommas("a\\,b")).toBe("a\\,b");
+  });
+
+  test("\\verb is not TeX and is never touched", () => {
+    expect(breakableCommas("\\verb|a, b|")).toBe("\\verb|a, b|");
+  });
+
+  test("inline maths renders from it and display maths does not", () => {
+    const md = createMarkdownLibrary(fixture());
+    const inline = md.render("A list: $\\alpha, \\beta, \\gamma$.", {});
+    // One .base per unbreakable run: two breaks make three.
+    expect(inline.match(/class="base"/g)).toHaveLength(3);
+    // What a screen reader gets is still the same three symbols.
+    expect(inline).toContain("<mi>α</mi>");
+    expect(inline).toContain("<mi>γ</mi>");
+
+    const display = md.render("$$\\alpha, \\beta, \\gamma$$", {});
+    expect(display.match(/class="base"/g)).toHaveLength(1);
   });
 });

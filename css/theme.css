@@ -536,6 +536,29 @@
   --dur-mid: 0.45s;
   --dur-slow: 0.85s;
 
+  /* --- Ambient motion: how long the decoration keeps moving -----------------
+     The gradient pans (rules, .text-flow headlines, the gradient borders) and
+     the cinematic grain used to run forever. An animation that never ends keeps
+     the browser drawing new frames for as long as the page is open, even while
+     nobody is looking at it. Measured at idle, every page did about 60 style
+     recalculations a second, indefinitely: battery drain on a laptop or phone,
+     and a busy main thread on old hardware.
+
+     --ambient-cycles is how many legs a pan runs before it rests. The pans run
+     `alternate`, so keep it EVEN: an even count ends where the pan started,
+     which is also the frame it rests on with no animation at all. An odd one
+     ends on the far side and snaps back. 2 is one sweep there and back, about
+     half a minute, then stillness. `infinite` restores the old behaviour.
+
+     --grain-cycles is the same for the cinematic stage's moving grain, in
+     0.44s steps: 30 is about 13 seconds, the length of the title sequence,
+     after which the grain holds still like the grain on every other page.
+     Its keyframes start and end on the same position, so any count is clean.
+
+     Reduced motion still switches all of it off; see the foot of input.css. */
+  --ambient-cycles: 2;
+  --grain-cycles: 30;
+
   /* --- Entrance: the beat a leading hero arrives on ------------------------
      The knobs for "Hero entrance" in input.css. Everything a hero animates in
      on load is derived from these five, so the whole family of hero pages

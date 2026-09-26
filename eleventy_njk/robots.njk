@@ -8,10 +8,9 @@ layout: false
     on the wrong domain is worse than none: it is the one file a crawler reads
     first, and it would point every one of them somewhere else.
 
-    Nothing is disallowed. The build report is the only page that does not want
-    indexing and it carries its own `noindex` meta; naming it here as well would
-    be wrong the moment an author publishes a page of their own at that URL,
-    which writeStatusPage() deliberately allows. -#}
+    Nothing is disallowed. The pages that must not be indexed carry their own
+    `noindex` meta (the 404 page), and the build report is not published at all:
+    it is written to _site_report/, beside the site. -#}
 User-agent: *
 Allow: /
 

@@ -35,6 +35,7 @@ import path from "node:path";
 import log from "./log.js";
 import { slugify } from "./paths.js";
 import { frontMatterBlock, isDraft, wholeValue } from "./front_matter.js";
+import { readUrlLock, lockKey, LOCK_FILE } from "./url_lock.js";
 
 /** Folder priority: an earlier folder keeps the bare slug on a conflict. */
 export const SOURCES = [
@@ -70,10 +71,8 @@ const isHidden = (name) => name.startsWith(".");
  * it is reserved even on a site with no category.json, so that adding one later
  * cannot take the URL of a page that was already published there.
  *
- * `status_check` is deliberately NOT here. That name is protected the other way
- * round: writeStatusPage() refuses to overwrite a page it did not write, so an
- * author who wants /status_check.html keeps it and loses the report. Reserving
- * it would reverse that decision and rename a page that works today.
+ * `status_check` is not here: the build report is written to _site_report/,
+ * outside the site, so an author's own /status_check.html collides with nothing.
  */
 const RESERVED_EXTRA = ["/blog.html", "/full_index.html", "/categories.html"];
 
@@ -435,6 +434,51 @@ function listPostFolders(root) {
   return entries;
 }
 
+/** The name a source asks for before any collision: its path, slugified. */
+function desiredSlug(candidate) {
+  return candidate.kind === "custom_post" ? slugify(candidate.base) : slugForRelativePath(candidate.base);
+}
+
+/** The folder part of a slug, "" at the top level. */
+const folderOf = (slug) => slug.slice(0, slug.lastIndexOf("/") + 1);
+
+/**
+ * The names published_urls.json holds for pages that still exist, as
+ * slug -> lock key. Built before any name is handed out, so a page keeps its
+ * recorded URL however early a newcomer that wants the same name is enumerated.
+ *
+ * A recorded name that can no longer be kept is an error, not a quiet rename:
+ * that page's published URL is about to change.
+ */
+function heldNames(candidates, lock, builtIn) {
+  const held = new Map();
+  for (const candidate of candidates) {
+    const key = lockKey(candidate);
+    const slug = lock.entries.get(key);
+    if (!slug) continue;
+
+    const problem =
+      folderOf(slug) !== folderOf(desiredSlug(candidate))
+        ? "the recorded name is in a different folder from the file"
+        : builtIn.slugs.has(slug)
+          ? "a built-in page in eleventy_njk/ now publishes there"
+          : held.has(slug)
+            ? `${held.get(slug)} is recorded under the same name`
+            : null;
+    if (problem) {
+      log.error(
+        "urls",
+        `${candidate.inputPath} cannot keep its published URL /${slug}.html`,
+        `${problem}; it is published under its own name instead, which changes its URL. ` +
+          `Fix ${LOCK_FILE} or the file names if that is not what you want`,
+      );
+      continue;
+    }
+    held.set(slug, key);
+  }
+  return held;
+}
+
 export function buildRegistry(root = process.cwd()) {
   // Resolved once: the same answer has to apply to every candidate below, and
   // re-reading eleventy_njk/ per file would be nine stats per post.
@@ -446,6 +490,10 @@ export function buildRegistry(root = process.cwd()) {
     ...listPostFolders(root),
   ];
 
+  // The names pages were already published under; see url_lock.js.
+  const lock = readUrlLock(root);
+  const held = heldNames(candidates, lock, builtIn);
+
   const bySlug = new Map();
   const byInputPath = new Map();
   /** Published directory -> the folder on disk whose assets publish there. */
@@ -456,10 +504,10 @@ export function buildRegistry(root = process.cwd()) {
   for (const candidate of candidates) {
     const meta = readSourceMeta(root, candidate.inputPath);
 
-    const desired =
-      candidate.kind === "custom_post"
-        ? slugify(candidate.base)
-        : slugForRelativePath(candidate.base);
+    const desired = desiredSlug(candidate);
+    const key = lockKey(candidate);
+    const recorded = lock.entries.get(key);
+    const locked = recorded !== undefined && held.get(recorded) === key;
 
     // The suffix goes on the last segment, not on the whole path: a collision
     // is between two pages, and /travel/iceland_2.html says that where
@@ -468,24 +516,30 @@ export function buildRegistry(root = process.cwd()) {
     const parent = cut < 0 ? "" : desired.slice(0, cut + 1);
     const leaf = cut < 0 ? desired : desired.slice(cut + 1);
 
-    let slug = desired;
+    let slug = locked ? recorded : desired;
     let suffix = 1;
 
     // A built-in page's name is taken even though no candidate here holds it.
     // Only bare names match: `reserved` holds "about", so /travel/about.html is
-    // untouched, which is right — it does not collide with anything.
-    while (bySlug.has(slug) || builtIn.slugs.has(slug)) {
+    // untouched, which is right — it does not collide with anything. A name
+    // another page already published under is taken the same way.
+    const taken = (name) => bySlug.has(name) || builtIn.slugs.has(name) || (held.has(name) && held.get(name) !== key);
+    while (!locked && taken(slug)) {
       suffix += 1;
       slug = `${parent}${leaf}_${suffix}`;
     }
 
-    if (slug !== desired) {
-      const owner = bySlug.get(desired);
+    // A page keeping a suffixed name it was published under is not news.
+    if (slug !== desired && !locked) {
+      const holder = bySlug.get(desired)?.inputPath;
+      const publisher = held.get(desired);
       log.warn(
         "slugs",
-        owner
-          ? `slug "${desired}" is already taken by ${owner.inputPath}`
-          : `slug "${desired}" belongs to a built-in page in eleventy_njk/`,
+        holder
+          ? `slug "${desired}" is already taken by ${holder}`
+          : publisher
+            ? `slug "${desired}" is already published by ${publisher}`
+            : `slug "${desired}" belongs to a built-in page in eleventy_njk/`,
         `${candidate.inputPath} published as "${slug}" instead`,
       );
     }
@@ -514,6 +568,8 @@ export function buildRegistry(root = process.cwd()) {
       ...candidate,
       slug,
       desired,
+      // Whether the slug came from published_urls.json rather than this build.
+      locked,
       // A post folder's assets publish under the slug the page got, which is
       // only known now. Everything else already knows its own folder.
       publishedDir: candidate.kind === "custom_post" ? slug : candidate.publishedDir,
@@ -540,7 +596,7 @@ export function buildRegistry(root = process.cwd()) {
   const all = [...bySlug.values()];
   applyDeclaredPermalinks(all, builtIn.permalinks);
 
-  return { bySlug, byInputPath, dirs, sourceDirs, all };
+  return { bySlug, byInputPath, dirs, sourceDirs, all, lock };
 }
 
 /**

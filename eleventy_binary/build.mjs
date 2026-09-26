@@ -5,7 +5,7 @@
  *   2. css          run the Tailwind binary over the templates
  *   3. eleventy     render every page
  *   4. assets       copy the files beside a page that Eleventy does not own
- *   5. status check inspect the output and write _site/status_check.html
+ *   5. status check inspect the output and write _site_report/status_check.html
  *
  * CSS runs before Eleventy so the freshly built stylesheet is the one Eleventy
  * copies into _site. Flags: --drafts, --no-css, --quiet, --help.
@@ -13,11 +13,16 @@
  * Steps 3 to 5 render into a staging directory which is swapped into place only
  * once they have all succeeded, so a failed build leaves the last good site
  * exactly where it was. See swapIntoPlace().
+ *
+ * Where things go (see lib/output_dirs.js): the site in _site/, a --drafts
+ * preview in _site_drafts/, and the report in _site_report/. Only _site/ is
+ * ever meant to be deployed, and nothing in it names a draft.
  */
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import Eleventy from "@11ty/eleventy";
 
@@ -29,26 +34,31 @@ import { generateMissingThumbnails } from "./lib/images.js";
 import { runStatusCheck, writeStatusPage, statusReport } from "./lib/status_check.js";
 import { fillDownloadHashes } from "./lib/downloads.js";
 import { validatePost, verdict } from "./lib/blocks/validate.js";
+import { referencedPaths } from "./lib/references.js";
+import { writeUrlLock, LOCK_FILE } from "./lib/url_lock.js";
+import { REPORT_DIR, outputDirFor } from "./lib/output_dirs.js";
 
 const HELP = `
 site_generate — build the static site.
 
   site_generate [options]
 
-  --drafts      include pages marked "draft: true" (for local preview only).
-                The output is marked _site/.draft-build so a deploy script can
-                refuse to publish it.
+  --drafts      include pages marked "draft: true", for a local preview. Written
+                to _site_drafts/ instead of _site/, so _site/ never holds a
+                draft. Never deploy _site_drafts/.
   --no-css      skip the Tailwind step and reuse the existing css/main.css
   --strict      do not publish a build the status check found errors in. The
-                staged build is kept, report included, so it can be inspected.
-  --check-only  do not build; just inspect the existing _site and rewrite
-                _site/status_check.html. This is what status_check.sh runs.
+                staged build is kept so it can be inspected.
+  --check-only  do not build; just inspect the existing _site (or _site_drafts
+                with --drafts) and rewrite the report. This is what
+                status_check.sh runs.
   --check-post <folder>
                 validate one page-builder document (input_custom_post/<folder>)
                 against the files in its folder, print the findings as JSON,
                 and exit non-zero on errors. No build.
   --json        print the status report as JSON on the last line of output.
-                The same report is always written to _site/status_check.json.
+                The same report is always written to _site_report/, as
+                status_check.html and status_check.json.
   --edit        start the page builder on http://127.0.0.1:8484 (or --port N)
                 and keep running until interrupted. No build until asked for.
   --quiet       suppress notes; warnings and errors are always shown
@@ -190,6 +200,15 @@ function buildCss(root) {
  * inside a page-builder page keep resolving. The .json save file itself is not
  * published — it is a working file, not part of the site.
  *
+ * A page-builder folder publishes only the files the built site refers to.
+ * Its Files tab labels the rest "unused · not published", and a picture imported by
+ * mistake and then removed from the page must not stay downloadable at
+ * /<slug>/photo.jpg. The document is the whole page, so what the site refers to
+ * is exactly what it needs: the pictures, their thumbnails, the lightbox
+ * originals, downloads, and the card and Open Graph image. A hand-written
+ * post folder still publishes everything: its page may load files in ways a
+ * scan of the HTML cannot see (a script, a stylesheet of its own).
+ *
  * Subfolders are included. A post folder is a folder: media grouped under
  * media/ or img/ is the obvious way for a page builder to organise a page's
  * assets, and generateMissingThumbnails() already walks a post folder
@@ -207,6 +226,9 @@ function copyPostAssets(root, outputDir, includeDrafts) {
   const registry = getRegistry(root);
   let copied = 0;
   let skippedDrafts = 0;
+  const heldBack = [];
+  // Read once, and only if a page-builder folder needs it.
+  let referenced = null;
 
   /**
    * Every file under a post folder that belongs in the published copy, as paths
@@ -244,6 +266,13 @@ function copyPostAssets(root, outputDir, includeDrafts) {
     const targetDir = path.join(outputDir, record.slug);
 
     for (const relative of collect(sourceDir)) {
+      if (record.source === "json") {
+        referenced ??= referencedPaths(outputDir);
+        if (!referenced.has(`/${record.slug}/${relative}`)) {
+          heldBack.push(`${record.folder}/${relative}`);
+          continue;
+        }
+      }
       const target = path.join(targetDir, relative);
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.copyFileSync(path.join(sourceDir, relative), target);
@@ -256,7 +285,14 @@ function copyPostAssets(root, outputDir, includeDrafts) {
     log.note(
       "assets",
       `${skippedDrafts} draft post folder(s) skipped`,
-      "their assets stay out of _site along with the page",
+      "their assets stay out of the site along with the page",
+    );
+  }
+  if (heldBack.length > 0) {
+    log.note(
+      "assets",
+      `${heldBack.length} file(s) in page-builder folders not published — nothing on the site uses them`,
+      heldBack.join(", "),
     );
   }
 }
@@ -362,7 +398,7 @@ function copyPageAssets(root, outputDir, includeDrafts) {
     log.note(
       "assets",
       `${skippedDrafts} file(s) beside a draft skipped`,
-      "they stay out of _site along with the page they belong to",
+      "they stay out of the site along with the page they belong to",
     );
   }
 }
@@ -422,15 +458,12 @@ function swapIntoPlace(outputDir, stagingDir, previousDir) {
 /**
  * Mark an output directory as a preview build that must not be deployed.
  *
- * `--drafts` builds into the same _site as a production run and replaces it, so
- * afterwards nothing on disk distinguished a site with unpublished pages in it
- * from the real one. `bun run dev` is exactly that command, which makes it the
- * everyday case rather than a corner one: build a preview, rsync _site later,
- * and the drafts are public with nothing having said a word.
+ * `--drafts` writes to _site_drafts/, never to _site/, so the folder you deploy
+ * cannot hold an unpublished page. This marker is the second line: if the
+ * preview folder is ever copied or uploaded by mistake, the file inside says
+ * what it is, and a deploy script can test for it.
  *
- * A dot-file, so the walkers skip it and it never becomes a published page. It
- * cannot stop a deploy on its own — it gives a deploy script something to test
- * for, and a person something to find.
+ * A dot-file, so the walkers skip it and it never becomes a published page.
  */
 function markAsDraftBuild(outputDir) {
   fs.writeFileSync(
@@ -449,6 +482,12 @@ function discardStaging(stagingDir) {
     // Nothing to do about it, and it must not mask the real build error.
   }
 }
+
+/**
+ * The staging directory of the build in progress, for the error handler at
+ * the foot of this file. Null until a build has chosen one.
+ */
+let activeStaging = null;
 
 async function main() {
   const options = parseArgs(process.argv);
@@ -475,30 +514,28 @@ async function main() {
 
   const started = Date.now();
   const settings = loadSettings(root);
-  const outputDir = path.join(root, "_site");
+  const outputName = outputDirFor(options.includeDrafts);
+  const outputDir = path.join(root, outputName);
+  const reportDir = path.join(root, REPORT_DIR);
 
   // --check-only inspects what is already in _site and stops. Nothing is
   // rebuilt, so it can be run against a deployed copy without changing it.
   if (options.checkOnly) {
     if (!fs.existsSync(outputDir)) {
-      console.error("_site does not exist — run site_generate first.");
+      console.error(`${outputName} does not exist — run site_generate${options.includeDrafts ? " --drafts" : ""} first.`);
       process.exit(1);
     }
-    console.log(`\nsite_generate --check-only — ${settings.name}\n`);
+    console.log(`\nsite_generate --check-only — ${settings.name} (${outputName}/)\n`);
     const empty = { reports: [], totals: { generated: 0, existing: 0, skipped: 0, oversized: 0, stale: 0 } };
-    const report = await runStatusCheck({ root, outputDir, settings, images: empty });
-    const written = writeStatusPage({ outputDir, settings, status: report, images: empty });
+    const report = await runStatusCheck({ root, outputDir, settings, images: empty, includeDrafts: options.includeDrafts });
+    writeStatusPage({ reportDir, checked: outputName, settings, status: report, images: empty });
     const counts = log.summary();
     console.log(
       `\nChecked ${report.pageCount} page(s) — ` +
         `${counts.errors} error(s), ${counts.warnings} warning(s).`,
     );
-    console.log(
-      written
-        ? "Report: _site/status_check.html\n"
-        : "Report NOT written — /status_check.html belongs to another page.\n",
-    );
-    if (options.json) console.log(JSON.stringify(statusReport({ status: report, images: empty })));
+    console.log(reportLine(reportDir));
+    if (options.json) console.log(JSON.stringify(statusReport({ status: report, images: empty, checked: outputName })));
     process.exit(counts.errors > 0 ? 1 : 0);
   }
 
@@ -510,9 +547,10 @@ async function main() {
   // included with --drafts, a renamed post, a tag page for a tag nobody uses any
   // more — from staying published; doing it beside the output rather than on top
   // of it is what keeps a failed build from taking the site down with it.
-  const stagingDir = path.join(root, "_site.tmp");
-  const previousDir = path.join(root, "_site.previous");
+  const stagingDir = `${outputDir}.tmp`;
+  const previousDir = `${outputDir}.previous`;
   discardStaging(stagingDir);
+  activeStaging = stagingDir;
 
   console.log("\n[1/5] thumbnails");
   const images = await generateMissingThumbnails(root);
@@ -552,8 +590,6 @@ async function main() {
     images,
     includeDrafts: options.includeDrafts,
   });
-  const reportWritten = writeStatusPage({ outputDir: stagingDir, settings, status, images });
-
   const seconds = ((Date.now() - started) / 1000).toFixed(2);
   const summary = log.summary();
 
@@ -565,15 +601,31 @@ async function main() {
    * what the report is complaining about. The exit code still says the build
    * had errors.
    *
-   * --strict is for the deploy. Note what it CANNOT do: the report explaining
-   * the errors is written into the staging directory, so refusing the swap also
-   * withholds the diagnosis — _site would keep the report from the last good
-   * build, which describes a different site. So the staging directory is kept
-   * rather than discarded, and the path to the report inside it is printed.
-   * Refusing to publish and refusing to explain are not the same thing.
+   * --strict is for the deploy. The report is written either way, and it says
+   * which build it describes; the refused build itself is kept in the staging
+   * directory so it can be looked at.
    */
   const publish = !(options.strict && summary.errors > 0);
   if (publish) swapIntoPlace(outputDir, stagingDir, previousDir);
+  // From here on staging is either gone (swapped in) or the refused build that
+  // is kept on purpose; the error handler must not discard it either way.
+  activeStaging = null;
+
+  // Only a build that published records its URLs; a refused build put nothing
+  // anywhere. A --drafts preview records the same non-draft pages a real build
+  // would, and never a draft: see url_lock.js.
+  if (publish && writeUrlLock(root, getRegistry(root))) {
+    log.info(`  ${LOCK_FILE} updated — commit it with the site`);
+  }
+
+  writeStatusPage({
+    reportDir,
+    checked: outputName,
+    note: publish ? "" : `Not published (--strict): the refused build is in ${path.basename(stagingDir)}/.`,
+    settings,
+    status,
+    images,
+  });
 
   console.log(
     `\nBuilt ${status.pageCount} page(s) in ${seconds}s — ` +
@@ -583,33 +635,34 @@ async function main() {
   if (!publish) {
     console.log(
       `\nNOT PUBLISHED — --strict, and the status check found ${summary.errors} error(s).\n` +
-        `  _site still holds the previous build.\n` +
-        (reportWritten
-          ? `  The build that was refused is in ${path.basename(stagingDir)}/, report at ` +
-            `${path.basename(stagingDir)}/status_check.html\n`
-          : `  The build that was refused is in ${path.basename(stagingDir)}/\n`) +
-        `  Delete it once you have read it; the next build will not reuse it.\n`,
+        `  ${outputName} still holds the previous build.\n` +
+        `  The build that was refused is in ${path.basename(stagingDir)}/\n` +
+        `  Delete it once you have read it; the next build will not reuse it.\n` +
+        reportLine(reportDir),
     );
+    if (options.json) console.log(JSON.stringify(statusReport({ status, images, checked: outputName })));
     process.exit(1);
   }
 
   if (options.includeDrafts) {
     console.log(
-      "\nDRAFT BUILD — _site contains pages marked `draft: true`.\n" +
-        "  Marked with _site/.draft-build. Do not deploy this output.\n",
+      `\nDRAFT PREVIEW — written to ${outputName}/, drafts included. Do not deploy it;\n` +
+        "  _site/ is untouched and still holds the last publishable build.\n",
     );
   }
 
-  console.log(
-    reportWritten
-      ? "Report: _site/status_check.html\n"
-      : "Report NOT written — /status_check.html belongs to another page.\n",
-  );
-  if (options.json) console.log(JSON.stringify(statusReport({ status, images })));
+  console.log(reportLine(reportDir));
+  if (options.json) console.log(JSON.stringify(statusReport({ status, images, checked: outputName })));
 
   // A warning is information, not a failure; only a hard error fails the build,
   // so a CI job can treat a non-zero exit as "the site did not build".
   process.exit(summary.errors > 0 ? 1 : 0);
+}
+
+/** Where the report is, as a path and as a link most terminals can open. */
+function reportLine(reportDir) {
+  const file = path.join(reportDir, "status_check.html");
+  return `Report: ${path.relative(process.cwd(), file)}  (${pathToFileURL(file).href})\n`;
 }
 
 main().catch((error) => {
@@ -622,9 +675,9 @@ main().catch((error) => {
   // reassurance that is no longer true.
   if (error?.keepStaging) {
     console.error(`\n${error.recovery}\n`);
-  } else {
-    discardStaging(path.join(process.cwd(), "_site.tmp"));
-    console.error("\n_site was left as it was — the previous build is still published.\n");
+  } else if (activeStaging) {
+    discardStaging(activeStaging);
+    console.error("\nThe output folder was left as it was — the previous build is still in place.\n");
   }
   process.exit(1);
 });

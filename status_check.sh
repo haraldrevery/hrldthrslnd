@@ -6,7 +6,7 @@
 # missing or malformed YAML front matter, duplicate slugs, missing meta
 # descriptions, and any reference that reaches outside this domain.
 #
-# Also rewrites _site/status_check.html with the same findings.
+# Also rewrites _site_report/status_check.html with the same findings.
 # Exits non-zero if there are errors, so it can gate a deploy.
 set -euo pipefail
 cd "$(dirname "$0")"

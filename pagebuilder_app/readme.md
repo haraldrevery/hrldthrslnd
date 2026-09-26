@@ -124,7 +124,9 @@ Delete a file, or overwrite one. An upload whose name is taken is saved under
 the next free name, and its thumbnail with it.
 A file dropped outside a drop target is ignored rather than opened, so a missed
 drop cannot navigate away from unsaved work. Removing a picture from a page removes the reference; the
-file stays in the folder until you delete it yourself.
+file stays in the folder until you delete it yourself, but it is no longer
+published: a build copies only the files the site uses, and the Files tab marks
+the rest "unused · not published".
 
 ## Safety of the document
 
@@ -133,8 +135,18 @@ save (the Save button, Ctrl-S) keeps a copy of the version it replaced in
 `.revisions/`; autosave keeps one every fifteen minutes. Undo and redo work
 across every edit in the session.
 
+A save never overwrites a version the editor did not load. If the file changed
+on disk since you opened it (another editor tab, a text editor, `git pull`),
+the save is refused and a dialog asks which version to keep: **Keep my version**
+or **Load the version on disk**. Either way the other one goes into History, so
+nothing is lost. Until you choose, nothing is saved, and switching posts or
+building waits too, so unsaved edits are never dropped.
+
+`.revisions/` is ignored by git, so it only exists on this machine. The
+documents themselves are committed as usual.
+
 ## Building
 
 The Build button runs `site_generate` as a separate process — exactly what you
-would run yourself — and shows its report. A build with drafts is marked as
-such and must not be deployed; the editor says so.
+would run yourself — and shows its report. A build with drafts goes to
+`_site_drafts/` instead of `_site/`, so it can never end up in what you deploy.

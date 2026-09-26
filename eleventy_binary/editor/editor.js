@@ -89,7 +89,12 @@
   async function unwrap(res) {
     let data = null;
     try { data = await res.json(); } catch { /* empty body */ }
-    if (!res.ok) throw new Error((data && data.error) || `${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const error = new Error((data && data.error) || `${res.status} ${res.statusText}`);
+      error.status = res.status;
+      error.data = data;
+      throw error;
+    }
     return data;
   }
   const api = {
@@ -115,6 +120,8 @@
     savedVersion: 0,
     saving: false,
     saveError: null,
+    stamp: null, // which version of the file on disk the document was loaded from
+    conflict: false, // the file changed on disk; nothing saves until the author chooses
     snapshot: null,
     history: [],
     future: [],
@@ -237,16 +244,19 @@
     }
   }
 
-  async function save(explicit) {
+  async function save(explicit, { force = false } = {}) {
     if (!state.doc) return;
+    if (state.conflict && !force) { openConflict(); return; }
     if (state.saving) { scheduleSave(); return; }
-    if (!explicit && !isDirty()) return;
+    if (!explicit && !force && !isDirty()) return;
     state.saving = true;
     state.saveError = null;
     const version = state.version;
     renderSaveState();
     try {
-      const result = await api.send("PUT", `/api/posts/${state.folder}`, { doc: state.doc, revision: explicit === true });
+      const result = await api.send("PUT", `/api/posts/${state.folder}`, { doc: state.doc, revision: explicit === true, base: state.stamp, force });
+      state.stamp = result.stamp;
+      state.conflict = false;
       state.savedVersion = Math.max(state.savedVersion, version);
       state.findings = result.check.findings;
       renderChecks();
@@ -258,20 +268,86 @@
         toast("Saved");
       }
       refreshPostList();
+      if (force) toast("Saved. The version it replaced is in History.", { action: { label: "History", fn: showHistory } });
     } catch (error) {
-      state.saveError = error.message;
-      toast(`Could not save: ${error.message}`, { level: "error", sticky: true });
+      if (error.data && error.data.conflict) {
+        state.conflict = true;
+        state.saveError = "The file changed on disk since it was opened here";
+        openConflict();
+      } else {
+        state.saveError = error.message;
+        toast(`Could not save: ${error.message}`, { level: "error", sticky: true });
+      }
     } finally {
       state.saving = false;
       renderSaveState();
-      if (isDirty()) scheduleSave();
+      if (isDirty() && !state.conflict) scheduleSave();
     }
+  }
+
+  /** The Page tab, where History lists the kept versions. */
+  function showHistory() {
+    state.sel = null;
+    state.tab = "page";
+    renderTabs();
+    renderInspector();
+  }
+
+  /**
+   * The file on disk is not the version this page loaded: another tab saved
+   * it, a text editor changed it, or git replaced it. Saving now would
+   * overwrite that change with no copy kept, so nothing saves until the author
+   * picks one version. Either way the other is kept in History, so neither
+   * choice can lose work. The dialog cannot be dismissed with Escape for the
+   * same reason: closing it would only leave the page unable to save.
+   */
+  function openConflict() {
+    const modal = $("#modal");
+    if (modal.open && modal.dataset.kind === "conflict") return;
+    if (modal.open) modal.close();
+    modal.className = "modal small";
+    modal.dataset.kind = "conflict";
+    // Both handlers are removed on close: the next dialog reuses this element
+    // and must be closable with Escape again.
+    modal.onclose = () => { delete modal.dataset.kind; modal.oncancel = null; modal.onclose = null; };
+    modal.oncancel = (e) => e.preventDefault();
+    const note = h("p", { class: "f-note", style: { color: "var(--ui-danger)" } });
+    const busy = (on) => { for (const b of modal.querySelectorAll("button")) b.disabled = on; };
+
+    const takeDisk = async () => {
+      busy(true);
+      try {
+        // Your edits first, into History, then the version on disk.
+        await api.send("POST", `/api/posts/${state.folder}/revisions`, { doc: state.doc });
+        modal.close();
+        await loadPost(state.folder);
+        toast("Loaded the version on disk. Your edits are in History.", { action: { label: "History", fn: showHistory } });
+      } catch (e) { note.textContent = e.message; busy(false); }
+    };
+    const keepMine = async () => {
+      busy(true);
+      modal.close();
+      await save(false, { force: true });
+    };
+
+    modal.replaceChildren(
+      h("div", { class: "modal-head" }, h("h2", {}, "This page changed on disk")),
+      h("div", { class: "modal-body" },
+        h("p", { style: { marginTop: 0 } }, `input_custom_post/${state.folder}/${state.folder}.json was changed outside this window since you opened it: in another tab, in a text editor, or by git.`),
+        h("p", {}, "Choose which version to keep. The other one is saved in History (Page tab), so nothing is lost either way."),
+        note),
+      h("div", { class: "modal-foot" }, h("span", { class: "grow" }),
+        h("button", { type: "button", class: "btn", onclick: takeDisk }, "Load the version on disk"),
+        h("button", { type: "button", class: "btn btn-primary", onclick: keepMine }, "Keep my version")),
+    );
+    modal.showModal();
   }
 
   function renderSaveState() {
     const el = $("#save-state");
     el.className = "save-state";
-    if (state.saveError) { el.textContent = "Not saved"; el.classList.add("is-error"); el.title = state.saveError; }
+    if (state.conflict) { el.textContent = "Not saved — changed on disk"; el.classList.add("is-error"); el.title = state.saveError || ""; }
+    else if (state.saveError) { el.textContent = "Not saved"; el.classList.add("is-error"); el.title = state.saveError; }
     else if (state.saving) { el.textContent = "Saving…"; el.title = ""; }
     else if (isDirty()) { el.textContent = "Edited"; el.classList.add("is-dirty"); el.title = "Autosaves in a moment"; }
     else { el.textContent = "Saved"; el.title = "Everything is on disk"; }
@@ -1233,18 +1309,37 @@
   }
 
   /* ============================================================ files tab */
+  /**
+   * Whether the page uses a file of its folder, by name. A picture or file
+   * field names it outright; a markdown or HTML field mentions it in its text,
+   * as in `![Caption](photo.jpg)`. The build is the authority: it publishes
+   * only the files the rendered site refers to (copyPostAssets in build.mjs).
+   * This follows the same rule closely enough to label the Files tab.
+   */
   function usedSources() {
-    const used = new Map();
+    const named = new Set();
+    const texts = [];
     const walk = (v) => {
       if (Array.isArray(v)) v.forEach(walk);
-      else if (v && typeof v === "object") { for (const [k, x] of Object.entries(v)) { if ((k === "src" || k === "poster" || k === "image") && typeof x === "string") used.set(x, (used.get(x) || 0) + 1); walk(x); } }
+      else if (v && typeof v === "object") {
+        for (const [k, x] of Object.entries(v)) {
+          if ((k === "src" || k === "poster" || k === "image") && typeof x === "string") named.add(x);
+          else if (typeof x === "string") texts.push(x);
+          else walk(x);
+        }
+      }
     };
     walk(state.doc);
-    return used;
+    return (name) => {
+      if (named.has(name)) return true;
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const mention = new RegExp(`(^|[\\s("'/=])${escaped}($|[\\s)"'?#])`);
+      return texts.some((text) => mention.test(text));
+    };
   }
 
   function filesTab() {
-    const used = usedSources();
+    const isUsed = usedSources();
     const assets = state.assets.filter((a) => !a.isMin);
     state.filesSel = new Set([...state.filesSel].filter((n) => assets.some((a) => a.name === n)));
     const upload = async () => { const files = await pickFiles({ multiple: true }); await importFiles(files); };
@@ -1262,7 +1357,7 @@
       },
         h("div", { class: "lib-thumb" }, a.kind === "image" ? thumbImg(a.name) : EXT(a.name)),
         h("div", { class: "lib-name" }, a.name),
-        h("div", { class: "lib-sub" }, used.get(a.name) ? h("span", {}, "on the page") : h("span", {}, "unused"), a.kind === "image" && a.hasMin === false ? h("span", { class: "warn", title: "The build makes the thumbnail if it is missing" }, "no thumbnail") : null));
+        h("div", { class: "lib-sub" }, isUsed(a.name) ? h("span", {}, "on the page") : h("span", { title: "Nothing on the page uses this file, so the build does not publish it. It stays in the folder." }, "unused · not published"), a.kind === "image" && a.hasMin === false ? h("span", { class: "warn", title: "The build makes the thumbnail if it is missing" }, "no thumbnail") : null));
       item.addEventListener("dragstart", (e) => {
         const names = selected && state.filesSel.size ? [...state.filesSel] : [a.name];
         e.dataTransfer.effectAllowed = "copy";
@@ -1549,7 +1644,7 @@
       ...posts.map((p) => h("button", {
         type: "button", class: `menu-item${p.folder === state.folder ? " is-current" : ""}`, disabled: p.source !== "json",
         title: p.source !== "json" ? "A hand-written HTML page; edit it in a text editor" : "",
-        onclick: async () => { closePopover(); if (p.folder !== state.folder) { await flushSave(); await loadPost(p.folder); } },
+        onclick: async () => { closePopover(); if (p.folder !== state.folder && await flushSave()) await loadPost(p.folder); },
       }, h("span", {}, p.title || p.folder, h("small", {}, `${p.folder}${p.source !== "json" ? " · hand-written HTML" : ""}`)), p.draft ? h("span", { class: "tag draft" }, "Draft") : h("span"))),
       h("div", { class: "menu-sep" }),
       h("button", { type: "button", class: "menu-item", onclick: () => { closePopover(); openNewPost(); } }, h("span", {}, "New post…"), h("span")),
@@ -1589,7 +1684,7 @@
     const create = async () => {
       error.textContent = "";
       try {
-        await flushSave();
+        if (!(await flushSave())) { error.textContent = "The current post is not saved; resolve that first."; return; }
         const result = await api.send("POST", "/api/posts", { folder: folder.value.trim(), title: title.value.trim() });
         state.site.posts = result.posts;
         modal.close();
@@ -1623,7 +1718,7 @@
       run.disabled = true;
       out.replaceChildren(h("p", { class: "f-note" }, "Building… this takes a moment on a site full of photographs."));
       try {
-        await flushSave();
+        if (!(await flushSave())) { out.replaceChildren(h("p", { class: "f-note", style: { color: "var(--ui-danger)" } }, "Not built: the current post is not saved yet.")); return; }
         const result = await api.send("POST", "/api/build", { drafts: drafts.checked });
         const r = result.report;
         out.replaceChildren(
@@ -1643,7 +1738,7 @@
     modal.replaceChildren(
       h("div", { class: "modal-head" }, h("h2", {}, "Build the site"), h("button", { type: "button", class: "icon-btn", "aria-label": "Close", onclick: () => modal.close() }, icon("close"))),
       h("div", { class: "modal-body" },
-        h("p", { class: "f-note", style: { marginTop: 0 } }, "Runs site_generate exactly as you would from a terminal and writes the site to _site/. Saves first."),
+        h("p", { class: "f-note", style: { marginTop: 0 } }, "Runs site_generate exactly as you would from a terminal and writes the site to _site/ (a draft preview to _site_drafts/). Saves first. The report is in _site_report/."),
         h("label", { class: "check-row" }, drafts, "Include drafts (a preview build; it is marked and must not be deployed)"),
         out),
       h("div", { class: "modal-foot" }, h("span", { class: "grow" }), h("button", { type: "button", class: "btn", onclick: () => modal.close() }, "Close"), run),
@@ -1659,11 +1754,24 @@
     if (!Array.isArray(d.blocks)) d.blocks = [];
   }
 
+  /**
+   * Save now, and say whether everything is on disk. Anything that is about
+   * to replace the document in memory (switching posts, creating one) or that
+   * reads the files (a build) must check the answer: after a failed save or a
+   * conflict the edits exist only here, and loading another post would drop
+   * them without a word.
+   */
   async function flushSave() {
+    if (state.conflict) { openConflict(); return false; }
     if (isDirty() || state.saving) {
       scheduleSave.flush();
       while (state.saving) await new Promise((r) => setTimeout(r, 50));
     }
+    if (state.conflict || isDirty()) {
+      if (!state.conflict) toast("The page is not saved yet, so that was not done. Fix the problem shown, then try again.", { level: "error" });
+      return false;
+    }
+    return true;
   }
 
   async function refreshRevisions() {
@@ -1673,7 +1781,7 @@
   async function loadPost(folder) {
     const data = await api.get(`/api/posts/${encodeURIComponent(folder)}`);
     Object.assign(state, {
-      folder, slug: data.slug, doc: data.doc, assets: data.assets, revisions: data.revisions, findings: data.check.findings,
+      folder, slug: data.slug, doc: data.doc, stamp: data.stamp, conflict: false, assets: data.assets, revisions: data.revisions, findings: data.check.findings,
       version: 0, savedVersion: 0, saveError: null, history: [], future: [], sel: null, filesSel: new Set(), canvasReady: false, canvasSheets: "", canvasScroll: 0,
     });
     ensureShape();
@@ -1757,8 +1865,7 @@
     const wanted = decodeURIComponent(location.hash.slice(1));
     if (!wanted || wanted === state.folder || !state.site) return;
     if (!state.site.posts.some((p) => p.folder === wanted && p.source === "json")) return;
-    await flushSave();
-    await loadPost(wanted);
+    if (await flushSave()) await loadPost(wanted);
   });
 
   boot().catch((error) => toast(`Could not start: ${error.message}`, { level: "error", sticky: true }));

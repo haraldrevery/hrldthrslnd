@@ -10,9 +10,10 @@ that shaped most of the decisions below.
 
 1. **thumbnails** — generate any missing `image_min/*_min.jpg`
 2. **css** — run the Tailwind binary over the templates
-3. **pages** — Eleventy renders everything into `_site/`
+3. **pages** — Eleventy renders everything into `_site/` (`_site_drafts/` with `--drafts`)
 4. **assets** — copy post-folder files, then fill in download checksums
-5. **status check** — inspect the output, write `_site/status_check.html`
+5. **status check** — inspect the output, write `_site_report/status_check.html`,
+   and record every published page's URL in `published_urls.json`
 
 CSS comes before Eleventy because Eleventy copies `css/main.css` into the
 output; building it afterwards would ship the previous run's stylesheet.
@@ -26,10 +27,10 @@ any more, a draft from a `--drafts` run — would otherwise stay published.
 ## Flags
 
 ```
---drafts      include pages marked draft: true (local preview only)
+--drafts      include pages marked draft: true; writes _site_drafts/, not _site/
 --no-css      skip Tailwind, reuse the existing css/main.css
 --strict      do not publish a build the status check found errors in
---check-only  do not build; inspect the existing _site and rewrite the report
+--check-only  do not build; inspect the existing _site (or _site_drafts) and rewrite the report
 --check-post <folder>  validate one page-builder document, print JSON findings
 --json        print the status report as JSON on the last line
 --edit        start the page builder on 127.0.0.1:8484 (--port N to change)
@@ -61,12 +62,15 @@ Exit code is non-zero only on **errors**. Warnings are information.
 | `editor/` | The editor page: index.html, editor.css, editor.js — embedded in the binary |
 | `editor/canvas.js` | Injected into the editor's preview only: selection, the block toolbar, drag to move, drops. Never part of a build |
 | `lib/slugs.js` | One slug namespace across all three input folders, with conflict resolution |
+| `lib/url_lock.js` | `published_urls.json`: the URL each published page keeps |
+| `lib/output_dirs.js` | The folders a build writes: `_site/`, `_site_drafts/`, `_site_report/` |
+| `lib/references.js` | What the built site refers to, shared by the link check and the post-folder copy |
 | `lib/images.js` | The `image/` → `image_min/` mirror |
 | `lib/codecs.js` | WASM codec bootstrap (see below) |
 | `lib/imagesize.js` | Intrinsic dimensions, parsed from file headers |
 | `lib/assets.js` | Adds the stylesheets and scripts a page's markup implies |
 | `lib/downloads.js` | SHA-256 / SHA-512 for download blocks |
-| `lib/status_check.js` | Site health checks, terminal output and HTML report |
+| `lib/status_check.js` | Site health checks, terminal output and the report in `_site_report/` |
 | `lib/paths.js` | Slugs, `_min` naming, HTML escaping |
 | `lib/settings.js` | `site_settings.json` |
 | `lib/log.js` | One log everything reports through |

@@ -6,7 +6,7 @@ REM links, images with no alt text, missing *_min counterparts, oversized
 REM assets, missing or malformed YAML front matter, duplicate slugs, missing
 REM meta descriptions, and any reference that reaches outside this domain.
 REM
-REM Also rewrites _site\status_check.html with the same findings.
+REM Also rewrites _site_report\status_check.html with the same findings.
 REM Exits non-zero if there are errors, so it can gate a deploy.
 setlocal
 cd /d "%~dp0"

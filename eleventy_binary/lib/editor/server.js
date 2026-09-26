@@ -10,8 +10,9 @@
  * What it will not do:
  *
  *   - listen anywhere but 127.0.0.1;
- *   - change a file except through store.js, which never deletes and never
- *     overwrites an upload;
+ *   - change a file except through store.js, which never deletes, never
+ *     overwrites an upload, and never saves over a version of a document the
+ *     editor did not load;
  *   - build in-process. The Build button runs the generator as a child, so
  *     the build's own caches are fresh every time and a half-finished edit in
  *     here cannot leak into it;
@@ -42,7 +43,7 @@ import { renderPost } from "../blocks/render.js";
 import { importMedia } from "./import_media.js";
 import {
   StoreError, listPosts, readPost, writePost, createPost, listAssets, writeAsset,
-  freeName, revisionsOf, readRevision, assertFolderName, describeFile,
+  freeName, revisionsOf, readRevision, saveRevision, assertFolderName, describeFile,
 } from "./store.js";
 
 const MIME = {
@@ -56,7 +57,7 @@ const MIME = {
 
 const json = (value, status = 200) =>
   new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8" } });
-const fail = (status, message) => json({ error: message }, status);
+const fail = (status, message, extra = {}) => json({ error: message, ...extra }, status);
 
 export async function startEditor({ root, port = 8484 }) {
   const settings = loadSettings(root);
@@ -243,14 +244,21 @@ export async function startEditor({ root, port = 8484 }) {
       const action = parts[3];
 
       if (!action && method === "GET") {
-        const { doc } = readPost(root, folder);
+        const { doc, stamp } = readPost(root, folder);
         const record = getRegistry(root).all.find((r) => r.kind === "custom_post" && r.folder === folder);
-        return json({ folder, slug: record?.slug ?? folder, doc, assets: listAssets(root, folder, { described: true }), revisions: revisionsOf(root, folder), check: checkDocument(doc, folder) });
+        return json({ folder, slug: record?.slug ?? folder, doc, stamp, assets: listAssets(root, folder, { described: true }), revisions: revisionsOf(root, folder), check: checkDocument(doc, folder) });
       }
       if (!action && method === "PUT") {
-        const { doc, revision } = await body();
-        const written = writePost(root, folder, doc, { revision: revision === true });
+        // `base` is required: a save that does not say which version it was
+        // edited from could only ever overwrite blind. `null` never matches a
+        // document on disk, so a client that leaves it out gets a conflict.
+        const { doc, revision, base, force } = await body();
+        const written = writePost(root, folder, doc, { revision: revision === true, base: base ?? null, force: force === true });
         return json({ saved: true, ...written, check: checkDocument(doc, folder) });
+      }
+      if (action === "revisions" && !parts[4] && method === "POST") {
+        const { doc } = await body();
+        return json({ revision: saveRevision(root, folder, doc), revisions: revisionsOf(root, folder) });
       }
       if (action === "check" && method === "POST") {
         const { doc } = await body();
@@ -320,7 +328,7 @@ export async function startEditor({ root, port = 8484 }) {
         if (req.method === "GET") return serveSitePath(url.pathname) ?? new Response("not found", { status: 404 });
         return fail(405, "method not allowed");
       } catch (error) {
-        if (error instanceof StoreError) return fail(error.status, error.message);
+        if (error instanceof StoreError) return fail(error.status, error.message, error.conflict ? { conflict: true, stamp: error.stamp } : {});
         log.error("editor", `${req.method} ${url.pathname} failed`, error.stack ?? error.message);
         return fail(500, error.message);
       }

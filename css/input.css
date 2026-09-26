@@ -348,7 +348,7 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: flow 12s var(--ease-liquid) infinite alternate;
+    animation: flow 12s var(--ease-liquid) var(--ambient-cycles) alternate;
   }
   @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
     .text-flow { background: none; color: var(--fg-strong); }
@@ -389,7 +389,7 @@
     border: 0;
     background: var(--grad-flow);
     background-size: 200% 100%;
-    animation: flow 16s var(--ease-liquid) var(--flow-phase, 0s) infinite alternate;
+    animation: flow 16s var(--ease-liquid) var(--flow-phase, 0s) var(--ambient-cycles) alternate;
   }
   section:nth-of-type(4n + 1) > .rule-grad { --flow-phase: 0s; }
   section:nth-of-type(4n + 2) > .rule-grad { --flow-phase: -9.6s; }
@@ -1336,7 +1336,7 @@
      Two animations, comma separated, and they have to be written out in full
      because the shorthand above would otherwise drop the first. `flow` is the
      gradient panning along the rule, which .rule-grad already carries and
-     which runs forever; the draw is the entrance. They touch different
+     which runs for --ambient-cycles legs; the draw is the entrance. They touch different
      properties — background-position and clip-path — so neither is fighting
      the other for a frame.
 
@@ -1347,7 +1347,7 @@
   .post-header > .rule-grad {
     --flow-phase: -6.4s;
     animation:
-      flow 16s var(--ease-liquid) var(--flow-phase, 0s) infinite alternate,
+      flow 16s var(--ease-liquid) var(--flow-phase, 0s) var(--ambient-cycles) alternate,
       hero-in-draw calc(var(--dur-entrance) * 1.1) cubic-bezier(0.65, 0, 0.35, 1)
         calc(var(--entrance-lead) + var(--hero-in-beat, 0) * var(--entrance-step)) both;
   }
@@ -2043,12 +2043,13 @@
   /* Film grain: an inline SVG noise tile, jumped around in discrete steps.
 
      The jump is a TRANSFORM, not a background-position, and that is the one
-     thing here worth not changing back. This layer covers the whole frame and
-     moves forever; animating background-position repaints every pixel of it
-     eighteen times a second for as long as the page is open, which on an old
-     laptop is a fan spinning up over a decorative texture. A transform is
-     handed to the compositor instead — the tile is rasterised once and the GPU
-     slides the finished layer, so the same effect costs nothing per frame.
+     thing here worth not changing back. This layer covers the whole frame;
+     animating background-position would repaint every pixel of it eighteen
+     times a second, which on an old laptop is a fan spinning up over a
+     decorative texture. A transform is handed to the compositor instead: the
+     tile is rasterised once and the GPU slides the finished layer. It still
+     stops after --grain-cycles steps (theme.css), because even a cheap frame
+     drawn forever keeps the machine awake.
 
      The layer is inset by -128px on every side so there is a tile's worth of
      overscan to slide into; without it the moves would drag the frame's edge
@@ -2083,7 +2084,7 @@
     pointer-events: none;
     opacity: 0.065;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
-    animation: cine-grain 0.44s steps(1, end) infinite;
+    animation: cine-grain 0.44s steps(1, end) var(--grain-cycles);
   }
 
   @keyframes cine-grain {
@@ -2682,7 +2683,7 @@
     height: 3px;
     background: var(--accent-grad);
     background-size: 200% 100%;
-    animation: flow 14s var(--ease-liquid) -7s infinite alternate;
+    animation: flow 14s var(--ease-liquid) -7s var(--ambient-cycles) alternate;
   }
 
   /* Below this width the panel is nearly as wide as the picture and the overlap
@@ -2788,7 +2789,7 @@
       var(--grad-flow) border-box;
     background-size: auto, 200% 100%;
     border: 1.5px solid transparent;
-    animation: flow 14s var(--ease-liquid) infinite alternate;
+    animation: flow 14s var(--ease-liquid) var(--ambient-cycles) alternate;
   }
   .chroma-frame {
     position: relative;
@@ -2797,7 +2798,7 @@
     background: var(--grad-marble);
     background-size: 180% 180%;
     box-shadow: var(--shadow-deep);
-    animation: drift 20s linear infinite;
+    animation: drift 20s linear var(--ambient-cycles) alternate;
   }
   .chroma-frame > * { display: block; overflow: hidden; border-radius: 2px; }
   @keyframes drift { to { background-position: 180% 180%; } }
@@ -6007,7 +6008,7 @@
     height: 3px;
     background: var(--grad-flow);
     background-size: 200% 100%;
-    animation: flow 16s var(--ease-liquid) -1.6s infinite alternate;
+    animation: flow 16s var(--ease-liquid) -1.6s var(--ambient-cycles) alternate;
   }
   .scrubber > * { display: block; }
   .scrubber .seg-gap { flex: none; width: 2px; background: var(--bg); }
@@ -6422,27 +6423,9 @@
   .page-link[aria-current="page"]:nth-child(6n + 1) { --page-accent: var(--c-mint); }
   .page-link[aria-disabled="true"] { opacity: 0.35; pointer-events: none; }
 
-  /* -- Status check table ------------------------------------------------------ */
-  .status-table { width: 100%; border-collapse: collapse; font-size: var(--step--1); }
-  .status-table th, .status-table td {
-    text-align: left;
-    padding: 0.6rem 0.75rem;
-    border-bottom: 1px solid var(--hairline);
-    vertical-align: top;
-  }
-  .status-table th {
-    font-family: var(--font-mono-family);
-    font-size: var(--step--2);
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--fg-muted);
-  }
-  .sev { display: inline-block; padding: 0.15rem 0.55rem; border-radius: var(--radius-pill);
-         font-family: var(--font-mono-family); font-size: var(--step--2);
-         letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); }
-  .sev-error { background: var(--c-crimson); color: #fff; }
-  .sev-warn  { background: var(--c-amber); }
-  .sev-ok    { background: var(--c-mint); }
+  /* The build report's table used to be styled here. The report now lives
+     outside the site with a stylesheet of its own (status_check.js), so the
+     site no longer ships rules that only it used. */
 }
 
 
@@ -6630,7 +6613,14 @@ html[data-width="18"]  { --reading-width: 18%; }
      and grid beside it — the block read as indented rather than as full width.
      Posts are unaffected either way: they sit in .reading-column, where the
      width cycler owns the measure (see "Reading width" above). */
-  .prose { color: var(--fg); }
+  /* overflow-wrap breaks a word only when it is longer than the whole line,
+     such as a pasted URL. Without it, that word ran past the column, and body's
+     overflow-x: hidden cut it off on a phone with no way to scroll to the rest.
+     break-word rather than anywhere: it does not shrink a table column or a
+     flex item to fit the pieces, so nothing that fits today changes. Inline
+     KaTeX is unaffected, since katex.css sets white-space: nowrap on it; see
+     breakableCommas() in markdown.js for how long formulas wrap instead. */
+  .prose { color: var(--fg); overflow-wrap: break-word; }
 
   .prose > * + * { margin-top: 1.15em; }
 

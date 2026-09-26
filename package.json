@@ -21,7 +21,7 @@
   "scripts": {
     "build": "bun run eleventy_binary/build.mjs",
     "build:drafts": "bun run eleventy_binary/build.mjs --drafts",
-    "dev": "bun run eleventy_binary/build.mjs --drafts && python3 -m http.server 8080 --directory _site",
+    "dev": "bun run eleventy_binary/build.mjs --drafts && python3 -m http.server 8080 --directory _site_drafts",
     "check": "bun run eleventy_binary/build.mjs --check-only",
     "test": "bun test",
     "css": "./update_css.sh",

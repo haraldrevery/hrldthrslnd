@@ -1,0 +1,21 @@
+{
+  "//": "Written by site_generate after every build that publishes: the URL each page was published at (/<name>.html), keyed by its source. A page keeps this URL even if another file later wants the same name. Commit this file; edit it only to move a page on purpose. See readme.md, 'Keeping URLs stable'.",
+  "pages": {
+    "input_custom_html/block_test_page.html": "block_test_page",
+    "input_custom_html/block_test_page_a.html": "block_test_page_a",
+    "input_custom_html/block_test_page_b.html": "block_test_page_b",
+    "input_custom_html/block_test_page_c.html": "block_test_page_c",
+    "input_custom_html/block_test_page_d.html": "block_test_page_d",
+    "input_custom_html/block_test_page_e.html": "block_test_page_e",
+    "input_custom_post/post_i/": "post_i",
+    "input_markdown/additional_yaml_test.md": "additional_yaml_test",
+    "input_markdown/gallery_test.md": "gallery_test",
+    "input_markdown/stress_test.md": "stress_test",
+    "input_markdown/test/stress_test_folder.md": "test/stress_test_folder",
+    "input_markdown/test/test_post_2.md": "test/test_post_2",
+    "input_markdown/test/test_post_folder.md": "test/test_post_folder",
+    "input_markdown/test_post.md": "test_post",
+    "input_markdown/test_post_2.md": "test_post_2",
+    "input_markdown/test_post_3.md": "test_post_3"
+  }
+}

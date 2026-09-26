@@ -43,11 +43,6 @@
       "order": 2
     },
     {
-      "label": "Status",
-      "link": "/status_check.html",
-      "order": 3
-    },
-    {
       "label": "RSS",
       "link": "/feed.xml",
       "order": 4
