@@ -14,8 +14,8 @@
  * passes the folder's listing, because that is the mistake the editor exists
  * to catch while it is being made.
  *
- * Pure: no filesystem, no Eleventy. The same code runs in the build and in the
- * editor's browser page.
+ * Pure: no filesystem, no Eleventy. The same code runs in the build and behind
+ * the editor's /check endpoint, which is how the editor page reaches it.
  */
 import { BLOCKS, BY_TYPE, FORMAT_VERSION, COLUMN_TYPES, META_FIELDS, variantOf, fieldApplies } from "./catalogue.js";
 import { cssLength, parseRatio } from "./units.js";

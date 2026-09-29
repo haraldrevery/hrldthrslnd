@@ -8,26 +8,19 @@
  * kind of duplication that drifts the moment one of them is taught about CRLF
  * or a `---` inside the body.
  *
- * Deliberately regex based, not a YAML parser. This module is bundled into the
- * compiled binary, but it is also the shape the .11tydata.js files could use;
- * more importantly Eleventy remains the authority on what the front matter
- * *means* — everything here is a cheap pre-pass over the raw source, used to
- * decide which files to enumerate before Eleventy has parsed anything.
+ * Deliberately regex based, not a YAML parser: it answers what an author WROTE
+ * (is the key there, does it carry a value, is the fence one we read) for the
+ * status check and for stripping a block. What the front matter MEANS — is the
+ * page a draft, where does it publish — is read in slugs.js with gray-matter
+ * and js-yaml, exactly as Eleventy reads it, so the two cannot disagree.
  */
 
 /**
  * The leading `---` block: group 1 is its body, without the fences.
  *
  * Horizontal whitespace is allowed after either fence, because gray-matter
- * allows it and this parser has to reach the same answer Eleventy does. It did
- * not, and the failure was invisible in both senses: the offending character is
- * a space nobody can see in an editor, and the consequence showed up somewhere
- * else entirely. A single trailing space after the opening `---` made this
- * report "no front matter at all", so readDraft() answered "not a draft" for a
- * page whose block said `draft: true`. Eleventy read the block correctly and
- * held the page back — while the asset copier, trusting the registry, published
- * that draft's co-located files beside the page that was never written. The
- * status check then reported two errors that both named the wrong cause.
+ * allows it: an invisible trailing space must not turn a file Eleventy reads
+ * into one the status check reports as having no front matter.
  *
  * `[^\S\r\n]` rather than `\s`: spaces and tabs only, never the line break
  * itself, which the pattern still has to match explicitly.
@@ -37,32 +30,19 @@ const FRONT_MATTER = /^---[^\S\r\n]*\r?\n([\s\S]*?)\r?\n---[^\S\r\n]*(?:\r?\n|$)
 /**
  * The source with any UTF-8 byte order mark removed.
  *
- * Editors on Windows still write one, and it sits *before* the opening `---`,
- * so the anchored pattern above did not match and the file looked like it had
- * no front matter at all. gray-matter strips the mark before parsing, so
- * Eleventy read the block perfectly well: the two disagreed, and the
- * disagreement was silent in the damaging direction — the status check reported
- * a missing block on a page that had one, and readDraft() below reported "not a
- * draft" for a file whose front matter said otherwise, publishing it.
+ * Editors on Windows still write one before the opening `---`, and gray-matter
+ * strips it, so this has to as well or the anchored pattern above misses a
+ * block Eleventy reads.
  */
 const withoutBom = (source) => String(source ?? "").replace(/^﻿/, "");
 
 /**
  * A fence that names a language: `---json`, `---js`, `---toml`.
  *
- * gray-matter reads all of these, and Eleventy therefore does too, but the
- * pattern above matches only a bare `---` — so a file written with one looked
- * to this pre-pass like a file with no front matter at all, and the divergence
- * ran in the damaging direction. `{"draft": true}` behind a `---json` fence is
- * a draft to Eleventy, which holds the page back, and NOT a draft here, so the
- * registry published the page's co-located assets beside a page that was never
- * written. A declared permalink in one was invisible in the same way.
- *
- * Detected rather than parsed. Teaching this module a second syntax would make
- * it the YAML parser its own header says it must not become, and the divergence
- * would simply move to whatever gray-matter supports next. Naming the file and
- * refusing it is the honest answer: the author gets one clear error instead of
- * a page that half-exists.
+ * gray-matter reads all of these, but the pattern above matches only a bare
+ * `---`, and the registry treats such a file as unreadable. Detected rather
+ * than parsed, so the status check can name the file with one clear error
+ * instead of leaving a page that half-exists.
  */
 const LANGUAGE_FENCE = /^---[ \t]*([A-Za-z][A-Za-z0-9]*)[ \t]*\r?\n/;
 
@@ -156,11 +136,9 @@ export function hasValue(block, key) {
  * the whole line would read `true # for now` as neither true nor false and warn
  * about a file Eleventy is perfectly happy with.
  *
- * Quotes are left on. isDraft() below depends on that: `draft: "true"` is the
- * string "true" to Eleventy and therefore NOT a draft, and a token that had been
- * unquoted here could not tell the two apart. A caller that only wants to report
- * on the shape of a value can strip them itself; one that decides whether a page
- * is published must not.
+ * Quotes are left on: `draft: "true"` is the string "true" to Eleventy, not a
+ * draft, and the status check's "is this true or false" warning has to see the
+ * difference. A caller that only wants the shape of a value strips them itself.
  */
 export function firstToken(block, key) {
   const line = valueLine(block, key);
@@ -188,21 +166,6 @@ export function wholeValue(block, key) {
   const line = valueLine(block, key);
   if (line == null) return null;
   return withoutComment(line).trim();
-}
-
-/**
- * Whether a front matter block marks the page as a draft.
- *
- * Matches Eleventy's own reading rather than being generous: the drafts
- * preprocessor tests `data.draft === true`, and the YAML core schema makes a
- * boolean out of true/True/TRUE and nothing else — `yes` and `1` parse as a
- * string and a number, so they are NOT drafts there and must not be here. A
- * looser test would unpublish a page Eleventy is publishing, which is the more
- * damaging direction to be wrong in.
- */
-export function isDraft(block) {
-  const value = firstToken(block, "draft");
-  return value != null && /^true$/i.test(value);
 }
 
 export default frontMatterBlock;

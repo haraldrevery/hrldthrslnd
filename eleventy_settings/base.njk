@@ -30,7 +30,7 @@
 <meta property="og:url" content="{{ page.url | absolute }}">
 {% if socialImage %}<meta property="og:image" content="{{ socialImage }}">
 <meta property="og:image:alt" content="{{ title or settings.name }}">
-{% endif %}<meta property="og:locale" content="{{ settings.language }}">
+{% endif %}<meta property="og:locale" content="{{ settings.language | ogLocale(settings.date_locale) }}">
 {% if date %}<meta property="article:published_time" content="{{ date | isoDate }}">{% endif %}
 {% for tag in tags | tagLabel %}<meta property="article:tag" content="{{ tag }}">
 {% endfor %}

@@ -1,0 +1,4 @@
+# LF in every checkout, whatever the machine's core.autocrlf says. A Windows
+# clone with autocrlf=true otherwise checks the .sh scripts out with CRLF, and
+# bash then fails on the stray \r. Git still detects binary files on its own.
+* text=auto eol=lf

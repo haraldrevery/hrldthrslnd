@@ -16,8 +16,13 @@ if [ ! -d _site ]; then
   exit 1
 fi
 
-if [ -x ./site_generate ]; then
-  exec ./site_generate --check-only "$@"
+# The compiled generator for this CPU; compile.sh names the ARM build apart.
+case "$(uname -m)" in
+  aarch64|arm64) BIN=./site_generate-arm64 ;;
+  *)             BIN=./site_generate ;;
+esac
+if [ -x "$BIN" ]; then
+  exec "$BIN" --check-only "$@"
 fi
 
 # No compiled binary yet: fall back to the development toolchain.

@@ -487,19 +487,33 @@ function checkHtml(outputDir, findings, stats) {
  * on every page. A build that publishes "https://example.com" is not a broken
  * build — it just is not this site's — so these are warnings.
  */
+/**
+ * A value that reads like a template placeholder: capitals, spaces and
+ * underscores only, with SITE as one of its words — "SITE", "SITE_NAME",
+ * "SITE LONG NAME". An edited copy of the template drifts away from DEFAULTS
+ * without ever becoming a real name, which the equality test alone missed.
+ */
+const looksLikePlaceholder = (value) => /^[A-Z _]+$/.test(value) && /(^|[ _])SITE([ _]|$)/.test(value);
+
 function checkSettings(settings, findings) {
   const placeholders = [
     { key: "url", detail: "every canonical, og:url, sitemap <loc> and robots.txt Sitemap: line points at it" },
     { key: "name", detail: "it is the title suffix on every page and the og:site_name" },
+    { key: "short_name", detail: "it is the site's alternate name in the JSON-LD" },
+    { key: "author", detail: "it is the author in every page's meta tags and JSON-LD, and the footer's copyright line" },
   ];
 
   for (const { key, detail } of placeholders) {
-    if (String(settings[key]) !== String(DEFAULTS[key])) continue;
+    const value = String(settings[key] ?? "");
+    const unchanged = value !== "" && value === String(DEFAULTS[key]);
+    if (!unchanged && !looksLikePlaceholder(value)) continue;
     findings.push({
       level: "warn",
       scope: "settings",
       page: "site_settings.json",
-      message: `"${key}" is still the template default, "${DEFAULTS[key]}"`,
+      message: unchanged
+        ? `"${key}" is still the template default, "${DEFAULTS[key]}"`
+        : `"${key}" looks like a placeholder, "${value}"`,
       detail,
     });
   }

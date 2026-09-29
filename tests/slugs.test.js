@@ -421,6 +421,32 @@ describe("buildRegistry — drafts", () => {
     const registry = quietly(() => buildRegistry(root));
     expect(registry.bySlug.get("a").draft).toBe(true);
   });
+
+  // Every reading below is Eleventy's: its preprocessor tests `data.draft ===
+  // true` on what gray-matter and js-yaml make of the block. Erring towards
+  // "draft" would unpublish a page Eleventy is publishing.
+  test("true in any YAML spelling is a draft, as Eleventy reads it", () => {
+    const root = project({
+      "input_markdown/a.md": frontMatter({ title: "a", draft: "True" }),
+      "input_markdown/b.md": frontMatter({ title: "b", draft: "TRUE" }),
+      "input_markdown/c.md": frontMatter({ title: "c", draft: "true # for now" }),
+      "input_markdown/d.md": "---\n{title: d, draft: true}\n---\nbody\n",
+      "input_markdown/e.md": "---\n  title: e\n  draft: true\n---\nbody\n",
+      "input_markdown/f.md": "---\r\ntitle: f\r\ndraft: true\r\n---\r\nbody\r\n",
+      "input_markdown/g.md": "﻿---\ntitle: g\ndraft: true\n---\nbody\n",
+    });
+    const registry = quietly(() => buildRegistry(root));
+    for (const name of ["a", "b", "c", "d", "e", "f", "g"]) expect(registry.bySlug.get(name).draft).toBe(true);
+  });
+
+  test("values YAML does not read as boolean true are not drafts", () => {
+    const values = ["false", "yes", "1", '"true"', "'true'"];
+    const files = Object.fromEntries(values.map((v, i) => [`input_markdown/n${i}.md`, frontMatter({ title: "x", draft: v })]));
+    files["input_markdown/nested.md"] = "---\ntitle: x\nextra:\n  draft: true\n---\nbody\n";
+    files["input_markdown/scalar.md"] = "---\ntitle: x\ndescription: |\n  draft: true\n---\nbody\n";
+    const registry = quietly(() => buildRegistry(project(files)));
+    for (const record of registry.all) expect(record.draft).toBe(false);
+  });
 });
 
 describe("buildRegistry — post folders", () => {

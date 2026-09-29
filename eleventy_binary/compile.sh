@@ -4,7 +4,7 @@
 # The result needs no Node, no Bun and no node_modules on the machine that runs
 # it — that is the whole point, and it is what site_generate must satisfy.
 #
-#   ./eleventy_binary/compile.sh           both targets
+#   ./eleventy_binary/compile.sh           all four targets (x64 and ARM64)
 #   ./eleventy_binary/compile.sh linux     just Linux
 #   ./eleventy_binary/compile.sh windows   just Windows
 set -euo pipefail

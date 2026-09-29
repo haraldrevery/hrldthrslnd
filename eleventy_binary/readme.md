@@ -46,7 +46,7 @@ Exit code is non-zero only on **errors**. Warnings are information.
 | File | Responsibility |
 |---|---|
 | `build.mjs` | The five steps above, and the CLI |
-| `compile.mjs` / `compile.sh` | Produce the Linux and Windows binaries |
+| `compile.mjs` / `compile.sh` | Produce the Linux and Windows binaries, x64 (baseline) and ARM64 |
 | `vendor_assets.sh` | Copy KaTeX and glightbox out of node_modules into the repo |
 | `lib/eleventy_config.js` | The whole Eleventy configuration; renders JSON posts as virtual templates. The root `eleventy.config.js` only refuses plain `npx @11ty/eleventy` |
 | `lib/markdown.js` | markdown-it: KaTeX, anchors, heading demotion, image figures, outline |

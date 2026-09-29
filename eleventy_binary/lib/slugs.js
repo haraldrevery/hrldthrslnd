@@ -32,9 +32,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import matter from "gray-matter";
+import yaml from "js-yaml";
+
 import log from "./log.js";
 import { slugify } from "./paths.js";
-import { frontMatterBlock, isDraft, wholeValue } from "./front_matter.js";
+import { frontMatterBlock, hasUnsupportedFence, wholeValue } from "./front_matter.js";
 import { readUrlLock, lockKey, LOCK_FILE } from "./url_lock.js";
 
 /** Folder priority: an earlier folder keeps the bare slug on a conflict. */
@@ -713,8 +716,8 @@ function registerDir(dirs, record) {
  */
 function readSourceMeta(root, inputPath) {
   // A page-builder document carries the same two answers in `meta`, and only
-  // the strict reading counts: `draft: true` as a JSON boolean, matching what
-  // isDraft() accepts from YAML. A file that does not parse is "not a draft"
+  // the strict reading counts: `draft: true` as a JSON boolean, as Eleventy
+  // requires of YAML. A file that does not parse is "not a draft"
   // for the same reason an unreadable one is — the status check reports it.
   if (/\.json$/i.test(inputPath)) {
     try {
@@ -727,17 +730,31 @@ function readSourceMeta(root, inputPath) {
     }
   }
 
-  let block = null;
+  // Parsed exactly as Eleventy parses it — gray-matter with js-yaml's load, the
+  // engine Eleventy's UserConfig installs — so the two cannot disagree about
+  // whether a page is a draft. A hand-rolled reader here missed flow-style
+  // front matter (`{title: x, draft: true}`): Eleventy skipped the page while
+  // the registry published the files beside it.
+  //
+  // A `---json` or `---js` fence is left as unreadable, which the status check
+  // reports as an error of its own. Front matter that does not parse is "not a
+  // draft" like an unreadable file; Eleventy fails the build on it anyway.
+  let data;
   try {
-    block = frontMatterBlock(fs.readFileSync(path.join(root, inputPath), "utf8"));
+    const source = fs.readFileSync(path.join(root, inputPath), "utf8");
+    if (hasUnsupportedFence(source)) return { draft: false, declared: null };
+    data = matter(source, MATTER_OPTIONS).data ?? {};
   } catch {
     return { draft: false, declared: null };
   }
-  // The WHOLE value, not the first token: a permalink is checked for being
-  // well formed below, and a token has already thrown away the part that
-  // would have failed the check.
-  return { draft: isDraft(block), declared: wholeValue(block, "permalink") };
+  // Anything but null goes on as text, so `permalink: false` reaches
+  // permalinkFault() and is refused and reported rather than read as absent.
+  const permalink = data.permalink == null ? "" : String(data.permalink).trim();
+  return { draft: data.draft === true, declared: permalink || null };
 }
+
+/** Eleventy's own front matter options, less the engines no page here uses. */
+const MATTER_OPTIONS = { engines: { yaml: yaml.load.bind(yaml) } };
 
 /**
  * One spelling for an input path: no leading "./", forward slashes.

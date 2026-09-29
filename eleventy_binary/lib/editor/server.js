@@ -318,6 +318,12 @@ export async function startEditor({ root, port = 8484 }) {
     idleTimeout: 255,
     maxRequestBodySize: 2 * 1024 * 1024 * 1024,
     async fetch(req) {
+      // Every request, reads included, must name this server. A page on another
+      // site can point its own domain at 127.0.0.1 (DNS rebinding) and read
+      // whatever answers there; its requests then carry that domain as Host.
+      const host = req.headers.get("host");
+      if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) return fail(403, "wrong host");
+
       const url = new URL(req.url);
       try {
         if (url.pathname === "/") return new Response(Bun.file(indexHtml), { headers: { "content-type": MIME[".html"], "cache-control": "no-store" } });

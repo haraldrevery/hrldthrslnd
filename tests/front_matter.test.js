@@ -1,14 +1,10 @@
 /**
  * front_matter.js — the pre-pass that runs before Eleventy exists.
  *
- * This module is a SECOND front matter parser: Eleventy uses gray-matter, and
- * the registry cannot, because it has to know a page's `draft` and `permalink`
- * before Eleventy has been constructed. The two therefore have to agree, and
- * every case below is a place where they once did not or could not.
- *
- * The rule for `draft` is deliberately conservative: match Eleventy's reading
- * rather than being generous, because being wrong in the "this is a draft"
- * direction unpublishes a page nobody asked to unpublish.
+ * A line reader for the status check, which asks what an author WROTE — is the
+ * key there, does it carry a value — rather than what YAML makes of it. What a
+ * page means (is it a draft, where does it publish) is read with Eleventy's own
+ * parser in slugs.js; tests/slugs.test.js pins those readings.
  */
 import { test, expect, describe } from "bun:test";
 import {
@@ -18,7 +14,6 @@ import {
   hasValue,
   firstToken,
   wholeValue,
-  isDraft,
 } from "../eleventy_binary/lib/front_matter.js";
 
 describe("frontMatterBlock", () => {
@@ -147,39 +142,5 @@ describe("wholeValue", () => {
     const b = frontMatterBlock("---\npermalink:\ntitle: t\n---\n");
     expect(wholeValue(b, "nothing")).toBeNull();
     expect(wholeValue(b, "permalink")).toBe("");
-  });
-});
-
-describe("isDraft", () => {
-  test("only an unquoted true, in any case, is a draft", () => {
-    expect(isDraft(frontMatterBlock("---\ndraft: true\n---\n"))).toBe(true);
-    expect(isDraft(frontMatterBlock("---\ndraft: True\n---\n"))).toBe(true);
-    expect(isDraft(frontMatterBlock("---\ndraft: TRUE\n---\n"))).toBe(true);
-  });
-
-  test("values YAML does not read as boolean true are NOT drafts", () => {
-    // Eleventy's preprocessor tests `data.draft === true`. `yes` and `1` parse
-    // as a string and a number there, so treating them as drafts here would
-    // unpublish a page Eleventy is publishing.
-    for (const value of ["false", "yes", "1", `"true"`, "'true'"]) {
-      expect(isDraft(frontMatterBlock(`---\ndraft: ${value}\n---\n`))).toBe(false);
-    }
-  });
-
-  test("a draft is still a draft behind a trailing-whitespace fence", () => {
-    expect(isDraft(frontMatterBlock("--- \ndraft: true\n--- \n"))).toBe(true);
-  });
-
-  test("no block, and no draft key, are both 'not a draft'", () => {
-    expect(isDraft(null)).toBe(false);
-    expect(isDraft(frontMatterBlock("---\ntitle: x\n---\n"))).toBe(false);
-  });
-
-  test("KNOWN LIMIT: an indented top-level key is not seen", () => {
-    // YAML allows a uniformly indented mapping; this line-anchored parser does
-    // not read it, and loosening the anchor would instead make a NESTED
-    // `draft:` under another key look top-level — a false positive, which is
-    // the more damaging direction. Pinned so the trade-off stays deliberate.
-    expect(isDraft(frontMatterBlock("---\n  draft: true\n---\n"))).toBe(false);
   });
 });

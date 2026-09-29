@@ -8,6 +8,8 @@
     "@jsquash/resize": "^2.1.0",
     "@vscode/markdown-it-katex": "^1.1.1",
     "glightbox": "^3.3.1",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.1",
     "katex": "^0.16.11",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",

@@ -11,7 +11,12 @@ layout: false
   <description>{{ settings.description }}</description>
   <language>{{ settings.language }}</language>
   <atom:link href="{{ '/feed.xml' | absolute }}" rel="self" type="application/rss+xml"/>
-  <lastBuildDate>{{ build.date | rfc822Date }}</lastBuildDate>
+  {#- When the content last changed, which is what RSS means by it — not when
+      the build ran, which made every rebuild look like news to a feed reader. -#}
+  {%- set changed = collections.posts | latestChange | rfc822Date %}
+  {%- if changed %}
+  <lastBuildDate>{{ changed }}</lastBuildDate>
+  {%- endif %}
   {#- The fields below carry no escaping filter, deliberately. Nunjucks
       autoescaping is on (Eleventy's default) and already entity-escapes every
       interpolation, which is exactly what RSS needs. Filtering as well escaped

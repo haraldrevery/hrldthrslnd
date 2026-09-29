@@ -514,6 +514,24 @@ export function createConfig({
       if (/^https?:\/\//i.test(url)) return url;
       return `${settings.url}${url.startsWith("/") ? "" : "/"}${url}`;
     });
+    // Open Graph wants language_TERRITORY ("en_GB"), not a BCP-47 tag. The
+    // territory comes from date_locale when it is the same language, since that
+    // is the one full tag site_settings.json carries.
+    eleventyConfig.addFilter("ogLocale", (language, locale) => {
+      const lang = String(language ?? "").trim();
+      const full = String(locale ?? "").trim();
+      const tag = lang.includes("-") || !full.toLowerCase().startsWith(`${lang.toLowerCase()}-`) ? lang : full;
+      return tag.replace(/-/g, "_");
+    });
+    // The newest `updated` or `date` among some pages, as a Date, or "" when
+    // none has one. For the feed's lastBuildDate, which should move only when
+    // an entry does.
+    eleventyConfig.addFilter("latestChange", (items) => {
+      const times = (Array.isArray(items) ? items : [])
+        .map((item) => Math.max(postTime(item.data?.updated), postTime(item.data?.date)))
+        .filter(Number.isFinite);
+      return times.length ? new Date(Math.max(...times)) : "";
+    });
     eleventyConfig.addFilter("limit", (arr, n) => (Array.isArray(arr) ? arr.slice(0, n) : arr));
     eleventyConfig.addFilter("jsonify", jsonForHtml);
     /** Strip tags and collapse whitespace — used to build search snippets. */

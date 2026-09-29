@@ -6,8 +6,10 @@ layout: false
 {#- The index search_bar.js fetches. Built at render time so it can never drift
     from what was actually published; drafts are excluded because they are not
     in collections.posts. -#}
+{#- No build timestamp in here: nothing reads one, and it made every build a
+    changed file — a fresh upload and a fresh download for every reader, with
+    not one entry different. -#}
 {
-  "generated": {{ build.date | jsonify | safe }},
   "entries": [
 {%- for post in collections.posts %}
     {
