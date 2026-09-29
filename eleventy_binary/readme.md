@@ -39,7 +39,10 @@ tag nobody uses any more — from staying published.
 --help
 ```
 
-Exit code is non-zero only on **errors**. Warnings are information.
+Exit code is non-zero only on **errors**. Warnings are information. An unknown
+option exits with 2 before doing anything, and a `site_settings.json`,
+`category.json` or `published_urls.json` that does not parse stops a build
+before anything is written (`--check-only` still runs and reports it).
 
 ## Modules
 

@@ -1,0 +1,29 @@
+# Every push: the tests, then a --strict build, which fails on any error the
+# status check finds (a broken link, a bad date, an unreadable config file).
+# Nothing is deployed from here.
+#
+# --no-css builds on the committed css/main.css, as a machine without the
+# Tailwind binary does; the binary is not in the repository.
+name: check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the pinned Bun version
+        id: tools
+        run: echo "bun=$(node -p "require('./package.json').tools.bun")" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ steps.tools.outputs.bun }}
+
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bun run eleventy_binary/build.mjs --strict --no-css

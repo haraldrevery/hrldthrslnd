@@ -233,8 +233,8 @@ existing page (pictures included) would move.
 - **Commit it** with the rest of the site. It changes only when pages are
   added, removed or renamed, one line per page.
 - **Renaming or moving a file is a new URL**: the old entry is dropped because
-  its source is gone. To keep an old address, set `permalink:` in the front
-  matter.
+  its source is gone, and the build warns that the old address is no longer
+  published. To keep it, set `permalink:` in the front matter.
 - A draft is recorded only once it has been published.
 - If the file cannot be read (a bad merge, say), the build reports an error,
   holds no URLs that run, and leaves the file alone so nothing is forgotten.
@@ -1027,6 +1027,16 @@ and nothing in it belongs on the web. Open it straight from disk; the build
 prints its path as a link. **`_site_report/status_check.json`** holds the same
 report as data, for a deploy script or a test; `./site_generate --json` prints
 it on the last line.
+
+A plain build publishes even when the check finds errors, so you can look at
+what came out. Build with **`--strict`** before you upload: it refuses to
+replace `_site/` while there are errors. `.github/workflows/check.yml` runs the
+tests and a `--strict` build on every push.
+
+Two things stop a build before it writes anything, and leave the previous
+`_site/` in place: an option the generator does not know (a typo such as
+`--stirct` used to be ignored), and a `site_settings.json`, `category.json` or
+`published_urls.json` that does not parse.
 
 ---
 

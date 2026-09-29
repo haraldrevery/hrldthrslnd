@@ -35,6 +35,7 @@ import { runStatusCheck, writeStatusPage, statusReport } from "./lib/status_chec
 import { fillDownloadHashes } from "./lib/downloads.js";
 import { validatePost, verdict } from "./lib/blocks/validate.js";
 import { referencedPaths } from "./lib/references.js";
+import { CATEGORY_FILE } from "./lib/categories.js";
 import { writeUrlLock, LOCK_FILE } from "./lib/url_lock.js";
 import { REPORT_DIR, outputDirFor } from "./lib/output_dirs.js";
 
@@ -67,27 +68,65 @@ site_generate — build the static site.
 Run it from the project root — the folder holding site_settings.json.
 `;
 
+/** Every option the generator knows, and whether it takes a value. */
+const OPTIONS = new Map([
+  ["--drafts", false],
+  ["--no-css", false],
+  ["--strict", false],
+  ["--check-only", false],
+  ["--check-post", true],
+  ["--json", false],
+  ["--edit", false],
+  ["--port", true],
+  ["--quiet", false],
+  ["--help", false],
+  ["-h", false],
+]);
+
+/**
+ * An option it does not know stops the generator before it does anything. A
+ * typo used to be ignored, so `--stirct` published the very build it was meant
+ * to refuse.
+ */
 function parseArgs(argv) {
   const args = argv.slice(2);
-  const flags = new Set(args);
-  if (flags.has("--help") || flags.has("-h")) {
+  const given = new Map();
+  const usage = (message) => {
+    console.error(`${message}\nRun site_generate --help for the options.`);
+    process.exit(2);
+  };
+
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (!OPTIONS.has(arg)) usage(`unknown option "${arg}"`);
+    if (!OPTIONS.get(arg)) {
+      given.set(arg, true);
+      continue;
+    }
+    const value = args[i + 1];
+    if (value === undefined || value.startsWith("-")) usage(`${arg} needs a value`);
+    given.set(arg, value);
+    i += 1;
+  }
+
+  if (given.has("--help") || given.has("-h")) {
     console.log(HELP.trim());
     process.exit(0);
   }
-  const valueOf = (name) => {
-    const at = args.indexOf(name);
-    return at >= 0 ? args[at + 1] ?? "" : null;
-  };
+
+  const port = given.has("--port") ? Number(given.get("--port")) : 8484;
+  if (!Number.isInteger(port) || port < 1 || port > 65535) usage(`--port needs a port number, not "${given.get("--port")}"`);
+
   return {
-    includeDrafts: flags.has("--drafts"),
-    css: !flags.has("--no-css"),
-    checkOnly: flags.has("--check-only"),
-    checkPost: valueOf("--check-post"),
-    json: flags.has("--json"),
-    edit: flags.has("--edit"),
-    port: Number(valueOf("--port") ?? 8484),
-    strict: flags.has("--strict"),
-    quiet: flags.has("--quiet"),
+    includeDrafts: given.has("--drafts"),
+    css: !given.has("--no-css"),
+    checkOnly: given.has("--check-only"),
+    checkPost: given.get("--check-post") ?? null,
+    json: given.has("--json"),
+    edit: given.has("--edit"),
+    port,
+    strict: given.has("--strict"),
+    quiet: given.has("--quiet"),
   };
 }
 
@@ -122,6 +161,50 @@ function checkPost(root, folder) {
   console.log(JSON.stringify(result, null, 2));
   console.error(`${name}: ${result.verdict}, ${findings.length} finding(s)`);
   process.exit(result.verdict === "error" ? 1 : 0);
+}
+
+const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * The project's JSON files, and what each must be for a build to use it.
+ *
+ * Each reader carries on without a file it cannot parse — the settings fall
+ * back to the template defaults, the categories to none, the URL record to
+ * holding nothing — and the status check reports it. That suits a report, not
+ * a build: it replaced a good site with one published under example.com, or
+ * with every category page gone, or with no URL held. So a build refuses to
+ * start instead, the way broken front matter already stops it.
+ */
+const CONFIG_FILES = [
+  { file: "site_settings.json", usable: (data) => isObject(data) || "it is not a JSON object" },
+  { file: CATEGORY_FILE, usable: (data) => isObject(data) || "it is not a JSON object" },
+  { file: LOCK_FILE, usable: (data) => isObject(data?.pages) || 'it has no "pages" object' },
+];
+
+/** Stop before anything is written if a configuration file cannot be used. */
+function refuseUnreadableConfig(root, outputName) {
+  let faults = 0;
+  for (const { file, usable } of CONFIG_FILES) {
+    const full = path.join(root, file);
+    if (!fs.existsSync(full)) continue;
+    let problem;
+    try {
+      const answer = usable(JSON.parse(fs.readFileSync(full, "utf8")));
+      if (answer !== true) problem = answer;
+    } catch (error) {
+      problem = `not valid JSON: ${error.message}`;
+    }
+    if (problem) {
+      log.error("config", `${file} cannot be read`, problem);
+      faults += 1;
+    }
+  }
+  if (faults === 0) return;
+  console.error(
+    `\nNothing was built — ${outputName}/ still holds the previous build.\n` +
+      `Fix the file${faults > 1 ? "s" : ""} (git diff shows what changed) and run again.\n`,
+  );
+  process.exit(1);
 }
 
 /**
@@ -567,8 +650,10 @@ async function main() {
   }
 
   const started = Date.now();
-  const settings = loadSettings(root);
   const outputName = outputDirFor(options.includeDrafts);
+  // --check-only reports these files as findings; a build must not start on them.
+  if (!options.checkOnly) refuseUnreadableConfig(root, outputName);
+  const settings = loadSettings(root);
   const outputDir = path.join(root, outputName);
   const reportDir = path.join(root, REPORT_DIR);
 

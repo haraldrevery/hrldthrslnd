@@ -16,9 +16,11 @@ _site_report/
 node_modules/
 node_modules.off/
 
-# The compiled generators are large; build them with
-# ./eleventy_binary/compile.sh rather than committing them.
-# Delete these two lines if you would rather ship the binaries in the repo.
+# The compiled generators, about 100 MB each; build them with
+# ./eleventy_binary/compile.sh. Do not commit them: site_generate.exe is over
+# GitHub's 100 MB file limit, so the push is refused, and every rebuild would
+# add another permanent copy to the history. To keep a copy off this machine,
+# attach them to a GitHub Release instead.
 site_generate
 site_generate.exe
 site_generate-arm64

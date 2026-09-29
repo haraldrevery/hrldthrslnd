@@ -10,8 +10,10 @@ import { test, expect, describe, afterEach } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
 
-import { buildRegistry } from "../eleventy_binary/lib/slugs.js";
+import { buildRegistry, invalidateRegistry } from "../eleventy_binary/lib/slugs.js";
 import { writeUrlLock, readUrlLock, LOCK_FILE } from "../eleventy_binary/lib/url_lock.js";
+import { runStatusCheck } from "../eleventy_binary/lib/status_check.js";
+import { loadSettings } from "../eleventy_binary/lib/settings.js";
 import log from "../eleventy_binary/lib/log.js";
 import { makeProject, removeProject, quietly, frontMatter } from "./helpers.js";
 
@@ -30,6 +32,25 @@ const postDoc = (meta = {}) => JSON.stringify({ format: 1, meta: { title: "P", .
 const registry = (root) => quietly(() => buildRegistry(root));
 const slugOf = (reg, inputPath) => reg.all.find((r) => r.inputPath === inputPath)?.slug;
 const lockOf = (root) => JSON.parse(fs.readFileSync(path.join(root, LOCK_FILE), "utf8")).pages;
+
+/** The pages the status check reports as no longer published, over an empty _site. */
+async function droppedUrls(root) {
+  invalidateRegistry(root);
+  fs.mkdirSync(path.join(root, "_site"), { recursive: true });
+  const { log: out, error, warn } = console;
+  console.log = console.error = console.warn = () => {};
+  try {
+    const { findings } = await runStatusCheck({
+      root,
+      outputDir: path.join(root, "_site"),
+      settings: loadSettings(root),
+      images: { reports: [], totals: {} },
+    });
+    return findings.filter((f) => f.scope === "urls").map((f) => f.page);
+  } finally {
+    Object.assign(console, { log: out, error, warn });
+  }
+}
 
 describe("a page keeps the URL it was published under", () => {
   test("a newcomer that wants a published name takes the suffix instead", () => {
@@ -109,6 +130,21 @@ describe("what is recorded", () => {
     expect(readUrlLock(root).readable).toBe(false);
     expect(quietly(() => writeUrlLock(root, reg))).toBe(false);
     expect(fs.readFileSync(path.join(root, LOCK_FILE), "utf8")).toBe("{ not json");
+  });
+
+  test("a page whose source is gone is reported, since its URL now fails", async () => {
+    const root = project({ "input_markdown/a.md": page() });
+    writeUrlLock(root, registry(root));
+    fs.renameSync(path.join(root, "input_markdown/a.md"), path.join(root, "input_markdown/b.md"));
+    expect(await droppedUrls(root)).toEqual(["/a.html"]);
+  });
+
+  test("a renamed page that keeps its old address with permalink is not reported", async () => {
+    const root = project({ "input_markdown/a.md": page() });
+    writeUrlLock(root, registry(root));
+    fs.rmSync(path.join(root, "input_markdown/a.md"));
+    fs.writeFileSync(path.join(root, "input_markdown/b.md"), page({ permalink: "/a.html" }));
+    expect(await droppedUrls(root)).toEqual([]);
   });
 
   test("a recorded name that a built-in page now uses is an error, not a quiet move", () => {

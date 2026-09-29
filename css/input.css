@@ -2804,6 +2804,12 @@
   @keyframes drift { to { background-position: 180% 180%; } }
 
   /* -- Decorative overlays -------------------------------------------------- */
+  /* No mix-blend-mode, on purpose. A blended layer over the whole viewport
+     makes the browser re-blend the entire screen on every scrolled frame: in
+     headless Chromium without a GPU (the fallback for old and blocklisted
+     GPUs) multiply/screen cost the front page 40% more CPU and dropped its
+     scroll to ~38 fps, where plain opacity holds 60. --grain-wash stands in
+     for what screen used to add in dark mode, a slight lift of the ground. */
   .grain::after {
     content: "";
     position: fixed;
@@ -2811,7 +2817,7 @@
     z-index: 60;
     pointer-events: none;
     opacity: var(--grain-opacity);
-    mix-blend-mode: var(--grain-blend);
+    background-color: var(--grain-wash);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   .editorial-grid {

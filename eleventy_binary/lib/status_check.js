@@ -27,6 +27,7 @@ import { readCategories, CATEGORY_FILE } from "./categories.js";
 import { foldSubject } from "./subjects.js";
 import { safeDecode, attributeRefs } from "./references.js";
 import { readExif } from "./exif.js";
+import { lockKey } from "./url_lock.js";
 
 const REQUIRED_FRONT_MATTER = ["title", "date", "description", "tags"];
 
@@ -762,6 +763,34 @@ function checkCategories(root, outputDir, findings) {
  * produced no page; the second catches a file the registry never saw, which is
  * the shape the original failure took.
  */
+/**
+ * A URL the last published build had and this one does not.
+ *
+ * The check runs before published_urls.json is rewritten, so the file still
+ * holds the previous build's pages: an entry whose source is gone is a page
+ * that has just left the site. A static host has no redirects, so every link
+ * and bookmark to it fails, and nothing else in the build says so.
+ */
+function checkDroppedUrls(root, findings) {
+  const registry = getRegistry(root);
+  if (!registry.lock?.readable) return;
+
+  const sources = new Set(registry.all.map(lockKey));
+  const live = new Set(registry.all.filter((record) => !record.draft).map((record) => record.permalink));
+
+  for (const [key, slug] of registry.lock.entries) {
+    const url = `/${slug}.html`;
+    if (sources.has(key) || live.has(url)) continue;
+    findings.push({
+      level: "warn",
+      scope: "urls",
+      page: url,
+      message: `no longer published — its source ${key} is gone`,
+      detail: `if it was renamed or moved, give the new file permalink: ${url} to keep the address`,
+    });
+  }
+}
+
 function checkUnpublished(root, outputDir, includeDrafts, findings) {
   const registry = getRegistry(root);
 
@@ -847,6 +876,7 @@ export async function runStatusCheck({ root, outputDir, settings, images, includ
   checkCategories(root, outputDir, findings);
   checkPostFolderPaths(root, findings);
   checkUnpublished(root, outputDir, includeDrafts, findings);
+  checkDroppedUrls(root, findings);
 
   // Assets fetched from another origin break the no-third-party promise, so
   // these are worth flagging. Outbound <a> links are not, and are not counted.

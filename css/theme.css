@@ -290,8 +290,8 @@
 
   --grid-line-v:   rgba(13, 13, 16, 0.04);
   --grid-line-h:   rgba(13, 13, 16, 0.035);
-  --grain-opacity: 0.032;
-  --grain-blend:   multiply;
+  --grain-opacity: 0.029;
+  --grain-wash:    transparent;
 
   --shadow-soft:   0 24px 60px -28px rgba(13, 13, 16, 0.28);
   --shadow-deep:   0 36px 100px -38px rgba(13, 13, 16, 0.55);
@@ -359,7 +359,7 @@
     --grid-line-v:   rgba(255, 255, 255, 0.05);
     --grid-line-h:   rgba(255, 255, 255, 0.04);
     --grain-opacity: 0.05;
-    --grain-blend:   screen;
+    --grain-wash:    rgba(255, 255, 255, 0.18);
 
     --shadow-soft:   0 24px 60px -28px rgba(0, 0, 0, 0.75);
     --shadow-deep:   0 36px 100px -38px rgba(0, 0, 0, 0.9);
