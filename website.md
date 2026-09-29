@@ -33,7 +33,10 @@ User can make a new post/article in three ways:
 
 - For any section/block container that has text, use justified text alignment.
 
-- Avoid solutions that are risky or have technical debts that prevents easy maintenance or makes it difficult to do updates to the sites logic. Keep it modular to avoid entangled dependencies and keeping the risk of potential damage / data losses / errors low. If risk mitigation or feature leads to potential over-engineering, consider simpler pipelines to avoid instabilities. 
+ - Avoid solutions that are risky or have technical debts that prevents easy maintenance or makes it difficult to do updates to the sites logic. Keep it modular to avoid entangled dependencies and keeping the risk of potential damage / data losses / errors low. If risk mitigation or feature leads to potential over-engineering, consider simpler pipelines to avoid instabilities and if that is not possible, give me a warning before doing anything!  
+
+- Try to avoid building on top of third-party dependencies that could break the pipeline if it gets updated (but store local backup in case source goes down), if using third-party libraries/packages, make sure they are trustworthy (not compromised with malicious code/vulnerabilities), stable and FOSS so it can legally be distributed. 
+
 
 
 
