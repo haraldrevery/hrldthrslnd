@@ -15,8 +15,14 @@ layout: false
     {#- lastmod is the last MODIFIED date, and a page's `date` is when it was
         published. The two are the same until an entry is edited, so `updated:`
         in the front matter is what separates them; without one the publish date
-        is still the best answer available and is what gets sent. -#}
-    {%- set changed = entry.data.updated or entry.date %}
+        is still the best answer available and is what gets sent.
+
+        Only dates someone wrote down. `entry.date` falls back to the file's
+        creation time, which on a fresh clone or a new machine is the day of the
+        checkout — every standing, subject and category page claimed to have
+        changed that day, and a crawler that catches lastmod lying stops reading
+        it for the whole site. No date is better than a wrong one. -#}
+    {%- set changed = entry.data.updated or entry.data.date %}
     {%- if changed %}
     <lastmod>{{ changed | isoDate }}</lastmod>
     {%- endif %}

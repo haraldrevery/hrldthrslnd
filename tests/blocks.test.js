@@ -78,6 +78,14 @@ describe("validatePost", () => {
     expect(paths).toContain("warn:meta.tags");
   });
 
+  test("a date that is not on the calendar is an error, not a quiet rollover", () => {
+    const findings = validatePost({ format: 1, meta: { title: "t", date: "2026-13-45", updated: "2026-02-30" }, blocks: [] });
+    const paths = findings.map((f) => `${f.level}:${f.path}`);
+    expect(paths).toContain("error:meta.date");
+    expect(paths).toContain("error:meta.updated");
+    expect(findings.find((f) => f.path === "meta.date").detail).toContain("2027-02-14");
+  });
+
   test("the wrong format, and no format, are errors", () => {
     expect(verdict(validatePost({ format: 2, meta: {}, blocks: [] }))).toBe("error");
     expect(validatePost({ meta: {}, blocks: [] }).some((f) => f.path === "format")).toBe(true);

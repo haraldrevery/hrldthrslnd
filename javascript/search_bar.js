@@ -11,7 +11,10 @@
  * id-based version wired up only the first, which left the drawer's field
  * disabled and inert on exactly the screens that have no other search.
  *
- * No dependencies, no network beyond a single fetch of /search_index.json.
+ * No dependencies, no network beyond a single fetch of /search_index.json —
+ * made the first time someone reaches for a field, not on every page load. The
+ * index grows by about a kilobyte a post and most visits never search, so a
+ * phone on a slow connection should not download and parse it just to read.
  */
 (function () {
   "use strict";
@@ -21,6 +24,8 @@
   /** Filled once the index arrives; every widget reads the same array. */
   var entries = [];
   var widgets = [];
+  /** "idle" until first asked for, then "loading", "ready" or "failed". */
+  var indexState = "idle";
 
   /* ------------------------------------------------------------- matching */
 
@@ -224,13 +229,29 @@
       }
     }
 
-    input.addEventListener("input", function () {
+    /** A one-line message in place of results, while there are none to show. */
+    function status(message) {
+      current = [];
+      active = -1;
+      results.innerHTML = '<p class="search-empty">' + escapeHtml(message) + "</p>";
+      open();
+    }
+
+    /** Answer whatever is typed, from the index as it stands. */
+    function update() {
       var query = input.value.trim();
       if (query.length < 2) {
         close();
         return;
       }
-      render(search(query));
+      if (indexState === "ready") render(search(query));
+      else if (indexState === "failed") status("Search is unavailable right now.");
+      else status("Loading…");
+    }
+
+    input.addEventListener("input", function () {
+      loadIndex();
+      update();
     });
 
     input.addEventListener("keydown", function (event) {
@@ -256,11 +277,18 @@
     });
 
     input.addEventListener("focus", function () {
+      // Focus comes before the first keystroke, so fetching here usually has
+      // the index in hand by the time there is a query to answer.
+      loadIndex();
       if (input.value.trim().length >= 2 && current.length > 0) open();
     });
 
     return {
       enable: function () { input.disabled = false; },
+      // The index arrived or failed: redo an open dropdown's answer.
+      refresh: function () {
+        if (!results.hidden) update();
+      },
       // A click anywhere outside this widget closes it — including a click in
       // the other one, which is why the test is per widget rather than global.
       closeUnlessInside: function (target) {
@@ -285,22 +313,36 @@
     }
   });
 
-  fetch("/search_index.json", { credentials: "omit" })
-    .then(function (response) {
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      return response.json();
-    })
-    .then(function (data) {
-      entries = (data && data.entries) || [];
-      for (var m = 0; m < entries.length; m += 1) {
-        entries[m].dateTokens = dateTokens(entries[m].date);
-      }
-      for (var k = 0; k < widgets.length; k += 1) widgets[k].enable();
-      // Only reveal the fields once there is actually an index behind them.
-      document.documentElement.classList.add("js-search");
-    })
-    .catch(function () {
-      // Leave the fields hidden and disabled: a search box that cannot search
-      // is worse than no search box.
-    });
+  /**
+   * Fetch the index, once. A failure is not final: the next focus tries again,
+   * because on a phone the usual cause is a connection that has since come back.
+   */
+  function loadIndex() {
+    if (indexState === "loading" || indexState === "ready") return;
+    indexState = "loading";
+    fetch("/search_index.json", { credentials: "omit" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        entries = (data && data.entries) || [];
+        for (var m = 0; m < entries.length; m += 1) {
+          entries[m].dateTokens = dateTokens(entries[m].date);
+        }
+        indexState = "ready";
+      })
+      .catch(function () {
+        indexState = "failed";
+      })
+      .then(function () {
+        for (var k = 0; k < widgets.length; k += 1) widgets[k].refresh();
+      });
+  }
+
+  // The fields are shown as soon as this script runs; the index behind them is
+  // fetched when one is first used. With scripting off they stay hidden and
+  // disabled, as the markup has them.
+  for (var k = 0; k < widgets.length; k += 1) widgets[k].enable();
+  document.documentElement.classList.add("js-search");
 })();

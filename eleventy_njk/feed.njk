@@ -23,7 +23,12 @@ layout: false
     <title>{{ post.data.title }}</title>
     <link>{{ post.url | absolute }}</link>
     <guid isPermaLink="true">{{ post.url | absolute }}</guid>
-    <pubDate>{{ post.data.date | rfc822Date }}</pubDate>
+    {#- pubDate is optional in RSS, and an empty one is invalid: a post with no
+        usable date (the status check reports it) goes out without the element. -#}
+    {%- set published = post.data.date | rfc822Date %}
+    {%- if published %}
+    <pubDate>{{ published }}</pubDate>
+    {%- endif %}
     <description>{{ post.data.description }}</description>
     {%- for tag in post.data.tags | tagLabel %}
     <category>{{ tag }}</category>

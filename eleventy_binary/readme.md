@@ -20,9 +20,10 @@ output; building it afterwards would ship the previous run's stylesheet.
 Checksums come after the copy step because they are hashes of the bytes that
 were actually shipped, not of a source that might differ.
 
-`_site/` is deleted at the start. Eleventy leaves behind files it no longer
-generates, and a stale page — a renamed post, a tag page for a tag nobody uses
-any more, a draft from a `--drafts` run — would otherwise stay published.
+Steps 3–5 write into an empty `_site.tmp/`, which replaces `_site/` only once
+they have finished; a build that fails leaves the previous site in place.
+Starting empty is what keeps a stale page — a renamed post, a tag page for a
+tag nobody uses any more — from staying published.
 
 ## Flags
 
@@ -47,7 +48,7 @@ Exit code is non-zero only on **errors**. Warnings are information.
 | `build.mjs` | The five steps above, and the CLI |
 | `compile.mjs` / `compile.sh` | Produce the Linux and Windows binaries |
 | `vendor_assets.sh` | Copy KaTeX and glightbox out of node_modules into the repo |
-| `lib/eleventy_config.js` | The whole Eleventy configuration, shared by the binary and `eleventy.config.js`; renders JSON posts as virtual templates |
+| `lib/eleventy_config.js` | The whole Eleventy configuration; renders JSON posts as virtual templates. The root `eleventy.config.js` only refuses plain `npx @11ty/eleventy` |
 | `lib/markdown.js` | markdown-it: KaTeX, anchors, heading demotion, image figures, outline |
 | `lib/resolver.js` | The three file questions a renderer asks, as an interface: disk for the build, a table for tests |
 | `lib/media_html.js` | The `<img>`, lightbox anchor and player markup shared by markdown and blocks |
@@ -75,13 +76,42 @@ Exit code is non-zero only on **errors**. Warnings are information.
 | `lib/settings.js` | `site_settings.json` |
 | `lib/log.js` | One log everything reports through |
 
+## Build tools
+
+Neither binary the build runs is in the repository. `package.json` records the
+versions under `tools`; `compile.mjs` warns when Bun differs and `site_generate`
+when Tailwind does, so a new machine cannot quietly build a different site.
+
+| Tool | Version | Where |
+|---|---|---|
+| Bun | 1.3.14 | `curl -fsSL https://bun.sh/install \| bash -s "bun-v1.3.14"` — only to compile `site_generate` and run the tests |
+| Tailwind CSS standalone | 4.3.3 | `https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/<name>`, saved in the project root under the same name and made executable |
+
+Tailwind file names and SHA-256, from the release's own `sha256sums.txt`
+(`sha256sum <file>` to check a download):
+
+| File | Runs on | SHA-256 |
+|---|---|---|
+| `tailwindcss-linux-x64` | Linux, Intel/AMD | `dc61b3ac6b8c9ca874c0cc4c57b2409791a64c5540404ca5f5367360babc313a` |
+| `tailwindcss-linux-arm64` | Linux, ARM (Raspberry Pi 4/5) | `55fd0b241214eff3de1e8ee4f22796662f2d2e7a49bcfca7477cfd0bac398195` |
+| `tailwindcss-windows-x64.exe` | Windows, also Windows on ARM (emulated) | `e0e260ce048014e9268f6237ff18f8ccf02cef521cbd0ae04e82c2cdf7aa3955` |
+| `tailwindcss-macos-arm64` | macOS, Apple silicon | `cdf646702987a743464dff4d9c60fd4480d1c1e73dd819a9a67f1078815dce9d` |
+
+`css/main.css` is committed, so a machine with no Tailwind at all still builds
+the site — with a warning, on the last stylesheet that was generated.
+
 ## Compiling
 
 ```bash
-./eleventy_binary/compile.sh            # both targets
-./eleventy_binary/compile.sh linux
-./eleventy_binary/compile.sh windows
+./eleventy_binary/compile.sh            # all four targets
+./eleventy_binary/compile.sh linux      # site_generate and site_generate-arm64
+./eleventy_binary/compile.sh windows    # site_generate.exe and site_generate-arm64.exe
 ```
+
+The x64 binaries are built on Bun's `-baseline` targets, which need only
+SSE4.2 (any x64 CPU since 2008). The default targets need AVX2 and crash with
+"Illegal instruction" on older and low-end CPUs. There is no macOS target:
+build from source there with `bun run build`.
 
 Always verify against a clean environment before shipping a binary — this is
 the test that actually matters:

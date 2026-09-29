@@ -18,7 +18,7 @@ import { createMarkdownLibrary, outlineFor } from "./markdown.js";
 import { headingSlug, escapeHtml } from "./paths.js";
 import { imageSize, resolveThumbnail } from "./imagesize.js";
 import { injectAssets } from "./assets.js";
-import { rfc822Date, toDate } from "./format.js";
+import { rfc822Date, toDate, jsonForHtml } from "./format.js";
 import { stripFrontMatter } from "./front_matter.js";
 import { mergeSubjects, foldSubject } from "./subjects.js";
 import { renderPost, pageData } from "./blocks/render.js";
@@ -515,7 +515,7 @@ export function createConfig({
       return `${settings.url}${url.startsWith("/") ? "" : "/"}${url}`;
     });
     eleventyConfig.addFilter("limit", (arr, n) => (Array.isArray(arr) ? arr.slice(0, n) : arr));
-    eleventyConfig.addFilter("jsonify", (value) => JSON.stringify(value));
+    eleventyConfig.addFilter("jsonify", jsonForHtml);
     /** Strip tags and collapse whitespace — used to build search snippets. */
     eleventyConfig.addFilter("plain", (html, max = 240) => {
       const text = String(html ?? "")

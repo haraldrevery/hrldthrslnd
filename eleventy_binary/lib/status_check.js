@@ -21,7 +21,7 @@ import {
 import {
   frontMatterBlock, firstToken, hasKey, hasValue, hasUnsupportedFence,
 } from "./front_matter.js";
-import { humanBytes } from "./format.js";
+import { humanBytes, calendarDateFault } from "./format.js";
 import { validatePost } from "./blocks/validate.js";
 import { readCategories, CATEGORY_FILE } from "./categories.js";
 import { foldSubject } from "./subjects.js";
@@ -228,7 +228,19 @@ function checkFrontMatter(root, findings, includeDrafts) {
     // sitemap's <lastmod> and the JSON-LD dateModified use when it is there.
     for (const key of ["date", "updated"]) {
       const value = firstToken(block, key)?.replace(/^['"]|['"]$/g, "");
-      if (!value || /^\d{4}-\d{2}-\d{2}/.test(value)) continue;
+      if (!value) continue;
+      const fault = calendarDateFault(value);
+      if (fault) {
+        findings.push({
+          level: level("error"),
+          scope: "front matter",
+          page,
+          message: `${key} "${value}" is not a real date`,
+          detail: fault,
+        });
+        continue;
+      }
+      if (/^\d{4}-\d{2}-\d{2}/.test(value)) continue;
       findings.push({
         level: "warn",
         scope: "front matter",

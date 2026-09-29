@@ -17,6 +17,11 @@
   },
   "//dependencies": "katex and glightbox are not imported by any code here \u2014 eleventy_binary/vendor_assets.sh copies their stylesheets, fonts and bundle out of node_modules into the repository, because the generator never touches node_modules and the site must load every asset from its own domain.",
   "description": "Static site generator + theme. npm is a development-time convenience only; site generation runs from the compiled site_generate binary.",
+  "tools": {
+    "bun": "1.3.14",
+    "tailwindcss": "4.3.3"
+  },
+  "//tools": "The binaries the build runs are not in the repository. These are the versions the site was last built with: compile.mjs warns when Bun differs, site_generate when Tailwind does. Where to fetch them is in eleventy_binary/readme.md, 'Build tools'.",
   "private": true,
   "scripts": {
     "build": "bun run eleventy_binary/build.mjs",

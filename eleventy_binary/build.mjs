@@ -124,22 +124,67 @@ function checkPost(root, folder) {
   process.exit(result.verdict === "error" ? 1 : 0);
 }
 
-/** The Tailwind standalone binary for this platform, if it is present. */
+/**
+ * The Tailwind standalone binary for this platform and CPU, if it is present.
+ *
+ * Named by architecture as well as OS, because a project folder copied from an
+ * x64 desktop to a Raspberry Pi still holds tailwindcss-linux-x64, which exists
+ * but cannot run there. Tailwind ships no Windows ARM build; Windows on ARM
+ * runs the x64 one under emulation. The bare name is for a binary the author
+ * renamed.
+ */
 function tailwindBinary(root) {
+  const arm = process.arch === "arm64";
   const candidates =
     process.platform === "win32"
       ? ["tailwindcss-windows-x64.exe", "tailwindcss.exe"]
-      : ["tailwindcss-linux-x64", "tailwindcss"];
+      : process.platform === "darwin"
+        ? [arm ? "tailwindcss-macos-arm64" : "tailwindcss-macos-x64", "tailwindcss"]
+        : [arm ? "tailwindcss-linux-arm64" : "tailwindcss-linux-x64", "tailwindcss"];
 
   for (const name of candidates) {
     const full = path.join(root, name);
-    if (fs.existsSync(full)) return full;
+    if (fs.existsSync(full)) return { binary: full, candidates };
   }
-  return null;
+  return { binary: null, candidates };
+}
+
+/**
+ * The version package.json pins a build tool to, or null. The binaries are not
+ * in the repository, so this is what says which ones to fetch on a new machine.
+ */
+function pinnedVersion(root, tool) {
+  try {
+    const value = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).tools?.[tool];
+    return typeof value === "string" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Say so when the Tailwind binary is not the pinned version. Tailwind changes
+ * its output between releases, and a major one can stop reading input.css at
+ * all, so a binary fetched fresh on a new machine must not quietly restyle the
+ * site.
+ */
+function checkTailwindVersion(root, binary) {
+  const pinned = pinnedVersion(root, "tailwindcss");
+  if (!pinned) return;
+  const result = spawnSync(binary, ["--help"], { cwd: root, encoding: "utf8" });
+  const found = /tailwindcss v(\d+\.\d+\.\d+)/.exec(`${result.stdout}${result.stderr}`)?.[1];
+  if (!found || found === pinned) return;
+  log.warn(
+    "css",
+    `Tailwind is v${found}, but package.json pins v${pinned}`,
+    found.split(".")[0] === pinned.split(".")[0]
+      ? "css/main.css may change; check the site, then update tools.tailwindcss if the upgrade is deliberate"
+      : "a different major version may not read css/input.css the same way — use the pinned release",
+  );
 }
 
 function buildCss(root) {
-  const binary = tailwindBinary(root);
+  const { binary, candidates } = tailwindBinary(root);
   if (!binary) {
     // With a sheet already on disk this is a warning: the build reuses it, and
     // the site renders — just possibly without a class a template added since.
@@ -147,8 +192,7 @@ function buildCss(root) {
     // stylesheet whatsoever and "reusing the existing css/main.css" would be a
     // reassurance about a file that is not there.
     const sheet = path.join(root, "css/main.css");
-    const detail =
-      "expected tailwindcss-linux-x64 or tailwindcss-windows-x64.exe in the project root";
+    const detail = `expected ${candidates[0]} in the project root`;
 
     if (fs.existsSync(sheet)) {
       log.warn(
@@ -161,6 +205,8 @@ function buildCss(root) {
     }
     return false;
   }
+
+  checkTailwindVersion(root, binary);
 
   // Two outputs: minified for the site, expanded for troubleshooting.
   const runs = [
@@ -178,7 +224,15 @@ function buildCss(root) {
     if (result.error) {
       // A missing executable bit is by far the most common cause here, and the
       // message from spawn alone does not make that obvious.
-      log.error("css", `could not run ${path.basename(binary)}`, result.error.message);
+      log.error(
+        "css",
+        `could not run ${path.basename(binary)}`,
+        `${result.error.message} — check that it is executable and built for this CPU (${process.platform}-${process.arch})`,
+      );
+      return false;
+    }
+    if (result.signal === "SIGILL") {
+      log.error("css", `${path.basename(binary)} crashed with an illegal instruction`, "this CPU lacks an instruction set the binary was built for");
       return false;
     }
     if (result.status !== 0) {

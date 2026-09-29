@@ -273,10 +273,25 @@ export async function mirrorDirectory(sourceDir, targetDir, { label, sourceLabel
     } catch (error) {
       report.skipped.push(sourcePath);
       log.error("images", `could not generate a counterpart for ${sourcePath}`, error.message);
+    } finally {
+      releaseMemory();
     }
   }
 
   return report;
+}
+
+/**
+ * Collect the last photograph's buffers before the next one is decoded.
+ *
+ * A 22-megapixel original is 88 MB decoded, and the orientation and resize
+ * passes each hold another copy of that size. The collector saw no reason to
+ * run between images, so the copies piled up: 39 photographs peaked at 1.75 GB,
+ * which a 4 GB laptop answers by swapping or killing the build. Bun only;
+ * under Node this is a no-op.
+ */
+function releaseMemory() {
+  globalThis.Bun?.gc?.(true);
 }
 
 /**

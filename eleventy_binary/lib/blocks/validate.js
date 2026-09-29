@@ -19,6 +19,7 @@
  */
 import { BLOCKS, BY_TYPE, FORMAT_VERSION, COLUMN_TYPES, META_FIELDS, variantOf, fieldApplies } from "./catalogue.js";
 import { cssLength, parseRatio } from "./units.js";
+import { calendarDateFault } from "../format.js";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -152,6 +153,10 @@ export function validatePost(doc, { assets = null } = {}) {
     if (!has("title")) error("meta.title", 'missing "title"', "it is the page's <title> and the card's heading");
     if (!has("date")) error("meta.date", 'missing "date"', "the journal is sorted by it");
     else if (!DATE.test(String(meta.date))) warn("meta.date", `date "${meta.date}" is not YYYY-MM-DD`, "sort order and the sitemap may be wrong");
+    else if (calendarDateFault(meta.date)) error("meta.date", `date "${meta.date}" is not a real date`, calendarDateFault(meta.date));
+    if (has("updated") && DATE.test(String(meta.updated)) && calendarDateFault(meta.updated)) {
+      error("meta.updated", `updated "${meta.updated}" is not a real date`, calendarDateFault(meta.updated));
+    }
     if (!has("description")) warn("meta.description", 'missing "description"', "used for the meta description, cards and search results");
     if (!has("tags") && !has("category")) warn("meta.tags", "no tags or categories", "the page will not appear on any subject page");
     if (!has("image")) warn("meta.image", 'missing "image"', "falls back to the site default for the card and the social image");

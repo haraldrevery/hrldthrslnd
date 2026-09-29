@@ -41,7 +41,7 @@ title: false
         homepage. Same guard card.njk already carries. -#}
     {%- if settings.default_image %}
     <img src="{{ settings.default_image }}" alt=""{{ settings.default_image | sizeAttrs | safe }}
-         loading="eager" decoding="async">
+         loading="eager" decoding="async" fetchpriority="high">
     {%- endif %}
     <div class="cine-scrim"></div>
   </div>

@@ -49,13 +49,30 @@ const shimEleventyPackageJson = {
     );
   },
 };
-/* Cover most consumer hardware just in case */
+/*
+ * Cover most consumer hardware.
+ *
+ * The x64 targets are the `-baseline` builds. Plain `bun-linux-x64` is compiled
+ * for Haswell and needs AVX2, so it dies with "Illegal instruction" on any
+ * Intel CPU before 2013, AMD before 2015, and the Atom-class Celeron and
+ * Pentium chips in cheap laptops well after that. Baseline needs only SSE4.2
+ * (Nehalem, 2008) and is the build the Tailwind standalone binary ships as.
+ * ARM has no such split.
+ */
 const TARGETS = [
-  { target: "bun-linux-x64", outfile: path.join(root, "site_generate") },
-  { target: "bun-windows-x64", outfile: path.join(root, "site_generate.exe") },
+  { target: "bun-linux-x64-baseline", outfile: path.join(root, "site_generate") },
+  { target: "bun-windows-x64-baseline", outfile: path.join(root, "site_generate.exe") },
   { target: "bun-linux-arm64",   outfile: path.join(root, "site_generate-arm64") },
   { target: "bun-windows-arm64", outfile: path.join(root, "site_generate-arm64.exe") },
 ];
+
+const pinnedBun = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).tools?.bun;
+if (pinnedBun && pinnedBun !== Bun.version) {
+  console.warn(
+    `Bun is ${Bun.version}, but package.json pins ${pinnedBun}. The binary embeds this Bun; ` +
+      `if the upgrade is deliberate, rebuild, check the site, and update tools.bun.\n`,
+  );
+}
 
 const only = process.argv[2];
 let failed = false;

@@ -135,8 +135,22 @@ describe("slugify", () => {
   });
 
   test("strips diacritics rather than dropping the letter", () => {
-    expect(slugify("Galdhøpiggen")).toBe("galdh_piggen");
+    expect(slugify("Galdhøpiggen")).toBe("galdhopiggen");
     expect(slugify("café")).toBe("cafe");
+  });
+
+  test("spells out the Latin letters NFKD cannot decompose", () => {
+    expect(slugify("Blåbær og tyttebær")).toBe("blabaer_og_tyttebaer");
+    expect(slugify("Ørnen")).toBe("ornen");
+    expect(slugify("Æ")).toBe("ae");
+    expect(slugify("Straße")).toBe("strasse");
+    expect(slugify("Łódź")).toBe("lodz");
+    expect(headingSlug("Været på toppen")).toBe("vaeret-pa-toppen");
+  });
+
+  test("a name with no Latin letters still falls back", () => {
+    expect(slugify("Δελφοί")).toBe("untitled");
+    expect(headingSlug("東京")).toBe("section");
   });
 
   test("leading and trailing separators are trimmed", () => {

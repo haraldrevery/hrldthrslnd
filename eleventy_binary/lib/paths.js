@@ -114,42 +114,43 @@ export function minFileName(file) {
 }
 
 /**
- * Normalise a slug: lowercase, non-alphanumerics collapsed to underscores.
- *
- * KNOWN LIMITATION, and deliberately not fixed: the output alphabet is ASCII
- * a-z0-9 only, so this is Latin-centric. NFKD plus the combining-marks strip
- * folds the accented Latin letters onto their bases — "Café" is "cafe",
- * "naïve résumé" is "naive_resume" — but a name written in Hebrew, Arabic,
- * Greek or any CJK script has no ASCII base to fold onto: every character is
- * removed by the `[^a-z0-9]` collapse and the whole name becomes "untitled".
- * A folder of such notes therefore collides on one slug and is separated only
- * by the `_2`, `_3` suffixes the registry assigns. `ß` becomes `stra_e` rather
- * than `strasse` for the same reason — NFKD does not decompose it.
- *
- * Widening the combining-marks range would change nothing: it is not the marks
- * that are lost, it is the base letters. A real fix is transliteration, and it
- * cannot be applied to a site that already exists — every slug it improved
- * would be a URL that moved, which is the single harm slugs.js is built to
- * prevent. An author with non-Latin filenames should set `permalink:` per page,
- * which is checked and honoured; see permalinkFault() in slugs.js.
+ * Latin letters that NFKD does not decompose, spelled the way Eleventy's own
+ * slugify filter spells them. Without this "Galdhøpiggen" published as
+ * galdh_piggen and "Æ" as untitled: the base letter itself was dropped.
+ * (å needs no entry; NFKD splits it into a and a ring.)
  */
-export function slugify(value) {
+const FOLD = { ø: "o", æ: "ae", œ: "oe", ß: "ss", þ: "th", ð: "d", đ: "d", ł: "l", ı: "i" };
+
+/**
+ * A name as lowercase ASCII letters and digits, everything else collapsed to
+ * `separator`.
+ *
+ * Still Latin-only: a name in Greek, Hebrew, Arabic or a CJK script has no
+ * ASCII to fold onto, becomes the fallback, and is told apart from the next
+ * one only by the registry's `_2`, `_3`. Such a page should set `permalink:`,
+ * which is checked and honoured; see permalinkFault() in slugs.js.
+ *
+ * Changing this changes URLs. Pages already recorded in published_urls.json
+ * keep theirs; subject and category pages and heading anchors do not.
+ */
+function asciiSlug(value, separator, fallback) {
   return String(value)
+    .toLowerCase()
+    .replace(/[øæœßþðđłı]/g, (letter) => FOLD[letter])
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "") || "untitled";
+    .replace(/[^a-z0-9]+/g, separator)
+    .replace(new RegExp(`^${separator}+|${separator}+$`, "g"), "") || fallback;
+}
+
+/** Normalise a slug: lowercase, non-alphanumerics collapsed to underscores. */
+export function slugify(value) {
+  return asciiSlug(value, "_", "untitled");
 }
 
 /** Slug for a heading anchor: keeps hyphens, which read better in a URL bar. */
 export function headingSlug(value) {
-  return String(value)
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "section";
+  return asciiSlug(value, "-", "section");
 }
 
 export function escapeHtml(value) {
