@@ -349,12 +349,12 @@
   --c-ultra: #4b2ee6;
   --c-violet: #a44bff;
   --c-green: #91e35e;
-  --ink: #0d0d10;
-  --ink-soft: #1c1d22;
+  --ink: #0A0A0A;
+  --ink-soft: #1F1F1F;
   --paper: #f4f4f2;
   --paper-pure: #ffffff;
-  --ink-rgb: 13, 13, 16;
-  --paper-rgb: 244, 244, 242;
+  --ink-rgb: 13, 13, 13;
+  --paper-rgb: 244, 244, 244;
   --mist: #d9d9d6;
   --grey-500: #7a7a80;
   --bg: var(--paper);
@@ -402,17 +402,17 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: var(--ink);
-    --bg-rgb: var(--ink-rgb);
-    --bg-raised: var(--ink-soft);
-    --bg-sunken: #141519;
+    --bg: #0d0d0d;
+    --bg-rgb: 13, 13, 13;
+    --bg-raised: #1d1d1d;
+    --bg-sunken: #151515;
     --fg: var(--paper);
     --fg-strong: #ffffff;
     --fg-muted: #9a9aa2;
     --fg-faint: #84848c;
     --hairline: rgba(255, 255, 255, 0.13);
     --hairline-soft: rgba(255, 255, 255, 0.08);
-    --panel-bg: rgba(28, 29, 34, 0.82);
+    --panel-bg: rgba(29, 29, 29, 0.82);
     --panel-border: rgba(255, 255, 255, 0.10);
     --overlay-scrim: rgba(0, 0, 0, 0.62);
     --stage-1: #383a40;

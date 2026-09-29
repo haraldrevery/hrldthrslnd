@@ -172,8 +172,8 @@
 
   /* Absolute ink/paper constants. These never swap. Use them for surfaces that
      are intentionally dark in BOTH schemes (hero matte stage, glass sections). */
-  --ink:       #0d0d10;
-  --ink-soft:  #1c1d22;
+  --ink:       #0A0A0A;
+  --ink-soft:  #1F1F1F;
   --paper:     #f4f4f2;
   --paper-pure:#ffffff;
 
@@ -184,8 +184,8 @@
      any engine that does not interpolate in premultiplied alpha a fade from it
      runs through grey. Writing rgba(var(--bg-rgb), 0) states the intent and is
      correct everywhere. */
-  --ink-rgb:   13, 13, 16;
-  --paper-rgb: 244, 244, 242;
+  --ink-rgb:   13, 13, 13;
+  --paper-rgb: 244, 244, 244;
   --mist:      #d9d9d6;
   --grey-500:  #7a7a80;
 }
@@ -305,18 +305,22 @@
    -------------------------------------------------------------------------- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:            var(--ink);
-    --bg-rgb:        var(--ink-rgb);
-    --bg-raised:     var(--ink-soft);
-    --bg-sunken:     #141519;
+    /* The grounds and the nav panel are neutral greys, each the same
+       luminance as the blue-leaning ink tone it replaces, so the dark scheme
+       has no cast. --ink itself stays: it is light mode's text colour and the
+       ground of the hero stages. */
+    --bg:            #0d0d0d;
+    --bg-rgb:        13, 13, 13;
+    --bg-raised:     #1d1d1d;
+    --bg-sunken:     #151515;
     --fg:            var(--paper);
     --fg-strong:     #ffffff;
-    --fg-muted:      #9a9aa2;          /* 6.95:1 on --bg, 6.17:1 on --bg-raised */
-    --fg-faint:      #84848c;          /* 5.23:1 on --bg, 4.53:1 on --bg-raised */
+    --fg-muted:      #9a9aa2;          /* 6.96:1 on --bg, 6.03:1 on --bg-raised */
+    --fg-faint:      #84848c;          /* 5.24:1 on --bg, 4.54:1 on --bg-raised */
     --hairline:      rgba(255, 255, 255, 0.13);
     --hairline-soft: rgba(255, 255, 255, 0.08);
 
-    --panel-bg:      rgba(28, 29, 34, 0.82);
+    --panel-bg:      rgba(29, 29, 29, 0.82);
     --panel-border:  rgba(255, 255, 255, 0.10);
     --overlay-scrim: rgba(0, 0, 0, 0.62);
 
