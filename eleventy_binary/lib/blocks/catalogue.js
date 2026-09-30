@@ -70,6 +70,10 @@
  *                it, the validator skips it and the renderer ignores it — a
  *                photograph left behind on a stage hero is not on the page.
  *   requiredFor  the variants that cannot render without it.
+ *   decorativeFor  on an image field: the variants in which the picture is a
+ *                ground rather than content, as `decorative` is for every
+ *                variant — the title card's photograph, where it is the
+ *                hero's own picture everywhere else.
  *   strict       on a select: a value this build does not know is an error,
  *                not a fallback. A hero treatment added by a newer build must
  *                not be published by an older one as a plain stage.
@@ -80,7 +84,17 @@ export const FORMAT_VERSION = 1;
 const IMAGE_FIELDS = "src, alt, title and caption";
 
 /** The hero treatments that are built around a photograph. */
-const PHOTOGRAPHIC = ["photo", "photo_adaptive", "collage", "salon"];
+const PHOTOGRAPHIC = ["photo", "photo_adaptive", "collage", "salon", "cine"];
+
+/**
+ * The hero treatments that set the title as a run of type, which a gradient
+ * can be clipped to. Not the title card: each of its letters is its own
+ * inline-block. Tried in Chromium, a .text-flow around one of its words made
+ * the word vanish, before and after the entrance — the letters inherit its
+ * transparent colour, and the gradient clipped to the word does not reach
+ * into their boxes.
+ */
+const TYPESET = ["stage", "photo", "photo_adaptive", "collage", "salon"];
 
 export const BLOCKS = [
   {
@@ -103,6 +117,7 @@ export const BLOCKS = [
           { value: "photo_adaptive", label: "Photo, adaptive — full bleed, follows the reader's colour scheme" },
           { value: "collage", label: "Collage — a portrait, a landscape and the masthead on a glass panel, overlapping" },
           { value: "salon", label: "Salon — the type beside one portrait hung on a mount, in gilded light" },
+          { value: "cine", label: "Title card — the front page's opening: the site mark, and the title developing letter by letter over a photograph" },
         ],
       },
       { name: "eyebrow", label: "Eyebrow", kind: "text", help: "The small label above the title." },
@@ -117,6 +132,7 @@ export const BLOCKS = [
         name: "accent",
         label: "Accent word",
         kind: "text",
+        variants: TYPESET,
         help: "A word or phrase from the title to set in the chroma gradient. Must appear in the title exactly, on one line.",
       },
       {
@@ -124,6 +140,7 @@ export const BLOCKS = [
         label: "Alternate words",
         kind: "boolean",
         default: false,
+        variants: TYPESET,
         help: "Set every other word of the title in the chroma gradient, starting with the first. Takes the place of the accent word.",
       },
       { name: "lede", label: "Lede", kind: "textarea" },
@@ -133,7 +150,8 @@ export const BLOCKS = [
         kind: "image",
         variants: PHOTOGRAPHIC,
         requiredFor: PHOTOGRAPHIC,
-        help: "The ground for the photo treatments; the portrait in the collage and the salon. Its caption and title are printed beside it there.",
+        decorativeFor: ["cine"],
+        help: "The ground for the photo treatments and the title card; the portrait in the collage and the salon. Its caption and title are printed beside it there. On the title card it is published without alt text, as on the front page: the title over it is what it says.",
       },
       {
         name: "image_2",
@@ -488,6 +506,15 @@ export function variantOf(spec, block) {
 /** Whether a field is part of the block as it is rendered — see `variants`. */
 export function fieldApplies(spec, field, block) {
   return !field.variants || field.variants.includes(variantOf(spec, block));
+}
+
+/**
+ * Whether a picture field is a ground on this block, published with an empty
+ * alt and not counted among the page's plates — see `decorative` and
+ * `decorativeFor`.
+ */
+export function isDecorative(spec, field, block) {
+  return field.decorative === true || Boolean(field.decorativeFor?.includes(variantOf(spec, block)));
 }
 
 /** The block types that may sit inside a two-column row. */

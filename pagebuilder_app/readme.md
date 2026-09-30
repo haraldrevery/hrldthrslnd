@@ -49,12 +49,17 @@ published; the panel on the right edits whatever you click in it.
 - **Files** tab: everything in the post folder, with what is on the page and
   what is not. Select several and "Add to page", or drag them onto the page.
 - **Hero treatments.** Select the hero and pick Stage, Photo (dark or
-  adaptive), Collage or Salon. The collage takes two pictures — drop one onto
-  each, or two at once — and works out its section count, date stamp and ruler
+  adaptive), Collage, Salon or Title card. The collage takes two pictures —
+  drop one onto each, or two at once — and works out its section count, date stamp and ruler
   from the page; the line under the stamp's date is the post's first subject
   unless you type one. The salon hangs one portrait, labels it "Plate I" unless
   you type another label, and engraves the author and the date in Roman
-  numerals under it, unless you word that line yourself.
+  numerals under it, unless you word that line yourself. The title card is the
+  front page's opening: the site mark, and the title developing letter by letter
+  over the photograph, which is its background rather than a picture on the
+  page, so it asks for no alt text. It takes no accent word. It is drawn for a
+  short title and a sentence or two of lede; the checks say when either runs
+  past one screen.
 - **Feature block.** *Over* lays a glass panel over the picture, which keeps its
   own proportions: nothing is cropped, and a tall picture is narrowed to fit
   the screen rather than cut. *Beside* is a 3:4 plate next to a solid panel.

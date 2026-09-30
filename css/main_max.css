@@ -1490,12 +1490,14 @@
     margin-bottom: calc(var(--cine-lockup-gap) - var(--cine-eyebrow-tail) + var(--cine-logo-lift));
   }
   .cine-title {
+    --cine-title-measure: calc(min(100vw - 4rem, 74rem) - 5.6rem);
+    --cine-letter-w: 0.8;
     margin: 2.8rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     column-gap: 0.5em;
-    font-size: var(--cine-title-size);
+    font-size: min(var(--cine-title-size), calc(var(--cine-title-measure) / (var(--cine-word, 1) * var(--cine-letter-w))));
     font-weight: 600;
     line-height: 1.04;
     text-transform: uppercase;
@@ -1514,6 +1516,9 @@
     display: inline-block;
     animation: cine-letter-in 1.3s cubic-bezier(0.2, 0.65, 0.25, 1) both;
     animation-delay: var(--letter-delay, 0s);
+  }
+  .cine-break {
+    flex-basis: 100%;
   }
   @keyframes cine-letter-in {
     0% {
@@ -1655,6 +1660,9 @@
     .cine-stage {
       --logo-hero-size: clamp(5.4rem, 10.5vw, 12.66rem);
     }
+    .cine-title {
+      --cine-title-measure: calc(min(100vw - 3rem, 74rem) - 5.6rem);
+    }
     .cine-rule {
       margin-block: clamp(0.75rem, 2.6vh, 1.5rem);
     }
@@ -1681,6 +1689,9 @@
     .cine-eyebrow {
       letter-spacing: 0.3em;
     }
+    .cine-break {
+      display: none;
+    }
   }
   @keyframes cine-letter-in-lite {
     0% {
@@ -1696,6 +1707,7 @@
     .cine-title {
       animation: none;
       letter-spacing: 0.14em;
+      --cine-letter-w: 0.64;
     }
     .cine-letter {
       animation-name: cine-letter-in-lite;

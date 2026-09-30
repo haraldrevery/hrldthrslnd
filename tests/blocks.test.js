@@ -9,11 +9,12 @@
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
 
-import { BLOCKS, BY_TYPE, defaultBlock, COLUMN_TYPES, fieldApplies } from "../eleventy_binary/lib/blocks/catalogue.js";
+import { BLOCKS, BY_TYPE, defaultBlock, COLUMN_TYPES, fieldApplies, isDecorative } from "../eleventy_binary/lib/blocks/catalogue.js";
 import { validatePost, assetRefs, verdict } from "../eleventy_binary/lib/blocks/validate.js";
 import { renderPost, assetUrl, pageData } from "../eleventy_binary/lib/blocks/render.js";
 import { cssLength, parseRatio } from "../eleventy_binary/lib/blocks/units.js";
 import { tileLayout, tileNeed, balancedColumns } from "../eleventy_binary/lib/blocks/measure.js";
+import { cineTitle, cineLabel, cineHeading } from "../eleventy_binary/lib/blocks/cine.js";
 import { createMarkdownLibrary } from "../eleventy_binary/lib/markdown.js";
 import { memoryResolver } from "../eleventy_binary/lib/resolver.js";
 
@@ -507,6 +508,142 @@ describe("hero treatments", () => {
     const { html } = render([{ type: "hero", variant: "stage", title: "x", image: portrait, image_2: landscape }]);
     expect(html).not.toContain("photo.jpg");
     expect(html).not.toContain("tall");
+  });
+});
+
+describe("the title card", () => {
+  const ground = { src: "photo.jpg", alt: "A stair", title: "On the stairs", caption: "Plate 001." };
+  const card = (extra = {}) => ({ type: "hero", variant: "cine", title: "The long\nexposure", image: ground, ...extra });
+  const heroOf = (html) => html.slice(0, html.indexOf('<div class="hero-end"'));
+
+  test("renders the front page's .cine-stage, piece by piece, with one h1", () => {
+    const { html, warnings } = render([
+      card({ eyebrow: "E", lede: "Fog <in>.", actions: [{ label: "Go", href: "/a" }, { label: "Or", href: "/b" }] }),
+      { type: "text", markdown: "a" },
+    ]);
+    const hero = heroOf(html);
+    // The names css/input.css styles the component by. A piece renamed here is
+    // a piece the stylesheet, nav_reveal.js or the reduced-motion list no
+    // longer finds.
+    for (const piece of [
+      "cine-stage", "cine-media", "cine-scrim", "cine-grain", "cine-card", "cine-eyebrow", "cine-logo",
+      "cine-title", "cine-rule", "cine-tagline", "cine-actions", "cine-btn", "cine-btn cine-btn--ghost",
+      "hero-scroll-cue hero-scroll-cue-center",
+    ]) {
+      expect(hero).toContain(`class="${piece}"`);
+    }
+    expect(html.startsWith('<section class="cine-stage">')).toBe(true);
+    expect(hero.match(/<h1\b/g)).toHaveLength(1);
+    expect(hero).toContain('<h1 class="cine-title" aria-label="The long exposure" style="--cine-word:8">');
+    // The eyebrow directly before the mark: the lockup spacing is a :has(+ .cine-logo).
+    expect(hero).toMatch(/<p class="cine-eyebrow">E<\/p>\n\s*<div class="cine-logo" aria-hidden="true"><\/div>/);
+    expect(hero).toContain('<p class="cine-tagline">Fog &lt;in&gt;.</p>');
+    expect(hero).toContain('<a class="cine-btn" href="/a">Go</a>');
+    expect(hero).toContain('<a class="cine-btn cine-btn--ghost" href="/b">Or</a>');
+    expect(html).toContain('<div class="hero-end" id="hero-end"></div>');
+    expect(warnings).toEqual([]);
+  });
+
+  test("the photograph is the ground: the original, eager, without alt, title or lightbox", () => {
+    const hero = heroOf(render([card()]).html);
+    expect(hero).toContain(
+      '<div class="cine-media" aria-hidden="true">\n    <img src="/post_x/photo.jpg" alt="" width="1600" height="1200" loading="eager" decoding="async" fetchpriority="high">',
+    );
+    expect(hero).not.toContain("A stair");
+    expect(hero).not.toContain("On the stairs");
+    expect(hero).not.toContain("glightbox");
+  });
+
+  test("the ground is decorative on the title card alone, and still required", () => {
+    const hero = BY_TYPE.get("hero");
+    const image = hero.fields.find((f) => f.name === "image");
+    expect(isDecorative(hero, image, { variant: "cine" })).toBe(true);
+    expect(isDecorative(hero, image, { variant: "photo" })).toBe(false);
+    expect(isDecorative(hero, image, { variant: "salon" })).toBe(false);
+
+    const bare = { src: "photo.jpg", alt: "", title: "", caption: "" };
+    const cine = validatePost(doc([card({ image: bare })]), { assets: ["photo.jpg"] });
+    expect(cine.some((f) => f.path.startsWith("blocks[0].image"))).toBe(false);
+    expect(assetRefs(doc([card()])).find((r) => r.path === "blocks[0].image.src").decorative).toBe(true);
+    // The same picture on the dark photo hero is content, and asks for alt text.
+    const photo = validatePost(doc([card({ variant: "photo", image: bare })]), { assets: ["photo.jpg"] });
+    expect(photo.some((f) => f.level === "warn" && f.path === "blocks[0].image.alt")).toBe(true);
+
+    const none = validatePost(doc([card({ image: null })]));
+    expect(none.find((f) => f.path === "blocks[0].image")).toMatchObject({ level: "error", message: "the title card treatment needs a picture" });
+  });
+
+  test("takes no accent: the fields are not part of it, the letters carry no gradient, and nothing warns", () => {
+    const hero = BY_TYPE.get("hero");
+    for (const name of ["accent", "alternate"]) {
+      const field = hero.fields.find((f) => f.name === name);
+      expect(fieldApplies(hero, field, { variant: "cine" })).toBe(false);
+      expect(fieldApplies(hero, field, { variant: "stage" })).toBe(true);
+    }
+    expect(render([card({ accent: "long" })]).html).not.toContain("text-flow");
+    expect(render([card({ alternate: true })]).html).not.toContain("text-flow");
+    const findings = validatePost(doc([card({ accent: "not in the title", alternate: true })]), { assets: ["photo.jpg"] });
+    expect(findings.some((f) => f.path === "blocks[0].accent")).toBe(false);
+  });
+
+  test("a title or a lede longer than the card holds in one screen is a note, and only on the title card", () => {
+    const long = { title: "A winter crossing of the high\nJotunheimen", lede: "x".repeat(161) };
+    const findings = validatePost(doc([card(long)]), { assets: ["photo.jpg"] });
+    expect(findings.find((f) => f.path === "blocks[0].title")).toMatchObject({ level: "note", message: "a long title for a title card (41 characters)" });
+    expect(findings.find((f) => f.path === "blocks[0].lede")).toMatchObject({ level: "note" });
+    const fits = validatePost(doc([card({ title: "Above the\ncloud line", lede: "x".repeat(160) })]), { assets: ["photo.jpg"] });
+    expect(fits.some((f) => f.path === "blocks[0].title" || f.path === "blocks[0].lede")).toBe(false);
+    const stage = validatePost(doc([{ ...card(long), variant: "stage" }]));
+    expect(stage.some((f) => f.path === "blocks[0].title" || f.path === "blocks[0].lede")).toBe(false);
+  });
+
+  test("the scroll cue can be switched off, as on every hero", () => {
+    const { html } = render([card({ scroll_cue: false })]);
+    expect(html).not.toContain("hero-scroll-cue");
+    expect(html).toContain('<div class="hero-end" id="hero-end"></div>');
+  });
+});
+
+describe("cine.js — the title card's letters", () => {
+  const letter = (delay, ch) => `<span class="cine-letter" style="--letter-delay:${delay}s">${ch}</span>`;
+
+  test("every letter takes the front page's delay table, read from a new place for each word", () => {
+    expect(cineTitle("Ab cd")).toBe(
+      `<span aria-hidden="true">${letter(0.32, "A")}${letter(1.05, "b")}</span>` +
+        " " +
+        `<span aria-hidden="true">${letter(0.73, "c")}${letter(1.36, "d")}</span>`,
+    );
+    // The table is fifteen long; a longer word goes round it.
+    expect(cineTitle("abcdefghijklmnop")).toContain(letter(0.67, "o") + letter(0.32, "p"));
+  });
+
+  test("a letter is a grapheme, a no-break space ties two words, and text is escaped", () => {
+    const count = (html) => (html.match(/class="cine-letter"/g) ?? []).length;
+    expect(count(cineTitle("Cafe\u0301"))).toBe(4);
+    expect(count(cineTitle("👍🏽"))).toBe(1);
+    const tied = cineTitle("a\u00A0b");
+    expect((tied.match(/<span aria-hidden="true">/g) ?? []).length).toBe(1);
+    expect(count(tied)).toBe(3);
+    expect(cineTitle("<&>")).toContain(letter(0.61, "&gt;"));
+    expect(cineTitle("<&>")).not.toContain("<&");
+  });
+
+  test("a line break is a .cine-break between words, and the label reads the title as one line", () => {
+    const html = cineTitle("  The long \n\n exposure ");
+    expect((html.match(/<span class="cine-break" aria-hidden="true"><\/span>/g) ?? []).length).toBe(1);
+    expect(html.startsWith('<span aria-hidden="true">')).toBe(true);
+    expect(html).toMatch(/<\/span> <span class="cine-break" aria-hidden="true"><\/span> <span aria-hidden="true">/);
+    expect(cineLabel("  The long \n\n exposure ")).toBe("The long exposure");
+    expect(cineTitle("")).toBe("");
+  });
+
+  test("the h1 carries the readable title and its longest word in letters, which caps its size", () => {
+    const h1 = cineHeading('Galdhøpiggen, "in" layers');
+    expect(h1.startsWith('<h1 class="cine-title" aria-label="Galdhøpiggen, &quot;in&quot; layers" style="--cine-word:13">')).toBe(true);
+    expect(h1.endsWith("</h1>")).toBe(true);
+    // Tied by a no-break space, two words are one that cannot break.
+    expect(cineHeading("ab\u00A0cd ef")).toContain("--cine-word:5");
+    expect(cineHeading("")).toContain("--cine-word:1");
   });
 });
 

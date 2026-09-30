@@ -78,6 +78,7 @@
     .cv-dropzone::before { content: "Drop to add here"; position: absolute; z-index: 2147482999; top: 12px; left: 50%; transform: translateX(-50%); background: #4f6bff; color: #fff; font: 600 12px system-ui, sans-serif; padding: 5px 10px; border-radius: 12px; }
     .cv-ghost { position: fixed; z-index: 2147483001; pointer-events: none; padding: 6px 10px; background: #1d1f25; color: #fff; font: 12px system-ui, sans-serif; border-radius: 6px; opacity: 0.92; }
     html.cv-dragging, html.cv-dragging * { cursor: grabbing !important; }
+    html.cv-still .cine-stage, html.cv-still .cine-stage * { animation: none !important; }
     .cv-empty { min-height: 60vh; display: grid; place-items: center; text-align: center; color: #8a8c93; font: 15px/1.5 system-ui, sans-serif; padding: 2rem; }
     .cv-empty strong { display: block; font-size: 18px; color: #50525a; margin-bottom: 4px; }
   `;
@@ -245,7 +246,19 @@
       if (Array.isArray(m.columnTypes)) joinable = new Set(m.columnTypes);
       decorate();
     }
-    else if (m.type === "update") { main().innerHTML = m.html; decorate(); }
+    else if (m.type === "update") {
+      // An update replaces the page's markup, which restarts every animation
+      // in it. The title card's entrance is three seconds of letters
+      // developing out of blur, and an edit re-renders 300ms after each pause
+      // in typing, so replayed every time it would never be seen finished. It
+      // plays when the card first appears; while it is being edited it is
+      // shown finished — the state reduced motion shows, which every piece of
+      // .cine-stage is built to rest in (see the reduced-motion list in
+      // input.css). Set before the markup goes in, so nothing starts first.
+      document.documentElement.classList.toggle("cv-still", Boolean(main().querySelector(".cine-stage")));
+      main().innerHTML = m.html;
+      decorate();
+    }
     else if (m.type === "scroll") { window.scrollTo(0, m.y || 0); }
     else if (m.type === "select") {
       selected = m.path ? { path: m.path, image: m.image || null } : null;

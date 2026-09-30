@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "meta": {
+    "title": "Hero test — the title card",
+    "date": "2026-10-01",
+    "description": "The front page's title card rendered from JSON: the site mark over a title that develops letter by letter, over a photograph, with grain and a slow push-in.",
+    "tags": [
+      "test",
+      "reference"
+    ],
+    "category": [],
+    "image": "/image/2015-2023/2016_amazing_mountains.jpg",
+    "author": "Harald Revery",
+    "draft": true
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "variant": "cine",
+      "eyebrow": "",
+      "title": "Above the\ncloud line",
+      "lede": "The front page's opening, chosen in the page builder. The title develops one letter at a time, on the same delays the site's own name does.",
+      "image": {
+        "src": "/image/2015-2023/2016_amazing_mountains.jpg",
+        "alt": "",
+        "title": "",
+        "caption": ""
+      },
+      "actions": [],
+      "scroll_cue": true
+    },
+    {
+      "type": "gallery",
+      "title": "2016, from above",
+      "layout": "justified",
+      "gap": "0.75rem",
+      "images": [
+        {
+          "src": "/image/2015-2023/2016somemountains.jpg",
+          "alt": "",
+          "title": "",
+          "caption": ""
+        },
+        {
+          "src": "/image/2015-2023/2016nicemountains.jpg",
+          "alt": "",
+          "title": "",
+          "caption": ""
+        },
+        {
+          "src": "/image/2015-2023/2016_cloud_details.jpg",
+          "alt": "",
+          "title": "",
+          "caption": ""
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "markdown": "## What the title card takes from the post\n\nThe title, the lede and the photograph are this hero's own fields; the mark over the title is the site's, as on the front page. The photograph is the card's ground, so it is published without alt text or a lightbox. There is no accent word: every letter is its own box, and a gradient clipped to a word does not reach into them, so the word would vanish."
+    }
+  ]
+}

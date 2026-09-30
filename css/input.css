@@ -2213,14 +2213,35 @@
                         + var(--cine-logo-lift));
   }
 
-  /* The tracking settles from wide to its final value as the letters land. */
+  /* The tracking settles from wide to its final value as the letters land.
+
+     The size is capped so the longest word fits on one line. Every letter is
+     an inline-block, and a line may break between any two of them, so a word
+     wider than the card does not overflow — it breaks in the middle. Measured
+     at 390px wide, "Galdhøpiggen" set as GALDHØPIG / GEN: the title's own
+     margins leave it 260px, and at the 2.4rem floor a capital takes about 23px.
+
+     --cine-word is the longest word's letter count, written on the h1 by
+     blocks/cine.js; a hand-written card without it falls back to 1 and is
+     never capped. --cine-title-measure is the widest the title can be: the
+     viewport less the stage's padding and a classic scrollbar, or the card's
+     74rem, less the title's own margins. --cine-letter-w is a capital's advance
+     in em, measured in this face at 0.58–0.63 with the final 0.14em tracking
+     and 0.74–0.79 at the settle's 0.3em start — 0.8 here, so a word that fits
+     does not break mid-word while the tracking settles either, and 0.64 on the
+     cheap path below, whose tracking never moves. A title of short words never
+     reaches the cap: it only takes over from --cine-title-size when a word
+     would otherwise break. */
   .cine-title {
+    --cine-title-measure: calc(min(100vw - 4rem, 74rem) - 5.6rem);
+    --cine-letter-w: 0.8;
     margin: 2.8rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     column-gap: 0.5em;
-    font-size: var(--cine-title-size);
+    font-size: min(var(--cine-title-size),
+                   calc(var(--cine-title-measure) / (var(--cine-word, 1) * var(--cine-letter-w))));
     font-weight: 600;
     line-height: 1.04;
     text-transform: uppercase;
@@ -2240,6 +2261,13 @@
     animation: cine-letter-in 1.3s cubic-bezier(0.2, 0.65, 0.25, 1) both;
     animation-delay: var(--letter-delay, 0s);
   }
+
+  /* A line break the author typed into the title (blocks/cine.js). The title
+     is a flex row, where a <br> does nothing, so the break is an empty item a
+     whole line wide: the words after it start a new line. It has no height,
+     and the title sets no row-gap, so it adds no space. Dropped on a short
+     screen with the short-viewport block below, as .hero-break is. */
+  .cine-break { flex-basis: 100%; }
 
   /* There is no will-change here, and that is deliberate. will-change on
      fifteen letters asks the browser to keep fifteen composited layers for the
@@ -2555,6 +2583,9 @@
        name in that orientation. */
     .cine-stage { --logo-hero-size: clamp(5.4rem, 10.5vw, 12.66rem); }
 
+    /* The stage's padding is 1.25rem a side here, not 1.5rem; see .cine-title. */
+    .cine-title { --cine-title-measure: calc(min(100vw - 3rem, 74rem) - 5.6rem); }
+
     .cine-rule    { margin-block: clamp(0.75rem, 2.6vh, 1.5rem); }
     .cine-tagline { font-size: clamp(1rem, 2.8vh, 1.25rem); line-height: 1.55; }
     .cine-actions {
@@ -2576,6 +2607,7 @@
       --logo-hero-size: clamp(2.08rem, min(8.58vw, 6.63vh), 10.66rem);
     }
     .cine-eyebrow { letter-spacing: 0.3em; }
+    .cine-break { display: none; }
   }
 
   /* --- The cheap path, for the screens attached to the weakest hardware -----
@@ -2609,7 +2641,7 @@
   }
 
   @media (max-width: 47.999rem), (max-height: 30rem) {
-    .cine-title { animation: none; letter-spacing: 0.14em; }
+    .cine-title { animation: none; letter-spacing: 0.14em; --cine-letter-w: 0.64; }
     .cine-letter { animation-name: cine-letter-in-lite; }
   }
 

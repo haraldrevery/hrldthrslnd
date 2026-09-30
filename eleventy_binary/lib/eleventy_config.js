@@ -22,6 +22,7 @@ import { rfc822Date, toDate, jsonForHtml } from "./format.js";
 import { stripFrontMatter } from "./front_matter.js";
 import { mergeSubjects, foldSubject } from "./subjects.js";
 import { renderPost, pageData } from "./blocks/render.js";
+import { cineHeading } from "./blocks/cine.js";
 import {
   TAG_PREFIX, CATEGORY_PREFIX, CATEGORIES_BASE,
   listingHref, occupiedBases, assignSlugs, paginate, byTitle,
@@ -497,6 +498,10 @@ export function createConfig({
       const size = imageSize(url, root);
       return size ? ` width="${size.width}" height="${size.height}"` : "";
     });
+    // A .cine-title h1, letter by letter — the one function the front page and
+    // the page builder's title card both write it with. Escapes its own text,
+    // so it is used with `| safe`. See blocks/cine.js.
+    eleventyConfig.addFilter("cineHeading", cineHeading);
     // No escapeHtml filter is registered, on purpose. Nunjucks autoescaping is
     // on and already escapes every interpolation, so a filter that escapes again
     // is not a safety net but a way to emit "&amp;amp;" — which is exactly what
@@ -545,6 +550,12 @@ export function createConfig({
         // stripping tags alone left a bare "#" behind each one — in every search
         // snippet, and in the body text a query is matched against.
         .replace(/<a\b[^>]*\bclass="[^"]*\bheader-anchor\b[^"]*"[^>]*>[\s\S]*?<\/a>/gi, " ")
+        // An inline element does not break a word, so its tags go without a
+        // space: `<em>un</em>told` is one word on the page and must be one
+        // here. The title card is where this shows — every letter is its own
+        // span (blocks/cine.js), and a space per tag indexed its title as
+        // "T H E  L O N G". Every other tag still stands for a space.
+        .replace(/<\/?(?:a|abbr|b|bdi|bdo|cite|code|data|dfn|em|i|kbd|mark|q|s|samp|small|span|strong|sub|sup|time|u|var)\b[^>]*>/gi, "")
         .replace(/<[^>]+>/g, " ")
         .replace(/&[a-z]+;|&#\d+;/gi, " ")
         .replace(/\s+/g, " ")

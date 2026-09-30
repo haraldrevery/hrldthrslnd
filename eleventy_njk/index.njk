@@ -12,26 +12,13 @@ title: false
    main.css; nothing about the treatment lives on this page.
 
    The title is the one part that is built rather than written, because the name
-   comes from site_settings.json and every letter needs its own delay. Two
-   loops: words, so a multi-word name wraps between words rather than mid-word,
-   and letters inside them.
-
-   DELAYS is a fixed table, not a random draw. The values are the ones frozen
-   into variant E, and a fixed table is what keeps the page static — the scatter
-   is identical on every build and on every visit, so the markup is cacheable
-   and the title develops the same way twice.
-
-   The stride of 7 is why the table is not simply read from the start for each
-   word. 7 and 15 are coprime, so a word beginning at offset 7·n lands on a
-   different run of the table than the word before it; read from index 0 every
-   time and a two-word name would develop both words in step, which is the one
-   pattern the scatter exists to avoid.
-
-   The letters are aria-hidden and the whole name is on the h1's aria-label: a
-   screen reader gets "SITE_NAME", not fifteen separate letters.
+   comes from site_settings.json and every letter needs its own delay. The
+   `cineHeading` filter builds the whole h1 — blocks/cine.js, the same function
+   the page builder's "Title card" hero uses, so a post that opens with one
+   develops its title exactly as this page does. The delay table, why it is read
+   with a stride, and the aria-label that stands in for the letters are
+   explained there.
 #}
-{% set DELAYS = [0.32, 1.05, 0.61, 0.88, 0.14, 1.22, 0.47, 0.73,
-                 1.36, 0.09, 0.96, 0.52, 1.11, 0.28, 0.67] %}
 
 <section class="cine-stage">
   <div class="cine-media" aria-hidden="true">
@@ -57,16 +44,7 @@ title: false
        this is the same name drawn. #}
     <div class="cine-logo" aria-hidden="true"></div>
 
-    <h1 class="cine-title" aria-label="{{ settings.name }}">
-      {%- for word in settings.name.split(" ") -%}
-        {%- set stride = loop.index0 * 7 -%}
-        <span aria-hidden="true">
-        {%- for letter in word | list -%}
-          <span class="cine-letter" style="--letter-delay:{{ DELAYS[(stride + loop.index0) % DELAYS.length] }}s">{{ letter }}</span>
-        {%- endfor -%}
-        </span>
-      {%- endfor -%}
-    </h1>
+    {{ settings.name | cineHeading | safe }}
 
     <div class="cine-rule" aria-hidden="true"></div>
 

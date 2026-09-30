@@ -173,6 +173,7 @@ every block. Readmes updated. Binary recompiled and verified.
 | Third pass | done | collage and salon hero treatments; title and caption from the file's XMP, IPTC or EXIF; 19 tests. See below |
 | Feature overlay | done | the feature block's "Over" layout: block_test_page's "Featured dispatch", at the picture's own proportions. See below |
 | Fourth pass | done | two full-width blocks, field notes (1–5) and wash (1–6); `bleed`, `records` with `min`/`max`, `decorative` pictures; a stylesheet test. See below |
+| Title card | done | the front page's `.cine-stage` as a sixth hero treatment; one letter function for both; `decorativeFor`; search index reads inline tags as words; 12 tests. See below |
 
 ---
 
@@ -695,4 +696,101 @@ phone width, and no console errors.
   run is their only check. The editor also restates `defaultBlock()`, and the
   two already differ for a row: `[null, null]` in the editor, `[]` in the
   catalogue.
+- `site_generate --edit` has this only once the binary is recompiled.
+
+---
+
+## The title card: the front page's hero as a treatment
+
+The front page opens with `.cine-stage`, the component block_test_page_e.html
+grew into: a photograph mixed into the stage's ground, grain, the site mark, a
+title that develops out of blur one letter at a time, a rule and a tagline. It
+is now the hero's sixth treatment, **Title card** (`"variant": "cine"`).
+
+### What it takes, and what it works out
+
+| Piece | From |
+|---|---|
+| Photograph | the hero's `image`, required. A ground here, as on the front page: empty alt, `aria-hidden`, no lightbox, no alt-text warning |
+| Site mark | always, over the title, as on the front page |
+| Title | the hero's `title`, one span per letter; its delays from the front page's table |
+| Eyebrow, lede, buttons | the hero's own fields; `.cine-eyebrow`, `.cine-tagline`, `.cine-btn` (first solid, the rest ghost) |
+| Scroll cue | centred, as on the front page, under a centred card |
+| Accent, alternate words | not part of it; hidden in the editor, skipped by the checks. Tried: `.text-flow` around a word of letter boxes makes the word vanish |
+
+Where the front page and variant E differ, it follows the front page: the mark,
+and the centred cue. It keeps E's eyebrow and buttons, which the front page
+leaves out but the component still styles.
+
+### One function for the letters
+
+The front page built its letters in Nunjucks from a delay table and a stride of
+7. The builder needs the same letters from JavaScript, and two copies of that
+table would drift the first time one was tuned. `lib/blocks/cine.js` is now
+the only copy; `index.njk` calls it through the `cineHeading` filter and
+`render.js` calls it directly. The front page's markup is unchanged but for
+whitespace (checked by diffing the built `index.html`).
+
+The function counts a letter as a grapheme (Nunjucks' `list` split by UTF-16
+unit, which would have broken a decomposed "é" or an emoji across two boxes),
+puts a space between words, and writes the longest word's length on the h1.
+
+### Found on the way, and fixed
+
+- **Search indexed the title letter by letter.** `plain` turned every tag into
+  a space, so a title card's h1 reached `search_index.json` as
+  "T h e l o n g e x p o s u r e", and a search for its title found nothing.
+  Inline tags are now dropped without a space, which is how a browser reads
+  them; `un<em>told</em>` is one word there too.
+- **Long words broke in the middle.** Letters are inline-blocks, and a line
+  may break between any two, so "Galdhøpiggen" set as GALDHØPIG / GEN at 390px,
+  and "Fjellvandringsturen" at every phone size. The front page never showed
+  it: its words are four letters. `.cine-title` now caps its size at what fits
+  its longest word (`--cine-word`), using a capital's measured advance. Checked
+  at five viewports with motion off and by sampling layout every 40ms through
+  the tracking settle: no mid-word break.
+- **The preview replayed the entrance on every keystroke.** An edit re-renders
+  the canvas 300ms after typing stops, which restarts every animation, so a
+  title card being edited was never seen finished. The canvas now shows it
+  settled (`animation: none`, the reduced-motion state) once it is on the page,
+  and still plays the entrance when the card first appears.
+- **Line breaks.** A `<br>` does nothing in the title's flex row; a typed line
+  break is a `.cine-break`, a full-width empty item, dropped on a short screen
+  as `.hero-break` is.
+
+### Measured
+
+Headless Chromium over a copy of the project, light and dark, 1440×900,
+1280×720, 1366×650, 390×844, 375×553 and 844×390: no console errors, the stage
+under the bar and `nav_reveal.js` engaged, the cue centred, no horizontal
+scroll.
+
+The card holds one screen for a title up to about 20 characters and a lede up
+to about 150. Past 24 characters the title wraps on a laptop and a real lede
+takes the card and its cue past the fold, so the checks note a title over 24
+characters and a lede over 160.
+
+With `--disable-gpu`, the first 4.5s cost 5.9 CPU-seconds for any title up to
+19 letters — the front page's figure — and 7.4 for 60 letters. Afterwards the
+card idles at about one core, which is the 34s push-in the front page keeps on
+purpose.
+
+### Not done, and worth knowing
+
+- **No exposure control.** `--cine-image-opacity` is tuned for the front page's
+  bright mountains; variant E sets 0.8 inline for its dark mist. A dark
+  photograph on a title card goes murky, and the editor has no field for it.
+  The value could be worked out from the picture's luminance at build time;
+  it would need a light and a dark value, which an inline style cannot carry.
+- **1280×720 is tight for every title card, the front page's included.** The
+  compact spacing starts at 43rem (688px) tall, so a 720px screen gets the
+  desktop padding: the front page runs 7px past it, with the cue on the
+  tagline's line box.
+- **The cap is an estimate.** It uses an average capital (0.64em static, 0.8em
+  while the tracking settles). A word of nothing but W's is wider and can still
+  break; a borderline word is set a few percent smaller than it strictly needs.
+- The site mark is not optional. It is the front page's lockup; a field can
+  be added if a post ever wants the card without it.
+- The editor's other heroes still replay their `.hero-in` entrance on every
+  preview update. It is short enough not to matter the way this one did.
 - `site_generate --edit` has this only once the binary is recompiled.

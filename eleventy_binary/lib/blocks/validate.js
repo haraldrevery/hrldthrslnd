@@ -17,7 +17,7 @@
  * Pure: no filesystem, no Eleventy. The same code runs in the build and behind
  * the editor's /check endpoint, which is how the editor page reaches it.
  */
-import { BLOCKS, BY_TYPE, FORMAT_VERSION, COLUMN_TYPES, META_FIELDS, variantOf, fieldApplies } from "./catalogue.js";
+import { BLOCKS, BY_TYPE, FORMAT_VERSION, COLUMN_TYPES, META_FIELDS, variantOf, fieldApplies, isDecorative } from "./catalogue.js";
 import { cssLength, parseRatio } from "./units.js";
 import { calendarDateFault } from "../format.js";
 
@@ -94,7 +94,7 @@ export function assetRefs(doc) {
       if (!fieldApplies(spec, field, block)) continue;
       const value = block[field.name];
       const at = `${path}.${field.name}`;
-      if (field.kind === "image" && value && typeof value === "object") push(`${at}.src`, value.src, "image", field.decorative === true);
+      if (field.kind === "image" && value && typeof value === "object") push(`${at}.src`, value.src, "image", isDecorative(spec, field, block));
       else if (field.kind === "images" && Array.isArray(value)) {
         value.forEach((img, i) => {
           if (img && typeof img === "object") push(`${at}[${i}].src`, img.src, "media");
@@ -315,7 +315,7 @@ function validateBlock(block, path, { error, warn, note }) {
         if (typeof value !== "boolean") warn(at, `"${field.name}" should be true or false`);
         break;
       case "image":
-        validateImage(value, at, { error, warn }, { decorative: field.decorative === true });
+        validateImage(value, at, { error, warn }, { decorative: isDecorative(spec, field, block) });
         break;
       case "records":
         if (!Array.isArray(value)) error(at, `"${field.name}" must be a list`);
@@ -364,11 +364,29 @@ function validateBlock(block, path, { error, warn, note }) {
   if (spec.type === "hero" && variant === "collage" && !(block.image_2 && String(block.image_2.src ?? "").trim())) {
     warn(`${path}.image_2`, "the collage has no second picture", "the landscape corner at the top right stays empty");
   }
+  // The title card is one screenful, drawn for a name and a sentence. Measured
+  // (1440x900, 1366x650, 390x844): a title up to about 20 characters sits on
+  // one line of a laptop screen and a lede up to about 150 still fits under
+  // it; past 24 the title wraps, and any real lede then takes the card and its
+  // scroll cue past the fold. Notes, not warnings: the page renders, it just
+  // scrolls before the reader has seen all of the card.
+  if (spec.type === "hero" && variant === "cine") {
+    const title = String(block.title ?? "").replace(/\s+/g, " ").trim();
+    const lede = String(block.lede ?? "").trim();
+    if (title.length > 24) {
+      note(`${path}.title`, `a long title for a title card (${title.length} characters)`, "it wraps on a laptop screen, and with a lede under it the card runs past the first screen; the card is drawn for a name or a few words");
+    }
+    if (lede.length > 160) {
+      note(`${path}.lede`, `a long lede for a title card (${lede.length} characters)`, "the card runs past the first screen on a laptop; a sentence or two fits");
+    }
+  }
   // Any block with an accent field: the hero and the wash. Matched the way
   // render.js's titleLines matches it — trimmed, within one line of the title
-  // — so the warning fires exactly when the page highlights nothing.
+  // — so the warning fires exactly when the page highlights nothing. Not on a
+  // treatment the accent is not part of: a title card has no accent to miss.
   const accent = String(block.accent ?? "").trim();
-  if (spec.fields.some((f) => f.name === "accent") && accent) {
+  const accentField = spec.fields.find((f) => f.name === "accent");
+  if (accentField && fieldApplies(spec, accentField, block) && accent) {
     if (block.alternate === true) {
       note(`${path}.accent`, "the accent is not used while alternating words is on", "every other word is set in the gradient instead");
     } else if (typeof block.title === "string" && !block.title.split(/\r?\n/).some((line) => line.includes(accent))) {

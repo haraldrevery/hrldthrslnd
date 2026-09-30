@@ -151,6 +151,16 @@
     return f.variants.includes(current);
   }
 
+  /**
+   * Whether a picture field is a ground on this block: `decorative`, or
+   * `decorativeFor` the block's variant — isDecorative() in catalogue.js,
+   * restated for the same reason as fieldShown.
+   */
+  function fieldGround(s, f, block) {
+    if (f.decorative === true) return true;
+    return Boolean(s && f.decorativeFor && fieldShown(s, { variants: f.decorativeFor }, block));
+  }
+
   /* ---------------------------------------------------------------- paths */
   function parsePath(path) {
     const out = [];
@@ -1117,7 +1127,7 @@
     dropTarget(slot, (srcs) => set(srcs.find((s) => kindOf(s) === "image")));
     // A ground is published with an empty alt and no lightbox, so it has no
     // alt text, title or caption to write.
-    const about = f.decorative
+    const about = fieldGround(spec(target.type), f, target)
       ? h("p", { class: "f-note", style: { margin: 0 } }, "The section's background: published without alt text or a lightbox, because the text over it says what it shows.")
       : pictureFields(img, path);
     return h("div", {}, slot, h("div", { style: { marginTop: "10px" } }, about));

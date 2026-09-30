@@ -25,6 +25,7 @@ import { BY_TYPE, variantOf } from "./catalogue.js";
 import { isFolderRef, isSafeFolderRef, assetRefs } from "./validate.js";
 import { cssLength, parseRatio } from "./units.js";
 import { tileLayout, tileLabel } from "./measure.js";
+import { cineHeading } from "./cine.js";
 
 const esc = escapeHtml;
 
@@ -264,7 +265,8 @@ function alternateWords(lines) {
  * Stage and the two photo treatments are one composition on a different
  * ground. The collage and the salon are compositions of their own, rendered
  * from the hand-written originals in block_test_page_c.html and
- * block_test_page_d.html. Their class names are a contract with
+ * block_test_page_d.html; the title card is the front page's opening, a
+ * .cine-stage (see renderCine). Their class names are a contract with
  * css/input.css: the phone layouts find the pieces BY NAME, so a piece
  * rendered here under another name is a piece a phone cannot rearrange.
  * tests/blocks.test.js holds the list.
@@ -280,6 +282,7 @@ function renderHero(block, path, ctx) {
   const variant = variantOf(BY_TYPE.get("hero"), block);
   if (variant === "collage") return renderCollage(block, path, ctx);
   if (variant === "salon") return renderSalon(block, path, ctx);
+  if (variant === "cine") return renderCine(block, path, ctx);
   return renderStage(block, path, ctx, variant);
 }
 
@@ -298,11 +301,14 @@ function heroCopy(block, indent) {
   );
 }
 
-/** The scroll cue, the end of the section, and the sentinel the cue lands on. */
-function heroClose(block) {
+/**
+ * The scroll cue, the end of the section, and the sentinel the cue lands on.
+ * `cue` adds a class to the cue: the centred one, for a centred composition.
+ */
+function heroClose(block, { cue: cueClass = "" } = {}) {
   const cue = block.scroll_cue === false
     ? ""
-    : `\n  <a class="hero-scroll-cue" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>`;
+    : `\n  <a class="hero-scroll-cue${cueClass ? ` ${cueClass}` : ""}" href="#hero-end">Scroll down <span class="arrow" aria-hidden="true">&#8595;</span></a>`;
   return `${cue}\n</section>\n<div class="hero-end" id="hero-end"></div>`;
 }
 
@@ -525,6 +531,58 @@ function renderSalon(block, path, ctx) {
     `    </div>\n` +
     `  </div>` +
     heroClose(block)
+  );
+}
+
+/**
+ * The title card: the front page's opening (index.njk), which grew out of
+ * block_test_page_e.html. A photograph mixed into the stage's own ground,
+ * grain, the site mark over a title that develops one letter at a time, a
+ * rule, and the lede under it. .cine-stage is a component in css/input.css;
+ * this writes the markup the front page writes, and the letters come from the
+ * same function (cine.js), so the two stay one design.
+ *
+ * Where the front page and variant E differ, it follows the front page: the
+ * mark over the title, and the scroll cue centred under a centred card. It
+ * keeps what the front page leaves out but the component still styles — the
+ * eyebrow over the mark, the buttons under the lede — because a post may want
+ * either.
+ *
+ * The photograph is the card's ground, not a plate: published with an empty
+ * alt in an aria-hidden layer, as on the front page, which is what the
+ * catalogue's `decorativeFor` says. There is no accent; see TYPESET in the
+ * catalogue.
+ */
+function renderCine(block, path, ctx) {
+  let ground = "";
+  if (block.image?.src) {
+    // The ORIGINAL, as on the other photographic heroes: it fills the screen.
+    const url = assetUrl(block.image.src, ctx.slug);
+    const size = ctx.resolver.imageSize(url);
+    if (!size) ctx.warn(`${path}.image`, `could not measure "${block.image.src}"`, "the hero picture ships without width and height");
+    ground = `    ${imageTag(url, "", "", size, { loading: "eager" })}\n`;
+  }
+  const actions = list(block.actions)
+    .filter((a) => a && text(a.label) && text(a.href))
+    .map((a, i) => `<a class="cine-btn${i === 0 ? "" : " cine-btn--ghost"}" href="${esc(text(a.href))}">${esc(text(a.label))}</a>`)
+    .join("\n      ");
+
+  return (
+    `<section class="cine-stage"${ctx.mark(path, "hero")}>\n` +
+    `  <div class="cine-media" aria-hidden="true">\n` +
+    ground +
+    `    <div class="cine-scrim"></div>\n` +
+    `  </div>\n` +
+    `  <div class="cine-grain" aria-hidden="true"></div>\n` +
+    `  <div class="cine-card">\n` +
+    (text(block.eyebrow) ? `    <p class="cine-eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
+    `    <div class="cine-logo" aria-hidden="true"></div>\n` +
+    `    ${cineHeading(block.title)}\n` +
+    `    <div class="cine-rule" aria-hidden="true"></div>\n` +
+    (text(block.lede) ? `    <p class="cine-tagline">${esc(text(block.lede))}</p>\n` : "") +
+    (actions ? `    <div class="cine-actions">\n      ${actions}\n    </div>\n` : "") +
+    `  </div>` +
+    heroClose(block, { cue: "hero-scroll-cue-center" })
   );
 }
 

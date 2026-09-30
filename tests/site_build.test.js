@@ -39,6 +39,16 @@ beforeAll(() => {
     ),
     "input_markdown/undated.md": frontMatter({ title: "Undated", description: "d", tags: "[Fjell]" }),
     "input_markdown/secret.md": frontMatter({ title: "Secret", date: "2026-05-02", description: "d", tags: "[Fjell]", draft: "true" }),
+    // A page-builder post that opens with the title card: every letter of its
+    // title is its own span, which is what the search index has to read back.
+    "input_custom_post/exposure/exposure.json": JSON.stringify({
+      format: 1,
+      meta: { title: "Long exposure", date: "2026-05-03", description: "d", tags: ["Fjell"] },
+      blocks: [
+        { type: "hero", variant: "cine", title: "The long\nexposure", lede: "Fog.", image: { src: "fog.jpg", alt: "", title: "", caption: "" } },
+        { type: "text", markdown: "Un*told* words." },
+      ],
+    }),
   });
   // The pieces of the real project the templates need to render and link.
   for (const dir of ["eleventy_njk", "eleventy_settings", "javascript", "font", "icon", "svg", "licence_and_legal"]) {
@@ -48,6 +58,7 @@ beforeAll(() => {
     fs.mkdirSync(path.join(root, dir), { recursive: true });
     fs.copyFileSync(path.join(REPO, dir, `${dir}.11tydata.js`), path.join(root, dir, `${dir}.11tydata.js`));
   }
+  fs.copyFileSync(path.join(REPO, "input_custom_post/post_i/thumbnail.jpg"), path.join(root, "input_custom_post/exposure/fog.jpg"));
   fs.mkdirSync(path.join(root, "css"));
   for (const sheet of ["main.css", "katex.css", "glightbox.min.css"]) {
     fs.copyFileSync(path.join(REPO, "css", sheet), path.join(root, "css", sheet));
@@ -91,7 +102,26 @@ describe("a full build", () => {
 
   test("the search index is valid JSON with the published posts", () => {
     const index = JSON.parse(read("search_index.json"));
-    expect(index.entries.map((e) => e.url).sort()).toEqual(["/tricky.html", "/undated.html"]);
+    expect(index.entries.map((e) => e.url).sort()).toEqual(["/exposure.html", "/tricky.html", "/undated.html"]);
+  });
+
+  test("the front page's title is written by the title card's own function", () => {
+    const html = read("index.html");
+    const letter = (delay, ch) => `<span class="cine-letter" style="--letter-delay:${delay}s">${ch}</span>`;
+    // "Journal" starts seven places into the table; a space between the words
+    // keeps them words for anything that reads text rather than layout.
+    expect(html).toContain(
+      '<h1 class="cine-title" aria-label="Test Journal" style="--cine-word:7"><span aria-hidden="true">' +
+        letter(0.32, "T") + letter(1.05, "e") + letter(0.61, "s") + letter(0.88, "t") +
+        '</span> <span aria-hidden="true">' + letter(0.73, "J"),
+    );
+    expect(read("exposure.html")).toContain('<h1 class="cine-title" aria-label="The long exposure" style="--cine-word:8">');
+  });
+
+  test("a title card's letters, and a word split by inline tags, are indexed as words", () => {
+    const entry = JSON.parse(read("search_index.json")).entries.find((e) => e.url === "/exposure.html");
+    expect(entry.text).toStartWith("The long exposure Fog.");
+    expect(entry.text).toContain("Untold words.");
   });
 
   test("the feed escapes text and leaves out a date it does not have", () => {
