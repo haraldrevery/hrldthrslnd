@@ -571,6 +571,7 @@
     top: 0;
     z-index: 200;
     padding: 0.75rem 1.25rem;
+    border-radius: var(--radius);
     background: var(--fg);
     color: var(--bg);
     font-family: var(--font-mono-family);
@@ -866,6 +867,7 @@
     background-size: 100% 1.5px;
   }
   .paper-panel {
+    border-radius: var(--radius);
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     box-shadow: var(--shadow-soft);
@@ -873,6 +875,7 @@
     backdrop-filter: blur(10px);
   }
   .ink-panel {
+    border-radius: var(--radius);
     background: rgba(28, 29, 34, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--paper);
@@ -1338,6 +1341,7 @@
   .glass-card {
     position: relative;
     isolation: isolate;
+    border-radius: var(--radius);
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.16);
     -webkit-backdrop-filter: blur(22px) saturate(140%);
@@ -1349,6 +1353,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
+    border-radius: inherit;
     pointer-events: none;
     background: linear-gradient(155deg, rgba(255,255,255,0.14), transparent 40%);
   }
@@ -1611,6 +1616,7 @@
     display: inline-block;
     padding: 0.7rem 1.6rem;
     border: 1px solid rgba(var(--cine-ink), 0.5);
+    border-radius: var(--radius);
     background-color: rgba(var(--cine-ground), 0.1);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
@@ -1733,6 +1739,7 @@
     padding: clamp(1.75rem, 4vw, 3rem);
     background: rgba(16, 17, 21, 0.74);
     color: var(--paper);
+    overflow: hidden;
   }
   .feature-overlay-visual {
     justify-self: start;
@@ -1862,6 +1869,8 @@
     display: block;
     position: relative;
     overflow: hidden;
+    isolation: isolate;
+    border-radius: var(--radius);
     background: #111217;
   }
   .art-plate img, .art-plate video {
@@ -1929,6 +1938,8 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    border-radius: var(--radius);
+    overflow: hidden;
     background: var(--bg);
     padding: 1.25rem 1.25rem 1.5rem;
     transition: background var(--dur-mid) var(--ease-liquid), transform var(--dur-mid) var(--ease-liquid);
@@ -2030,6 +2041,7 @@
     grid-template-rows: 1fr auto;
     min-height: 19rem;
     overflow: hidden;
+    border-radius: var(--radius);
     background: var(--stage-ground);
     color: var(--panel-adaptive-fg);
   }
@@ -2042,6 +2054,7 @@
   }
   .category-card-frost {
     z-index: -1;
+    border-radius: var(--radius);
     background: var(--category-glass);
     border: var(--hairline-width) solid var(--category-frame);
     box-shadow: inset 0 var(--hairline-width) var(--category-edge), 0 1.25rem 2.5rem -1.25rem rgba(0, 0, 0, 0.45);
@@ -3020,6 +3033,7 @@
   }
   .gallery .tile-vector {
     background: var(--paper);
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     padding: 2rem;
@@ -3428,6 +3442,7 @@
     .collage-portrait .art-plate {
       aspect-ratio: auto;
       height: 100%;
+      border-radius: 0;
     }
     .collage-portrait {
       --hero-in-beat: 0;
@@ -3910,6 +3925,7 @@
     padding-inline: 0.5rem;
     padding-top: calc(var(--optical-shift-caps) * 2);
     border: 1px solid var(--hairline);
+    border-radius: var(--radius);
     font-family: var(--font-mono-family);
     font-size: var(--step--1);
     color: var(--fg-muted);

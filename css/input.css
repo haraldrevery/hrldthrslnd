@@ -199,6 +199,7 @@
     top: 0;
     z-index: 200;
     padding: 0.75rem 1.25rem;
+    border-radius: var(--radius);
     background: var(--fg);
     color: var(--bg);
     font-family: var(--font-mono-family);
@@ -641,8 +642,19 @@
   }
   .link-underline:hover, .link-underline:focus-visible { background-size: 100% 1.5px; }
 
-  /* -- Surfaces ------------------------------------------------------------ */
+  /* -- Surfaces ------------------------------------------------------------
+     Every free-standing box on the site takes --radius: these two and
+     .glass-card, the cards, the plates, the media frames, the slices. What
+     stays square is what is not a box of its own — rules, table cells, the
+     ruled .stat-grid, and the bare-glyph controls (.search-input, the
+     lightbox buttons) that say why where they are declared.
+
+     A pseudo-element laid over a rounded panel does not follow its corners.
+     Cover the whole panel and it takes `border-radius: inherit`
+     (.glass-card::before); run along one edge and the panel clips it with
+     `overflow: hidden` (.slice, .card, .feature-overlay-panel). */
   .paper-panel {
+    border-radius: var(--radius);
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     box-shadow: var(--shadow-soft);
@@ -650,6 +662,7 @@
     backdrop-filter: blur(10px);
   }
   .ink-panel {
+    border-radius: var(--radius);
     background: rgba(28, 29, 34, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--paper);
@@ -1745,6 +1758,7 @@
   .glass-card {
     position: relative;
     isolation: isolate;
+    border-radius: var(--radius);
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.16);
     -webkit-backdrop-filter: blur(22px) saturate(140%);
@@ -1756,6 +1770,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
+    border-radius: inherit;
     pointer-events: none;
     background: linear-gradient(155deg, rgba(255,255,255,0.14), transparent 40%);
   }
@@ -2461,6 +2476,7 @@
     display: inline-block;
     padding: 0.7rem 1.6rem;
     border: 1px solid rgba(var(--cine-ink), 0.5);
+    border-radius: var(--radius);
     background-color: rgba(var(--cine-ground), 0.1);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
@@ -2694,6 +2710,9 @@
        ink from `inherit`. */
     background: rgba(16, 17, 21, 0.74);
     color: var(--paper);
+    /* Clips the accent rule below to the rounded corners .glass-card gives
+       the panel. Nothing else in it reaches the edge. */
+    overflow: hidden;
   }
   .feature-overlay-visual {
     justify-self: start;
@@ -2883,11 +2902,26 @@
      does not apply to one: the plate stopped clipping, the hover scale spilled
      past its edges, and a single markdown image grew instead of zooming while
      every plate that happened to be a <div> or <figure> zoomed correctly. The
-     frame has to be a block for the crop to exist at all.                     */
+     frame has to be a block for the crop to exist at all.
+
+     The radius is the one the video and audio frames already carry, so every
+     framed picture on the site has the same softened corner. The overflow clip
+     follows it, which is what rounds the image, the hover zoom and a
+     .plate-caption with it. Where a plate stops being a frame and becomes a
+     full-bleed ground — the collage portrait on a phone — it is set back to 0.
+
+     `isolation: isolate` is for WebKit. There, a child that is being
+     transformed (the hover zoom below) is known to escape a rounded overflow
+     clip and show square corners for the length of the transition. A stacking
+     context on the clipping box keeps it inside. Nothing in a plate needs its
+     z-index to reach past the plate: the overflow clip already stops anything
+     from being drawn there.                                                   */
   .art-plate {
     display: block;
     position: relative;
     overflow: hidden;
+    isolation: isolate;
+    border-radius: var(--radius);
     background: #111217;
   }
   /* Natural height by default. `height: 100%` inside a container with no
@@ -2972,10 +3006,16 @@
   @media (min-width:  88rem) { .card-grid--fill > .card:nth-child(4)     { display: flex; } }
   @media (min-width: 108rem) { .card-grid--fill > .card:nth-child(5)     { display: flex; } }
 
+  /* Rounded like every other box, though at rest it does not show: the card
+     paints the page's own --bg. It shows on hover, where the card lifts to
+     --bg-raised, and overflow: hidden is what bends the accent edge below
+     round the corners with it. */
   .card {
     position: relative;
     display: flex;
     flex-direction: column;
+    border-radius: var(--radius);
+    overflow: hidden;
     background: var(--bg);
     padding: 1.25rem 1.25rem 1.5rem;
     transition: background var(--dur-mid) var(--ease-liquid),
@@ -3221,6 +3261,10 @@
        left with 69px of picture above its label, a strip rather than a plate. */
     min-height: 19rem;
     overflow: hidden;
+    /* The plate's corner, on the card rather than only the picture: the card
+       paints --stage-ground behind the media, and a square card around a
+       rounded picture would show that ground in all four corners. */
+    border-radius: var(--radius);
     /* The ground a card with no picture stands on, and the scheme's own: the
        pale stage in light, the old matte in dark. */
     background: var(--stage-ground);
@@ -3239,6 +3283,7 @@
 
   .category-card-frost {
     z-index: -1;
+    border-radius: var(--radius);
     background: var(--category-glass);
     border: var(--hairline-width) solid var(--category-frame);
     box-shadow: inset 0 var(--hairline-width) var(--category-edge),
@@ -5107,6 +5152,9 @@
      both schemes rather than following the theme. */
   .gallery .tile-vector {
     background: var(--paper);
+    /* Declared here as well as on .art-plate: the renderer's vector tiles are
+       art plates, but a hand-written one (block_test_page.html) is not. */
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     padding: 2rem;
@@ -5615,7 +5663,9 @@
       -webkit-mask-image: var(--hero-fade-mask);
       mask-image: var(--hero-fade-mask);
     }
-    .collage-portrait .art-plate { aspect-ratio: auto; height: 100%; }
+    /* No radius: this is the hero's ground now, not a plate in a composition,
+       and it runs to the screen's edges. */
+    .collage-portrait .art-plate { aspect-ratio: auto; height: 100%; border-radius: 0; }
 
     /* The portrait is the hero's GROUND at this width, not a piece in a
        composition, and both halves of its desktop entrance are wrong for that.
@@ -6426,6 +6476,7 @@
     /* Nudge the glyphs down to the optical centre of the square. */
     padding-top: calc(var(--optical-shift-caps) * 2);
     border: 1px solid var(--hairline);
+    border-radius: var(--radius);
     font-family: var(--font-mono-family);
     font-size: var(--step--1);
     color: var(--fg-muted);
