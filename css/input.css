@@ -1915,6 +1915,11 @@
     --cine-image-opacity: 0.68;
     --cine-glow: rgba(13, 13, 16, 0.22);
 
+    /* The container .cine-title's measure is taken from: 100cqi is this
+       content box, the viewport less the padding below and any scrollbar,
+       whatever the padding is at the width in hand. Inline size only; the
+       stage's width comes from the page, never from what it holds. */
+    container-type: inline-size;
 
     position: relative;
     /* The pair is deliberate. svh is the small viewport height — the screen
@@ -2228,7 +2233,9 @@
                         + var(--cine-logo-lift));
   }
 
-  /* The tracking settles from wide to its final value as the letters land.
+  /* The tracking settles from wide to its final value as the letters land:
+     --cine-track-from to --cine-track, in em, written once here for the
+     settle and the size cap both to read.
 
      The size is capped so the longest word fits on one line. Every letter is
      an inline-block, and a line may break between any two of them, so a word
@@ -2236,37 +2243,49 @@
      at 390px wide, "Galdhøpiggen" set as GALDHØPIG / GEN: the title's own
      margins leave it 260px, and at the 2.4rem floor a capital takes about 23px.
 
-     --cine-word is the longest word's letter count, written on the h1 by
-     blocks/cine.js; a hand-written card without it falls back to 1 and is
-     never capped. --cine-title-measure is the widest the title can be: the
-     viewport less the stage's padding and a classic scrollbar, or the card's
-     74rem, less the title's own margins. --cine-letter-w is a capital's advance
-     in em, measured in this face at 0.58–0.63 with the final 0.14em tracking
-     and 0.74–0.79 at the settle's 0.3em start — 0.8 here, so a word that fits
-     does not break mid-word while the tracking settles either, and 0.64 on the
-     cheap path below, whose tracking never moves. A title of short words never
-     reaches the cap: it only takes over from --cine-title-size when a word
-     would otherwise break. */
+     The cap is the word's own width, not an estimate of it. blocks/cine.js
+     writes the longest word's letters as --cine-word and its width before
+     tracking as --cine-word-em, summed from the advances in this face's font
+     file. Separate inline-blocks do not kern, so at a given tracking the word
+     is exactly --cine-word-em + --cine-word × the tracking, in em. A card
+     that gives only --cine-word counts a full em a letter, as cine.js counts
+     a letter it cannot measure; a hand-written card with neither is never
+     capped.
+
+     --cine-track-max is the widest the tracking ever gets: the settle's start,
+     so a word that fits does not break mid-word while the tracking settles
+     either; the cheap path below, whose tracking never moves, sets it back to
+     --cine-track. --cine-title-measure is the widest the title can be: the
+     stage's content box (100cqi; .cine-stage is the container), or the card's
+     74rem, less the title's own margins. Out of that comes half a pixel a
+     letter, for a browser that rounds each advance to a whole pixel.
+
+     A title of short words never reaches the cap: it only takes over from
+     --cine-title-size when a word would otherwise break. */
   .cine-title {
-    --cine-title-measure: calc(min(100vw - 4rem, 74rem) - 5.6rem);
-    --cine-letter-w: 0.8;
-    margin: 2.8rem;
+    --cine-track: 0.14;
+    --cine-track-from: 0.3;
+    --cine-track-max: var(--cine-track-from);
+    --cine-title-margin: 2.8rem;
+    --cine-title-measure: calc(min(100cqi, 74rem) - 2 * var(--cine-title-margin));
+    margin: var(--cine-title-margin);
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     column-gap: 0.5em;
     font-size: min(var(--cine-title-size),
-                   calc(var(--cine-title-measure) / (var(--cine-word, 1) * var(--cine-letter-w))));
+                   calc((var(--cine-title-measure) - var(--cine-word, 1) * 0.5px)
+                        / (var(--cine-word-em, var(--cine-word, 0)) + var(--cine-word, 1) * var(--cine-track-max))));
     font-weight: 600;
     line-height: 1.04;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: calc(var(--cine-track) * 1em);
     animation: cine-track 2.8s cubic-bezier(0.2, 0.6, 0.2, 1) both;
   }
 
   @keyframes cine-track {
-    from { letter-spacing: 0.3em; }
-    to   { letter-spacing: 0.14em; }
+    from { letter-spacing: calc(var(--cine-track-from) * 1em); }
+    to   { letter-spacing: calc(var(--cine-track) * 1em); }
   }
 
   /* One rule for every letter; the timing comes from the per-letter
@@ -2599,10 +2618,7 @@
        name in that orientation. */
     .cine-stage { --logo-hero-size: clamp(5.4rem, 10.5vw, 12.66rem); }
 
-    /* The stage's padding is 1.25rem a side here, not 1.5rem; see .cine-title. */
-    .cine-title { --cine-title-measure: calc(min(100vw - 3rem, 74rem) - 5.6rem); }
-
-    .cine-rule    { margin-block: clamp(0.75rem, 2.6vh, 1.5rem); }
+    .cine-rule   { margin-block: clamp(0.75rem, 2.6vh, 1.5rem); }
     .cine-tagline { font-size: clamp(1rem, 2.8vh, 1.25rem); line-height: 1.55; }
     .cine-actions {
       margin-top: clamp(1rem, 3vh, 1.75rem);
@@ -2657,7 +2673,7 @@
   }
 
   @media (max-width: 47.999rem), (max-height: 30rem) {
-    .cine-title { animation: none; letter-spacing: 0.14em; --cine-letter-w: 0.64; }
+    .cine-title { animation: none; --cine-track-max: var(--cine-track); }
     .cine-letter { animation-name: cine-letter-in-lite; }
   }
 

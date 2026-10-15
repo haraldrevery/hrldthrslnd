@@ -4,13 +4,14 @@
  *
  * The markdown pipeline and the block renderer both have to answer three
  * questions while they render — how big is this image, which thumbnail should
- * stand in for it, and where does this file beside the page publish to. They
+ * stand in for it, and where does this file beside the page publish to — and
+ * the title card a fourth: how wide is this letter in the site's face. They
  * used to answer them by calling the filesystem-bound helpers directly, which
  * meant the renderers could only ever run inside a build, against a project on
  * disk. The editor's live preview and the tests both need to render without
  * one.
  *
- * So the three questions are an object, and the renderers take the object.
+ * So the questions are an object, and the renderers take the object.
  * diskResolver() is the build's answer and wraps the helpers that were called
  * before. memoryResolver() is a table. Nothing else changes: a caller that
  * still passes a root string gets the disk resolver, so the old signature keeps
@@ -20,6 +21,7 @@ import path from "node:path";
 
 import { imageSize, resolveThumbnail } from "./imagesize.js";
 import { publishedPathForSource } from "./slugs.js";
+import { faceAdvances, TEXT_FACE } from "./font_metrics.js";
 
 /** The resolver a build uses: the project on disk, via the registry. */
 export function diskResolver(root = process.cwd()) {
@@ -30,6 +32,7 @@ export function diskResolver(root = process.cwd()) {
     imageSize: (url) => imageSize(url, resolved),
     resolveThumbnail: (url) => resolveThumbnail(url, resolved),
     publishedPathForSource: (relative) => publishedPathForSource(relative, resolved),
+    glyphAdvance: (char) => faceAdvances(path.join(resolved, TEXT_FACE))(char),
   };
 }
 
@@ -44,8 +47,10 @@ export function diskResolver(root = process.cwd()) {
  *   stands in for itself
  * @param {Record<string, string>} options.published
  *   path on disk (relative to the project root) -> the URL it publishes at
+ * @param {Record<string, number>} options.advances
+ *   character -> its advance in em; anything not listed is unmeasured (null)
  */
-export function memoryResolver({ sizes = {}, thumbnails = {}, published = {} } = {}) {
+export function memoryResolver({ sizes = {}, thumbnails = {}, published = {}, advances = {} } = {}) {
   return {
     kind: "memory",
     root: null,
@@ -55,6 +60,7 @@ export function memoryResolver({ sizes = {}, thumbnails = {}, published = {} } =
       const clean = String(relative).replace(/^\.\//, "");
       return published[clean] ?? null;
     },
+    glyphAdvance: (char) => advances[char] ?? null,
   };
 }
 
@@ -62,7 +68,7 @@ export function memoryResolver({ sizes = {}, thumbnails = {}, published = {} } =
  * Whatever a caller handed over, as a resolver.
  *
  * A string is a project root; undefined is the current directory; an object
- * that already answers the three questions is used as it is. This is what lets
+ * that already answers the questions is used as it is. This is what lets
  * createMarkdownLibrary(root) keep its old signature.
  */
 export function asResolver(value) {

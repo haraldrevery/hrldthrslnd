@@ -1384,6 +1384,7 @@
     --hero-fg-muted: rgba(var(--cine-ink), 0.62);
     --cine-image-opacity: 0.68;
     --cine-glow: rgba(13, 13, 16, 0.22);
+    container-type: inline-size;
     position: relative;
     min-height: 100vh;
     min-height: 100svh;
@@ -1495,26 +1496,29 @@
     margin-bottom: calc(var(--cine-lockup-gap) - var(--cine-eyebrow-tail) + var(--cine-logo-lift));
   }
   .cine-title {
-    --cine-title-measure: calc(min(100vw - 4rem, 74rem) - 5.6rem);
-    --cine-letter-w: 0.8;
-    margin: 2.8rem;
+    --cine-track: 0.14;
+    --cine-track-from: 0.3;
+    --cine-track-max: var(--cine-track-from);
+    --cine-title-margin: 2.8rem;
+    --cine-title-measure: calc(min(100cqi, 74rem) - 2 * var(--cine-title-margin));
+    margin: var(--cine-title-margin);
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     column-gap: 0.5em;
-    font-size: min(var(--cine-title-size), calc(var(--cine-title-measure) / (var(--cine-word, 1) * var(--cine-letter-w))));
+    font-size: min(var(--cine-title-size), calc((var(--cine-title-measure) - var(--cine-word, 1) * 0.5px) / (var(--cine-word-em, var(--cine-word, 0)) + var(--cine-word, 1) * var(--cine-track-max))));
     font-weight: 600;
     line-height: 1.04;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: calc(var(--cine-track) * 1em);
     animation: cine-track 2.8s cubic-bezier(0.2, 0.6, 0.2, 1) both;
   }
   @keyframes cine-track {
     from {
-      letter-spacing: 0.3em;
+      letter-spacing: calc(var(--cine-track-from) * 1em);
     }
     to {
-      letter-spacing: 0.14em;
+      letter-spacing: calc(var(--cine-track) * 1em);
     }
   }
   .cine-letter {
@@ -1666,9 +1670,6 @@
     .cine-stage {
       --logo-hero-size: clamp(5.4rem, 10.5vw, 12.66rem);
     }
-    .cine-title {
-      --cine-title-measure: calc(min(100vw - 3rem, 74rem) - 5.6rem);
-    }
     .cine-rule {
       margin-block: clamp(0.75rem, 2.6vh, 1.5rem);
     }
@@ -1712,8 +1713,7 @@
   @media (max-width: 47.999rem), (max-height: 30rem) {
     .cine-title {
       animation: none;
-      letter-spacing: 0.14em;
-      --cine-letter-w: 0.64;
+      --cine-track-max: var(--cine-track);
     }
     .cine-letter {
       animation-name: cine-letter-in-lite;

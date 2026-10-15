@@ -746,9 +746,12 @@ puts a space between words, and writes the longest word's length on the h1.
   may break between any two, so "Galdhøpiggen" set as GALDHØPIG / GEN at 390px,
   and "Fjellvandringsturen" at every phone size. The front page never showed
   it: its words are four letters. `.cine-title` now caps its size at what fits
-  its longest word (`--cine-word`), using a capital's measured advance. Checked
-  at five viewports with motion off and by sampling layout every 40ms through
-  the tracking settle: no mid-word break.
+  its longest word: `--cine-word` letters and `--cine-word-em` wide, summed
+  from the advances in the face's own TTF (`font_metrics.js`). An average
+  capital's advance was tried first and was too narrow for M, W, O and G, so
+  "Mammutwanderweg" still broke at 320 and 390px. Checked at fourteen
+  viewports by sampling layout every 40ms through the tracking settle: no
+  mid-word break.
 - **The preview replayed the entrance on every keystroke.** An edit re-renders
   the canvas 300ms after typing stops, which restarts every animation, so a
   title card being edited was never seen finished. The canvas now shows it

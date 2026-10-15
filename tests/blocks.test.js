@@ -534,7 +534,7 @@ describe("the title card", () => {
     }
     expect(html.startsWith('<section class="cine-stage">')).toBe(true);
     expect(hero.match(/<h1\b/g)).toHaveLength(1);
-    expect(hero).toContain('<h1 class="cine-title" aria-label="The long exposure" style="--cine-word:8">');
+    expect(hero).toContain('<h1 class="cine-title" aria-label="The long exposure" style="--cine-word:8;--cine-word-em:8">');
     // The eyebrow directly before the mark: the lockup spacing is a :has(+ .cine-logo).
     expect(hero).toMatch(/<p class="cine-eyebrow">E<\/p>\n\s*<div class="cine-logo" aria-hidden="true"><\/div>/);
     expect(hero).toContain('<p class="cine-tagline">Fog &lt;in&gt;.</p>');
@@ -638,12 +638,28 @@ describe("cine.js — the title card's letters", () => {
   });
 
   test("the h1 carries the readable title and its longest word in letters, which caps its size", () => {
+    // No resolver to measure with: every letter counts as a full em.
     const h1 = cineHeading('Galdhøpiggen, "in" layers');
-    expect(h1.startsWith('<h1 class="cine-title" aria-label="Galdhøpiggen, &quot;in&quot; layers" style="--cine-word:13">')).toBe(true);
+    expect(h1.startsWith('<h1 class="cine-title" aria-label="Galdhøpiggen, &quot;in&quot; layers" style="--cine-word:13;--cine-word-em:13">')).toBe(true);
     expect(h1.endsWith("</h1>")).toBe(true);
     // Tied by a no-break space, two words are one that cannot break.
     expect(cineHeading("ab\u00A0cd ef")).toContain("--cine-word:5");
-    expect(cineHeading("")).toContain("--cine-word:1");
+    expect(cineHeading("")).toContain('style="--cine-word:1;--cine-word-em:0"');
+  });
+
+  test("the longest word's width is measured in the face, as the stylesheet draws it", () => {
+    const face = memoryResolver({ advances: { A: 0.5, B: 0.25, E: 0.5, I: 0.125, M: 0.75, S: 0.5 } });
+    const style = (title, resolver = face) => cineHeading(title, resolver).match(/style="([^"]*)"/)[1];
+    // Uppercased first: "b" is measured as the "B" it is drawn as.
+    expect(style("Ab")).toBe("--cine-word:2;--cine-word-em:0.75");
+    // "ß" is drawn "SS": two advances, and two letters for the tracking.
+    expect(style("Eß")).toBe("--cine-word:3;--cine-word-em:1.5");
+    // A letter the face does not have counts as a full em.
+    expect(style("A?")).toBe("--cine-word:2;--cine-word-em:1.5");
+    // The larger of each, across words: six narrow letters, and two wide ones.
+    expect(style("IIIIII MM")).toBe("--cine-word:6;--cine-word-em:1.5");
+    // Rounded up, so rounding never makes a word narrower than it is.
+    expect(style("A", memoryResolver({ advances: { A: 1 / 3 } }))).toBe("--cine-word:1;--cine-word-em:0.334");
   });
 });
 

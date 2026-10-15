@@ -32,10 +32,12 @@
  * so the next word starts a new line where there is room for it, and dropped
  * on a short screen the way .hero-break is on the other heroes.
  *
- * The h1 carries the length of its longest word as --cine-word. Letters are
- * inline-blocks, and a line may break between any two of them, so a word wider
- * than the card breaks in the middle — "Galdhøpiggen" did on a phone. The
- * stylesheet caps the title's size so that word fits; see .cine-title.
+ * The h1 carries its longest word's measurements: --cine-word, the letters in
+ * it, and --cine-word-em, its width in em before tracking, from the face's own
+ * advances (font_metrics.js, through the resolver). Letters are inline-blocks,
+ * and a line may break between any two of them, so a word wider than the card
+ * breaks in the middle — "Galdhøpiggen" did on a phone. The stylesheet caps
+ * the title's size so that word fits; see .cine-title.
  */
 import { escapeHtml } from "../paths.js";
 
@@ -90,11 +92,46 @@ export function cineTitle(title) {
 }
 
 /**
+ * What a letter the face cannot measure counts as, in em: wider than any
+ * capital in a text face. Such a letter is drawn by a fallback font whose width
+ * cannot be known here, so it is allowed more than it is likely to take.
+ */
+const UNMEASURED = 1;
+
+/**
+ * A word as the stylesheet draws it: its width in em before tracking, and how
+ * many letters the tracking follows. Uppercased first, as .cine-title is, and
+ * that can make one letter two — "ß" is drawn "SS", two advances and two
+ * trackings.
+ */
+function measure(letters, resolver) {
+  let em = 0;
+  let count = 0;
+  for (const letter of letters) {
+    const drawn = letter.toUpperCase().normalize("NFC");
+    count += Array.from(graphemes.segment(drawn)).length;
+    for (const char of drawn) em += resolver?.glyphAdvance?.(char) ?? UNMEASURED;
+  }
+  return { em, count };
+}
+
+/**
  * The whole h1: the readable title as its aria-label (the letters are
  * aria-hidden, so a screen reader hears the title once, not letter by letter),
- * the longest word's length as --cine-word, and the letters.
+ * the longest word's measurements, and the letters.
+ *
+ * The two measurements are each the largest of any word's, which need not be
+ * the same word's: a word of many narrow letters and a shorter one of wide
+ * letters trade places as the tracking widens. The pair is never narrower than
+ * any word at any tracking, and where one word is longest both ways — nearly
+ * every title — it is that word exactly. The width is rounded up, so rounding
+ * cannot shrink it either.
+ *
+ * `resolver` answers glyphAdvance(); without one, every letter is unmeasured.
  */
-export function cineHeading(title) {
-  const longest = Math.max(1, ...wordsOf(title).flat().map((letters) => letters.length));
-  return `<h1 class="cine-title" aria-label="${escapeHtml(cineLabel(title))}" style="--cine-word:${longest}">${cineTitle(title)}</h1>`;
+export function cineHeading(title, resolver) {
+  const words = wordsOf(title).flat().map((letters) => measure(letters, resolver));
+  const count = Math.max(1, ...words.map((w) => w.count));
+  const em = Math.ceil(Math.max(0, ...words.map((w) => w.em)) * 1000) / 1000;
+  return `<h1 class="cine-title" aria-label="${escapeHtml(cineLabel(title))}" style="--cine-word:${count};--cine-word-em:${em}">${cineTitle(title)}</h1>`;
 }

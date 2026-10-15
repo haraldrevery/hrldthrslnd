@@ -577,7 +577,7 @@ function renderCine(block, path, ctx) {
     `  <div class="cine-card">\n` +
     (text(block.eyebrow) ? `    <p class="cine-eyebrow">${esc(text(block.eyebrow))}</p>\n` : "") +
     `    <div class="cine-logo" aria-hidden="true"></div>\n` +
-    `    ${cineHeading(block.title)}\n` +
+    `    ${cineHeading(block.title, ctx.resolver)}\n` +
     `    <div class="cine-rule" aria-hidden="true"></div>\n` +
     (text(block.lede) ? `    <p class="cine-tagline">${esc(text(block.lede))}</p>\n` : "") +
     (actions ? `    <div class="cine-actions">\n      ${actions}\n    </div>\n` : "") +

@@ -35,7 +35,7 @@ beforeAll(() => {
     }),
     "input_markdown/tricky.md": frontMatter(
       { title: `"${TRICKY_TITLE}"`, date: "2026-05-01", description: "</script><b>x</b>", tags: "[Høst, Fjell]" },
-      "## Været på toppen\n\nCold.",
+      "## Været på toppen\n\nCold.\n\nColder by $E = mc^2$.",
     ),
     "input_markdown/undated.md": frontMatter({ title: "Undated", description: "d", tags: "[Fjell]" }),
     "input_markdown/secret.md": frontMatter({ title: "Secret", date: "2026-05-02", description: "d", tags: "[Fjell]", draft: "true" }),
@@ -110,12 +110,24 @@ describe("a full build", () => {
     const letter = (delay, ch) => `<span class="cine-letter" style="--letter-delay:${delay}s">${ch}</span>`;
     // "Journal" starts seven places into the table; a space between the words
     // keeps them words for anything that reads text rather than layout.
+    const h1 = html.match(/<h1 class="cine-title" aria-label="Test Journal" style="--cine-word:7;--cine-word-em:([\d.]+)">/);
+    expect(h1).not.toBeNull();
     expect(html).toContain(
-      '<h1 class="cine-title" aria-label="Test Journal" style="--cine-word:7"><span aria-hidden="true">' +
+      `${h1[0]}<span aria-hidden="true">` +
         letter(0.32, "T") + letter(1.05, "e") + letter(0.61, "s") + letter(0.88, "t") +
         '</span> <span aria-hidden="true">' + letter(0.73, "J"),
     );
-    expect(read("exposure.html")).toContain('<h1 class="cine-title" aria-label="The long exposure" style="--cine-word:8">');
+    // Measured in the face the fixture carries in font/, not counted: JOURNAL
+    // is about three and a quarter em, where a full em a letter would be seven.
+    expect(Number(h1[1])).toBeCloseTo(3.24, 1);
+    expect(read("exposure.html")).toMatch(/<h1 class="cine-title" aria-label="The long exposure" style="--cine-word:8;--cine-word-em:[\d.]+">/);
+  });
+
+  test("a formula is indexed once, as the TeX it was written in", () => {
+    const entry = JSON.parse(read("search_index.json")).entries.find((e) => e.url === "/tricky.html");
+    expect(entry.text.match(/E = mc\^2/g)).toHaveLength(1);
+    expect(entry.text).not.toContain("mc2");
+    expect(entry.text).not.toContain("m c 2");
   });
 
   test("a title card's letters, and a word split by inline tags, are indexed as words", () => {

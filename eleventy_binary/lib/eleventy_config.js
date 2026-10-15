@@ -112,6 +112,27 @@ const humanDate = (value, locale = "en-GB") => {
 };
 
 /**
+ * `html` without the `tag` elements whose class list holds `className`,
+ * content and all. Nested elements of the same name are counted, so the cut is
+ * at the element's own closing tag, not the first one inside it — which a
+ * regular expression alone cannot find.
+ */
+const dropElements = (html, tag, className) => {
+  const open = new RegExp(`<${tag}\\b[^>]*\\bclass="(?:[^"]*\\s)?${className}(?:\\s[^"]*)?"[^>]*>`, "gi");
+  const tags = new RegExp(`<(/?)${tag}\\b[^>]*>`, "gi");
+  let out = "";
+  let from = 0;
+  for (let found; (found = open.exec(html)); ) {
+    tags.lastIndex = open.lastIndex;
+    let depth = 1;
+    for (let next; depth > 0 && (next = tags.exec(html)); ) depth += next[1] ? -1 : 1;
+    out += `${html.slice(from, found.index)} `;
+    from = open.lastIndex = depth > 0 ? html.length : tags.lastIndex;
+  }
+  return out + html.slice(from);
+};
+
+/**
  * Build the Eleventy config function.
  *
  * @param {object} options
@@ -500,8 +521,9 @@ export function createConfig({
     });
     // A .cine-title h1, letter by letter — the one function the front page and
     // the page builder's title card both write it with. Escapes its own text,
-    // so it is used with `| safe`. See blocks/cine.js.
-    eleventyConfig.addFilter("cineHeading", cineHeading);
+    // so it is used with `| safe`. Measured in the site's face through the same
+    // resolver the page builder's renderer reads. See blocks/cine.js.
+    eleventyConfig.addFilter("cineHeading", (title) => cineHeading(title, md.resolver));
     // No escapeHtml filter is registered, on purpose. Nunjucks autoescaping is
     // on and already escapes every interpolation, so a filter that escapes again
     // is not a safety net but a way to emit "&amp;amp;" — which is exactly what
@@ -541,10 +563,18 @@ export function createConfig({
     eleventyConfig.addFilter("jsonify", jsonForHtml);
     /** Strip tags and collapse whitespace — used to build search snippets. */
     eleventyConfig.addFilter("plain", (html, max = 240) => {
-      const text = String(html ?? "")
+      const markup = String(html ?? "")
         .replace(/<!--[\s\S]*?-->/g, " ")
         .replace(/<script[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ");
+      // A formula is indexed once, as the TeX it was written in. KaTeX writes
+      // each one three times: MathML for a screen reader, the TeX source inside
+      // that as an <annotation>, and a copy built of spans for the eye, hidden
+      // from assistive technology. All three reached the index, so $E = mc^2$
+      // was "E = m c 2 E = mc^2 E=mc2". The drawn copy goes whole, and the
+      // MathML gives way to its annotation.
+      const text = dropElements(markup, "span", "katex-html")
+        .replace(/<math\b[^>]*>[\s\S]*?<annotation encoding="application\/x-tex">([\s\S]*?)<\/annotation>[\s\S]*?<\/math>/gi, " $1 ")
         // The heading anchor is decoration, not text. markdown-it-anchor puts an
         // aria-hidden <a class="header-anchor">#</a> inside every heading, so
         // stripping tags alone left a bare "#" behind each one — in every search
